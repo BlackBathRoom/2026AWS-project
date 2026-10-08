@@ -1,0 +1,6 @@
+node_modules/
+cdk/node_modules/
+cdk/lib/
+npm-debug.log
+env/
+.env
