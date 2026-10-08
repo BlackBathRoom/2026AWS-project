@@ -1,0 +1,14 @@
+{
+  "name": "ai-learning-system",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "NODE_ENV=development node src/index.js",
+    "cdk:synth": "cd cdk && npm run -s build && npx cdk synth"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "aws-sdk": "^2.1360.0"
+  }
+}
