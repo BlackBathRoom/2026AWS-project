@@ -1,0 +1,144 @@
+openapi: 3.0.3
+info:
+  title: 情報II AI学習システム API
+  version: 1.0.0
+  description: B-01で共有するサンプルAPI契約。認証本実装はB-02で置換する。
+servers:
+  - url: http://localhost:3000/api/v1
+    description: ローカル開発環境
+tags:
+  - name: common
+    description: 共通API
+paths:
+  /health:
+    get:
+      tags: [common]
+      summary: APIの稼働状態を取得
+      operationId: getHealth
+      responses:
+        '200':
+          description: 稼働中
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
+              example: { status: ok, timestamp: '2026-10-10T00:00:00Z' }
+  /me:
+    get:
+      tags: [common]
+      summary: 認証済みユーザーを取得
+      operationId: getMe
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: ユーザー情報
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserProfile' }
+              example: { userId: user-001, organizationId: school-001, role: student, trainingIds: [training-001] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /trainings:
+    get:
+      tags: [common]
+      summary: 認証ユーザーの組織に属する研修一覧を取得
+      operationId: listTrainings
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: trainingId
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/TrainingId' }
+      responses:
+        '200':
+          description: 研修一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Training' } }
+              example: { items: [{ trainingId: training-001, organizationId: school-001, name: 情報II 基礎, status: active }] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /study-context:
+    get:
+      tags: [common]
+      summary: サーバー管理の学習コンテキストを取得
+      operationId: getStudyContext
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: trainingId, in: query, required: true, schema: { $ref: '#/components/schemas/TrainingId' } }
+        - { name: assignmentId, in: query, required: true, schema: { $ref: '#/components/schemas/AssignmentId' } }
+      responses:
+        '200':
+          description: 学習コンテキスト
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudyContext' }
+              example: { userId: user-001, organizationId: school-001, trainingId: training-001, assignmentId: assignment-001, mode: learning, assistancePolicy: hint, ruleVersionId: rule-v1 }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    ValidationError:
+      description: 入力値不正
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    Unauthorized:
+      description: 認証失敗
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    NotFound:
+      description: リソースなし
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+  schemas:
+    ApiError:
+      type: object
+      required: [code, message, requestId, timestamp]
+      properties:
+        code: { type: string, enum: [VALIDATION_ERROR, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, RATE_LIMITED, INTERNAL_ERROR, SERVICE_UNAVAILABLE] }
+        message: { type: string }
+        requestId: { type: string }
+        timestamp: { type: string, format: date-time }
+    HealthResponse:
+      type: object
+      required: [status, timestamp]
+      properties:
+        status: { type: string, enum: [ok] }
+        timestamp: { type: string, format: date-time }
+    UserProfile:
+      type: object
+      required: [userId, organizationId, role, trainingIds]
+      properties:
+        userId: { $ref: '#/components/schemas/UserId' }
+        organizationId: { $ref: '#/components/schemas/OrganizationId' }
+        role: { type: string, enum: [student, teacher, admin, reviewer] }
+        trainingIds: { type: array, items: { $ref: '#/components/schemas/TrainingId' } }
+    Training:
+      type: object
+      required: [trainingId, organizationId, name, status]
+      properties:
+        trainingId: { $ref: '#/components/schemas/TrainingId' }
+        organizationId: { $ref: '#/components/schemas/OrganizationId' }
+        name: { type: string }
+        status: { type: string, enum: [active, archived] }
+    StudyContext:
+      type: object
+      required: [userId, organizationId, trainingId, assignmentId, mode, assistancePolicy, ruleVersionId]
+      properties:
+        userId: { $ref: '#/components/schemas/UserId' }
+        organizationId: { $ref: '#/components/schemas/OrganizationId' }
+        trainingId: { $ref: '#/components/schemas/TrainingId' }
+        assignmentId: { $ref: '#/components/schemas/AssignmentId' }
+        mode: { type: string, enum: [learning, assessment] }
+        assistancePolicy: { type: string, enum: [none, hint, guided] }
+        ruleVersionId: { $ref: '#/components/schemas/RuleVersionId' }
+    UserId: { type: string, pattern: '^[A-Za-z0-9_-]+$' }
+    OrganizationId: { type: string, pattern: '^[A-Za-z0-9_-]+$' }
+    TrainingId: { type: string, pattern: '^[A-Za-z0-9_-]+$' }
+    AssignmentId: { type: string, pattern: '^[A-Za-z0-9_-]+$' }
+    RuleVersionId: { type: string, pattern: '^[A-Za-z0-9_-]+$' }
