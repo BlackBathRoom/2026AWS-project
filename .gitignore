@@ -1,4 +1,5 @@
 node_modules/
+dist/
 cdk/node_modules/
 cdk/lib/
 npm-debug.log
