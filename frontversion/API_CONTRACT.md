@@ -1,71 +1,103 @@
-# B/C担当への接続メモ
+# API接続契約案 v2
 
-この版の `/api/*` は画面を先行開発するための仮のデモAPIです。
-添付仕様書の正式APIは `/v1/*` で、名前・構造も異なります。**URLだけの変更では接続できません。**
-本番接続時はB/CとOpenAPI・型・サンプル・エラーコードを合わせ、`public/js/api.js` に変換処理を用意してください。
+**正式な経路・API番号・主要項目は仕様書05に準拠。詳細JSONの形状はこの実装の接続案であり、未合意です。** Bが版管理しA/B/Cで固定するまで本番契約にしないでください。
 
-## 対応関係
+ルート一覧は `src/contracts/endpoints.js` が正本、型は `src/contracts/types.d.ts`。ExpressルートはB/Cメソッドへ委譲します。画面は `/api` や架空の本番APIを呼びません。`/dev/session` と `/dev/uploads/*` はmock時だけ存在する開発補助で、本番APIではありません。
 
-| デモの操作 | 仕様書の正式API | 主担当 | 接続時の注意 |
-|---|---|---|---|
-| `POST /api/demo/login` | Cognitoの認証フロー | B | 役割選択入口を削除し、認証済みユーザーの役割を取得する |
-| `GET /api/me` | API-01 `GET /v1/me` | B | Bearer access token、所属、研修、権限、有効期限を検証 |
-| `GET /api/materials` | API-02 `GET /v1/lessons/{id}` | C | 一覧取得方法も合意。公開版と原本の短期URL・出典・ページを受け取る |
-| `GET /api/questions` | API-03 `GET /v1/quiz/next` | B | 問題を1つずつ取得。attempt_id、版、出題理由を保持する |
-| `POST /api/answers` | API-04 `POST /v1/attempts` | B | Idempotency-Key、回答時間、採点方針、再回答と初回の区別 |
-| `GET /api/progress` | API-05 `GET /v1/progress` | B | score/confidence/reasonsと5軸・証拠・評価状態を別々に描画 |
-| `POST /api/ai/jobs` | API-06 `POST /v1/tutor/jobs` | C | session_id、課題/attempt_id、requested_action、冪等キーを追加 |
-| `GET /api/ai/jobs/{id}` | API-07 `GET /v1/tutor/jobs/{id}` | C | job_idとネストしたresultを画面用に変換。公開・権限を毎回再確認 |
-| `GET /api/training` | API-08 `GET /v1/cohorts/{id}/analytics` | B | 担当研修・単元で絞り込み。他校/担当外はAPI側で拒否 |
-| `POST /api/admin/materials/{id}/transition` | API-09 `POST /v1/content/{id}/transitions` | C | expected_version/action/reason。実際の取込完了を待って公開 |
-| `POST /api/ai/feedback` | API-10 `POST /v1/feedback` | C | interaction_id/type/commentに変換、個人情報を除去 |
-| `POST /api/admin/delete-learning` | API-11 `POST /v1/admin/deletion-requests` | B | 即時全削除ではなく、対象・範囲・保持期限・バックアップ残存・再認証を扱う |
-| 教材のテキスト登録・一覧 | API-14/15 `POST /v1/content/uploads` / `GET /v1/content` | C | 隔離アップロード、PDF解析、状態・カーソルを扱う |
-| 問題・知識マップ（未実装） | API-16/17 | C | 下書き・承認・循環検査を伴う管理画面を追加 |
-| `PUT /api/admin/settings` | API-18 `POST /v1/admin/policies` | B | policy版、再認証、緩和時の承認、停止の即時反映 |
-| 研修目標（課題にまとめている） | API-19 `GET/PUT /v1/me/training-profile` | B | 経験・目標・時間をプロフィールとして分離 |
-| `GET /api/task` | API-20 `GET /v1/training-assignments/{id}` | B | 監修課題・ルーブリック・援助方針を取得 |
-| `PUT /api/draft` / `POST /api/submissions` | API-21 下書き作成・更新・submit | B | 課題版・提出版・expected_version・冪等キーを合わせる |
-| `POST /api/attachments` | API-22 ファイル登録・complete・取得 | B | S3隔離・実体検査・検査待ち・検査失敗・サイズ制限を実装 |
-| `POST /api/reviews` | API-23 GET/POST reviews・finalize | B | デモの一括保存を下書きと確定に分離。割当・自己レビュー禁止・証拠を検証 |
-| `POST /api/appeals` | API-24 申立て・resolve | B | 別評価者の再割当、再評価、到達再計算を追加 |
+## 共通
 
-API-12 StudyContext、API-13 ApprovedQuestionはB/C間の内部APIです。ブラウザから呼び出さず、正解や援助ポリシーの決定権をフロントへ渡しません。
+- base `/v1`、JSON/UTF-8、HTTPS。本番はBearer access token。mockのみHttpOnly Cookie。
+- ISO8601 UTCを返し、画面と日次カウンターはJST。
+- エラーは `{ "error": { "code": "VERSION_CONFLICT", "message": "…", "request_id": "…" } }`。
+- 401未認証、403許可なし、404存在/可視性なし、409版/冪等競合、422入力、429上限、503停止/未接続。
+- role/org/modeを入力から信頼しない。ctx.userはB.authenticateのサーバー解決値。
+- API-04/06/21/23/24の変更操作は画面が `Idempotency-Key` を発行。同内容の通信再送は同キー。
+- 版競合は入力を残して409表示。自動上書きしない。
+- 一覧は最大50件。管理一覧はnext_cursorで続きを取得。実装時にレビュー一覧も全ページ対応を確認。
 
-## 現在のデモレスポンス
+## 05にない詳細：今回の接続案
+
+以下は「仕様書に記載済み」として扱わないでください。役割・状態enum名、補助フィールドも本番合意が必要です。
+
+| 箇所 | 接続案 | 必要な理由 |
+|---|---|---|
+| API-01 | `policy` を追加 | 現在のAI停止・上限設定を表示。05には設定取得APIがない |
+| API-05 | `{knowledge:[], competencies:[]}`、knowledgeにunit_id/sample_count | 概念のID命名規則に依存せず、章と知識/能力を対応させる |
+| API-19 | training_planの各行にunit_id/lesson_id/assignment_id/session_id | 教材・課題・AIセッションの対応をBの返却値から選ぶ |
+| API-20 | required_outputsをkey/label/description配列、rubric/scale、`my_submissions` | C監修の項目を画面へ反映し、保存した下書き・提出版を再取得。05にGET /submissionsがない |
+| API-23 GET | `{items:[{submission,assignment,reviews,appeals}], next_cursor}` | 割当提出物と評価履歴をレビュー画面に表示。05は一覧の詳細形状を未定義 |
+| 提出 | `version`は編集競合用、`submission_version`は不変提出版番号 | 更新回数と提出v1/v2の区別 |
+| API-18 | reasonを追加 | A-10の変更理由入力・監査に対応（05の主要入力には未列記） |
+| API-22 | `filename`、アップロードURLをpresigned_urlで返す、CLEAN/検査状態 | ファイル名表示と隔離アップロード・静的閲覧をつなぐ |
+| 公的教材一覧 | `public/data/catalog.json`に公開メタデータだけを置く | 05には受講者用教材一覧APIがなく、管理専用API-15を流用しない |
+| 管理状態/操作 | SUBMIT / APPROVE / START_INGESTION / PUBLISH / WITHDRAW | actionの具体enumが05には未列記 |
+| role | teacher / reviewer / manager / approver / admin | Cognito group名自体は未確定。B側で表示ロールへ正規化 |
+
+正式課題の分類・ルーブリック・概念粒度はCの監修待ちです。仮ID・固定課題を正式仕様として確定していません。原本PDFの上限、許諾情報の保存先、完了通知はCと確認が必要で、独自の本番経路は追加していません。
+
+## 主なリクエスト
 
 ```json
-{"jobId":"uuid"}
+POST /v1/attempts
+{"attempt_id":"attempt-…","answer":"a","response_time_ms":4200}
+
+POST /v1/tutor/jobs
+{"session_id":"…","assignment_id":"…","question":"…","requested_action":"GUIDANCE","draft_version":2}
+
+POST /v1/submissions
+{"assignment_id":"…","assignment_version":1}
+
+PATCH /v1/submissions/{id}
+{"expected_version":1,"text":{"practice":"…","explanation":"…","diagnosis":"…","lesson":"…"},"aid_declaration":"…"}
+
+POST /v1/submissions/{id}/submit
+{"expected_version":2}
+
+POST /v1/reviews
+{"submission_id":"…","submission_version":1,"rubric_version":"…","axes":{"K":2,"P":2,"E":2,"D":2,"L":2},"rationale":"…","evidence_refs":["submission-…"],"required_outputs_confirmed":true}
+
+POST /v1/reviews/{id}/finalize
+{"expected_version":1}
+
+POST /v1/review-appeals
+{"assessment_id":"…","reason":"…"}
+
+POST /v1/review-appeals/{id}/resolve
+{"axes":{"K":2,"P":2,"E":2,"D":2,"L":2},"rationale":"…","evidence_refs":["submission-…"],"required_outputs_confirmed":true}
 ```
+
+上のAPI-21のtextキーは例です。AはAPI-20のrequired_outputsを使って入力欄を生成します。Cが監修内容をBへ渡し、Bが任意の単元に対応したフィールドを返してください。
+
+## AI
+
+受付202は `{job_id,status,poll_after_ms}`。GETのstatusがSUCCEEDEDになったときだけresultを表示。ジョブ状態と回答結果を混同しません。
 
 ```json
 {
-  "status":"COMPLETED",
-  "verdict":"SUPPORTED",
-  "text":"画面に表示する検査済み回答（本番時）",
-  "citations":[{"materialId":"m1","title":"教材名","chapter":"章","page":"1–2","version":1,"source":"出典"}]
+  "job_id":"job-…",
+  "status":"SUCCEEDED",
+  "result":{
+    "status":"INSUFFICIENT",
+    "response_type":"GUIDANCE",
+    "message":"根拠となる承認済み教材を確認できません。",
+    "citations":[],
+    "next_action":"OPEN_MATERIAL",
+    "reason_code":"NO_APPROVED_SOURCE"
+  }
 }
 ```
 
-このデモの回答は固定文で、実際のAI検査は行っていません。本番は検査前の中間生成文をフロントに渡しません。
-フロントは2秒おきに状態を取得し、30秒で待機を打ち切ります（仕様書の提案値）。離脱時は待機を中止します。
+SUPPORTEDなら1件以上の出典が必要です。各出典はsource_id/version/page/chunk_id。フロントは型欠落を拒否してHTMLをエスケープします。出典が実在し現行公開版かどうかはCのサーバーが検証します。フロントの形式検証だけで出典の真正性を保証できません。
 
-エラー形式：
+## ファイル
 
-```json
-{"code":"CONFLICT","message":"別画面で更新されています。内容を控えて再読み込みしてください。"}
-```
+1. POST `/submissions/{id}/files`：filename/type/size/checksum（SHA-256）を渡す。
+2. 返却presigned_urlへPUT。画面は `application/octet-stream` を付けるのでS3側署名条件と合わせる。
+3. POST `/files/{id}/complete`：検査状態を受け取る。CLEANになるまで表示・提出不可。
+4. GET `/files/{id}`：本人/割当評価者認可後に静的内容。IPYNBの出力・HTMLやコードを実行しない。
 
-401は再認証、403は権限/評価援助制限、409は版競合、429は利用上限、503はAI停止/本番未接続を表示します。
-409時に入力を自動破棄しないこと、送信成功を確認できないときに保存済みと表示しないことを維持してください。
+モックのファイル検査は形式・容量・SHA-256・UTF-8・ノートブック構造だけです。マルウェア検査、S3隔離、非同期検査完了後のポーリングや期限切れ再発行はBの接続作業です。
 
-## 接続の順番
+## B/Cの内部呼出
 
-1. BからAPI URL、Cognito設定、所属・役割付き検証ユーザー、正式OpenAPIを受領する。
-2. Cから公開教材、正常/拒否/失敗/時間切れのAI応答例を受領する。
-3. `src/index.js` のデモルーターとデモ入口を本番の認証/APIへ置き換える。
-4. `api.js` と画面の呼び出しを正式なリクエスト/レスポンスへ対応させる。秘密鍵・AWSアクセスキーをpublicに置かない。
-5. 多校・担当外・期限切れ・自己レビュー・添付未検査の負例をB/Cと検証する。
-6. 監修教材と正式な評価基準に置き換え、一連の操作を確認してから配信する。
-
-CORS、トークン管理、CognitoのリダイレクトURL、配信先、APIの認可方式はBと合意して設定してください。
+現在の同一Expressプロセスでは `getC().getApprovedQuestion(ctx)` と `getB().getStudyContext(ctx)`。HTTP公開しません。Lambda等へ分割する場合はIAMのサービス間認可、タイムアウト、同じ文脈のorg/user/版照合へ置き換えてください。
