@@ -1,0 +1,12 @@
+{
+  "name": "ai-learning-system-frontend-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "情報Ⅱ教員育成・担当Aの画面確認用デモ",
+  "scripts": {
+    "dev": "node src/index.js",
+    "test": "node --test tests/demo.test.cjs"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": { "express": "^5.1.0" }
+}
