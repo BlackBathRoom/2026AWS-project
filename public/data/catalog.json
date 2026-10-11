@@ -1,0 +1,169 @@
+{
+  "note": "公的教材の参照先一覧。アプリ内での取込・承認・公開・AI検索利用は別途C担当が管理する。IDは接続用仮IDであり文部科学省の識別子ではない。",
+  "sources": [
+    {
+      "title": "情報Ⅱ 教員研修用教材",
+      "url": "https://www.mext.go.jp/a_menu/shotou/zyouhou/detail/mext_00742.html"
+    },
+    {
+      "title": "情報Ⅰ 教員研修用教材",
+      "url": "https://www.mext.go.jp/a_menu/shotou/zyouhou/detail/1416756.htm"
+    }
+  ],
+  "units": [
+    {
+      "unit_id": "ii-1",
+      "lesson_id": "ii-1",
+      "course_level": "II",
+      "title": "第1章 情報社会の進展と情報技術",
+      "resource_type": "TRAINING_MATERIAL",
+      "publisher": "文部科学省",
+      "approval_status": "NOT_IMPORTED",
+      "references": [
+        {
+          "title": "教材PDF",
+          "url": "https://www.mext.go.jp/content/20200609-mxt_jogai01-000007843_002.pdf"
+        }
+      ]
+    },
+    {
+      "unit_id": "ii-2",
+      "lesson_id": "ii-2",
+      "course_level": "II",
+      "title": "第2章 コミュニケーションとコンテンツ",
+      "resource_type": "TRAINING_MATERIAL",
+      "publisher": "文部科学省",
+      "approval_status": "NOT_IMPORTED",
+      "references": [
+        {
+          "title": "教材PDF",
+          "url": "https://www.mext.go.jp/content/20200609-mxt_jogai01-000007843_003.pdf"
+        }
+      ]
+    },
+    {
+      "unit_id": "ii-3",
+      "lesson_id": "ii-3",
+      "course_level": "II",
+      "title": "第3章 情報とデータサイエンス",
+      "resource_type": "TRAINING_MATERIAL",
+      "publisher": "文部科学省",
+      "approval_status": "NOT_IMPORTED",
+      "references": [
+        {
+          "title": "前半",
+          "url": "https://www.mext.go.jp/content/20200702-mxt_jogai01-000007843_004.pdf"
+        },
+        {
+          "title": "後半",
+          "url": "https://www.mext.go.jp/content/20200609-mxt_jogai01-000007843_007.pdf"
+        }
+      ]
+    },
+    {
+      "unit_id": "ii-4",
+      "lesson_id": "ii-4",
+      "course_level": "II",
+      "title": "第4章 情報システムとプログラミング",
+      "resource_type": "TRAINING_MATERIAL",
+      "publisher": "文部科学省",
+      "approval_status": "NOT_IMPORTED",
+      "references": [
+        {
+          "title": "教材PDF",
+          "url": "https://www.mext.go.jp/content/20200609-mxt_jogai01-000007843_005.pdf"
+        }
+      ]
+    },
+    {
+      "unit_id": "ii-5",
+      "lesson_id": "ii-5",
+      "course_level": "II",
+      "title": "第5章 情報と情報技術を活用した問題発見・解決の探究",
+      "resource_type": "TRAINING_MATERIAL",
+      "publisher": "文部科学省",
+      "approval_status": "NOT_IMPORTED",
+      "references": [
+        {
+          "title": "教材PDF",
+          "url": "https://www.mext.go.jp/content/20200609-mxt_jogai01-000007843_006.pdf"
+        }
+      ]
+    },
+    {
+      "unit_id": "i-1",
+      "lesson_id": "i-1",
+      "course_level": "I",
+      "title": "第1章 情報社会の問題解決",
+      "resource_type": "TRAINING_MATERIAL",
+      "publisher": "文部科学省",
+      "approval_status": "NOT_IMPORTED",
+      "references": [
+        {
+          "title": "教材PDF",
+          "url": "https://www.mext.go.jp/content/20200722-mxt_jogai02-100013300_003.pdf"
+        }
+      ]
+    },
+    {
+      "unit_id": "i-2",
+      "lesson_id": "i-2",
+      "course_level": "I",
+      "title": "第2章 コミュニケーションと情報デザイン",
+      "resource_type": "TRAINING_MATERIAL",
+      "publisher": "文部科学省",
+      "approval_status": "NOT_IMPORTED",
+      "references": [
+        {
+          "title": "教材PDF",
+          "url": "https://www.mext.go.jp/content/20200928-mxt_jogai01-100013300_001.pdf"
+        }
+      ]
+    },
+    {
+      "unit_id": "i-3",
+      "lesson_id": "i-3",
+      "course_level": "I",
+      "title": "第3章 コンピュータとプログラミング",
+      "resource_type": "TRAINING_MATERIAL",
+      "publisher": "文部科学省",
+      "approval_status": "NOT_IMPORTED",
+      "references": [
+        {
+          "title": "教材PDF",
+          "url": "https://www.mext.go.jp/content/20200722-mxt_jogai02-100013300_005.pdf"
+        }
+      ]
+    },
+    {
+      "unit_id": "i-4",
+      "lesson_id": "i-4",
+      "course_level": "I",
+      "title": "第4章 情報通信ネットワークとデータの活用",
+      "resource_type": "TRAINING_MATERIAL",
+      "publisher": "文部科学省",
+      "approval_status": "NOT_IMPORTED",
+      "references": [
+        {
+          "title": "教材PDF",
+          "url": "https://www.mext.go.jp/content/20200722-mxt_jogai02-100013300_006.pdf"
+        }
+      ]
+    }
+  ],
+  "supplements": [
+    {
+      "title": "情報Ⅱ はじめに・目次",
+      "url": "https://www.mext.go.jp/content/20200609-mxt_jogai01-000007843_001.pdf"
+    },
+    {
+      "title": "情報Ⅰ はじめに・目次",
+      "url": "https://www.mext.go.jp/content/20200722-mxt_jogai02-100013300_001.pdf"
+    },
+    {
+      "title": "情報Ⅰ 本教材の利用方法について",
+      "url": "https://www.mext.go.jp/content/20200722-mxt_jogai02-100013300_002.pdf"
+    }
+  ],
+  "teaching_resources": []
+}
