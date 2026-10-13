@@ -66,4 +66,4 @@ APIのベースURLは `/api/v1`、日時はUTCのISO 8601、エラーは共通�
 
 B-02でCognito JWT検証と本番認証、続いてDB永続化・RBAC拡張・監査ログ・到達判定（B-10）へ移行します。未確定事項は [docs/pending-decisions.md](docs/pending-decisions.md) に記載しています。
 
-担当BのAWS移行境界は [docs/backend-architecture.md](docs/backend-architecture.md)、担当A向けAPIは [docs/frontend-integration.md](docs/frontend-integration.md)、担当C向け契約は [docs/ai-integration.md](docs/ai-integration.md) を参照してください。
+担当BのAWS移行境界は [docs/backend-architecture.md](docs/backend-architecture.md)、担当A向けAPIは [docs/frontend-integration.md](docs/frontend-integration.md)、担当C向け契約は [docs/ai-integration.md](docs/ai-integration.md)、仕様比較は [docs/backend-gap-analysis.md](docs/backend-gap-analysis.md) を参照してください。

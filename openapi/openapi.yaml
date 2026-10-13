@@ -232,6 +232,20 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /reviews/assign:
+    post:
+      tags: [review]
+      summary: 提出版へ評価者を割り当て
+      operationId: assignReview
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } }
+      responses:
+        '201': { description: 評価割当, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /reviews/{id}/finalize:
     post:
       tags: [review]
@@ -358,6 +372,15 @@ paths:
       security: [{ bearerAuth: [] }]
       responses:
         '200': { description: 利用量, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+  /admin/audits:
+    get:
+      tags: [admin]
+      summary: 組織の監査イベントを取得
+      operationId: listAuditEvents
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: 監査イベント, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /tutor/jobs:
     post:
       tags: [learning]
