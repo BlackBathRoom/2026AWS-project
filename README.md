@@ -13,7 +13,7 @@ src/middleware/  ローカル専用モック認証
 src/mocks/  ユーザー・研修・StudyContextのサンプル
 src/routes/  サンプルAPIルート
 tests/  Vitest契約テスト
-docs/  APIルール、連携ガイド、未確定事項
+docs/  APIルール、A/C連携、AWS移行境界、未確定事項
 ```
 
 ## 必要なソフトウェア
@@ -36,6 +36,8 @@ npm run dev
 ```bash
 npm test
 ```
+
+担当B機能のテストも同じコマンドで実行されます。現在のテストはB-01とローカル担当Bサービスを対象にしています。
 
 ## APIの確認方法
 
@@ -63,3 +65,5 @@ APIのベースURLは `/api/v1`、日時はUTCのISO 8601、エラーは共通�
 ## B-02以降の実装予定
 
 B-02でCognito JWT検証と本番認証、続いてDB永続化・RBAC拡張・監査ログ・到達判定（B-10）へ移行します。未確定事項は [docs/pending-decisions.md](docs/pending-decisions.md) に記載しています。
+
+担当BのAWS移行境界は [docs/backend-architecture.md](docs/backend-architecture.md)、担当A向けAPIは [docs/frontend-integration.md](docs/frontend-integration.md)、担当C向け契約は [docs/ai-integration.md](docs/ai-integration.md) を参照してください。
