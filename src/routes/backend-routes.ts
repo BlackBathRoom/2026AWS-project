@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { AuthContext } from '../contracts/user';
 import { requireMockAuth } from '../middleware/mock-auth';
 import { backendRepository as repo } from '../repositories/backend-repository';
-import { DomainError, applyDeletion, calculateAttainment, createSubmission, finalizeAssessment, getProgress, getRecommendations, getSafeQuestion, getUsage, nextQuestion, reapplyDeletionLedger, requireOrganization, requireRole, requireSelf, requireTraining, reserveAi, saveAttempt, submitSubmission, updateSubmission } from '../services/backend-services';
+import { DomainError, applyDeletion, assignReview, calculateAttainment, completeTutorJob, createSubmission, finalizeAssessment, getProgress, getRecommendations, getSafeQuestion, getUsage, nextQuestion, reapplyDeletionLedger, requireCurrentTraining, requireOrganization, requireRole, requireSelf, requireTraining, reserveAi, saveAttempt, submitSubmission, updateSubmission } from '../services/backend-services';
 
 function errorResponse(req: Request, res: Response, error: unknown): void {
   if (error instanceof DomainError) { res.status(error.status).json({ code: error.code, message: error.message, requestId: req.requestId, timestamp: new Date().toISOString() }); return; }
@@ -35,13 +35,13 @@ backendRouter.get('/progress', endpoint((req, res) => {
 }));
 
 backendRouter.get('/attainment', endpoint((req, res) => {
-  const auth = req.auth!; const trainingId = id.parse(req.query.trainingId); requireTraining(auth, trainingId); res.json(calculateAttainment(repo, auth, trainingId));
+  const auth = req.auth!; const trainingId = id.parse(req.query.trainingId); requireCurrentTraining(repo, auth, trainingId); res.json(calculateAttainment(repo, auth, trainingId));
 }));
 
 backendRouter.get('/recommendations', endpoint((req, res) => { const auth = req.auth!; const trainingId = id.parse(req.query.trainingId); res.json(getRecommendations(repo, auth, trainingId)); }));
 
 backendRouter.get('/training-assignments/:id', endpoint((req, res) => {
-  const auth = req.auth!; const assignmentId = id.parse(req.params.id); const assignment = repo.getAssignment(assignmentId); if (!assignment) throw new DomainError(404, 'NOT_FOUND', '課題が見つかりません'); requireOrganization(auth, assignment.organizationId); requireTraining(auth, assignment.trainingId); res.json(assignment);
+  const auth = req.auth!; const assignmentId = id.parse(req.params.id); const assignment = repo.getAssignment(assignmentId); if (!assignment) throw new DomainError(404, 'NOT_FOUND', '課題が見つかりません'); requireOrganization(auth, assignment.organizationId); requireCurrentTraining(repo, auth, assignment.trainingId); res.json(assignment);
 }));
 
 backendRouter.post('/submissions', endpoint((req, res) => {
@@ -57,14 +57,14 @@ backendRouter.patch('/submissions/:id', endpoint((req, res) => {
 }));
 
 backendRouter.post('/submissions/:id/submit', endpoint((req, res) => {
-  const auth = req.auth!; const input = z.object({ expectedVersion: z.number().int().positive() }).parse(req.body); res.json(submitSubmission(repo, auth, id.parse(req.params.id), input.expectedVersion));
+  const auth = req.auth!; const input = z.object({ expectedVersion: z.number().int().positive(), content: z.string().max(100000).optional() }).parse(req.body); res.json(submitSubmission(repo, auth, id.parse(req.params.id), input.expectedVersion, input.content));
 }));
 
 backendRouter.post('/submissions/:id/files', endpoint((req, res) => {
   const auth = req.auth!; const submission = repo.submissions.find((item) => item.submissionId === req.params.id); if (!submission) throw new DomainError(404, 'NOT_FOUND', '提出物が見つかりません'); requireSelf(auth, submission.ownerId);
   const input = z.object({ filename: z.string().min(1).max(255), mimeType: z.string().min(1).max(128), size: z.number().int().positive(), checksum: z.string().min(1).max(256) }).parse(req.body);
   const allowed = ['text/plain', 'text/csv', 'text/x-python', 'application/x-ipynb+json']; if (input.size > 2 * 1024 * 1024) throw new DomainError(413, 'PAYLOAD_TOO_LARGE', 'ファイルサイズが上限を超えています'); if (!allowed.includes(input.mimeType) || /<|\.html?$/i.test(input.filename)) throw new DomainError(422, 'UNPROCESSABLE_ENTITY', '許可されていないファイル形式です');
-  const file = { fileId: `file-${randomUUID()}` as import('../contracts/backend').FileId, organizationId: auth.organizationId, ownerId: auth.userId, submissionId: submission.submissionId, filename: input.filename, mimeType: input.mimeType, size: input.size, checksum: input.checksum, scanStatus: 'pending' as const, storageKey: `${auth.organizationId}/${submission.submissionId}/${randomUUID()}` }; repo.files.push(file); res.status(201).json({ fileId: file.fileId, scanStatus: file.scanStatus, filename: file.filename, size: file.size });
+  const file = { fileId: `file-${randomUUID()}` as import('../contracts/backend').FileId, organizationId: auth.organizationId, ownerId: auth.userId, submissionId: submission.submissionId, filename: input.filename, mimeType: input.mimeType, size: input.size, checksum: input.checksum, scanStatus: 'pending' as const, storageKey: `${auth.organizationId}/${submission.submissionId}/${randomUUID()}` }; repo.files.push(file); const version = repo.submissionVersions.find((item) => item.submissionId === submission.submissionId && item.versionNumber === submission.currentVersion); if (version) version.fileIds.push(file.fileId); res.status(201).json({ fileId: file.fileId, scanStatus: file.scanStatus, filename: file.filename, size: file.size });
 }));
 
 backendRouter.post('/files/:id/complete', endpoint((req, res) => {
@@ -79,8 +79,10 @@ backendRouter.get('/reviews', endpoint((req, res) => {
   const auth = req.auth!; requireRole(auth, ['reviewer', 'teacher']); res.json({ items: repo.reviewAssignments.filter((item) => item.reviewerId === auth.userId && item.organizationId === auth.organizationId).map((item) => ({ ...item, assessment: repo.assessments.find((assessment) => assessment.submissionVersionId === item.submissionVersionId) })) });
 }));
 
+backendRouter.post('/reviews/assign', endpoint((req, res) => { const auth = req.auth!; const input = z.object({ submissionVersionId: id, reviewerId: id }).parse(req.body); res.status(201).json(assignReview(repo, auth, input.submissionVersionId, input.reviewerId)); }));
+
 backendRouter.post('/reviews', endpoint((req, res) => {
-  const auth = req.auth!; requireRole(auth, ['reviewer', 'teacher']); const input = reviewInput.parse(req.body); const version = repo.submissionVersions.find((item) => item.submissionVersionId === input.submissionVersionId); if (!version) throw new DomainError(404, 'NOT_FOUND', '提出版が見つかりません'); if (version.ownerId === auth.userId) throw new DomainError(403, 'FORBIDDEN', '自己レビューはできません'); const submission = repo.submissions.find((item) => item.submissionId === version.submissionId)!; requireOrganization(auth, submission.organizationId); const assessment = { assessmentId: `assessment-${randomUUID()}`, submissionVersionId: version.submissionVersionId, rubricVersionId: 'rubric-v1' as import('../contracts/common').RubricVersionId, scores: input.scores, rationale: input.rationale, evidenceRefs: input.evidenceRefs, reviewerId: auth.userId, status: 'draft' as const, version: 1 }; repo.assessments.push(assessment); repo.reviewAssignments.push({ reviewId: `review-${randomUUID()}` as import('../contracts/common').ReviewId, submissionVersionId: version.submissionVersionId, reviewerId: auth.userId, organizationId: auth.organizationId, status: 'assigned' }); res.status(201).json(assessment);
+  const auth = req.auth!; requireRole(auth, ['reviewer', 'teacher']); const input = reviewInput.parse(req.body); const version = repo.submissionVersions.find((item) => item.submissionVersionId === input.submissionVersionId); if (!version) throw new DomainError(404, 'NOT_FOUND', '提出版が見つかりません'); if (version.ownerId === auth.userId) throw new DomainError(403, 'FORBIDDEN', '自己レビューはできません'); const submission = repo.submissions.find((item) => item.submissionId === version.submissionId)!; requireOrganization(auth, submission.organizationId); if (!repo.reviewAssignments.some((item) => item.submissionVersionId === version.submissionVersionId && item.reviewerId === auth.userId && item.status === 'assigned')) throw new DomainError(403, 'FORBIDDEN', '割り当てられた評価者ではありません'); const assessment = { assessmentId: `assessment-${randomUUID()}`, submissionVersionId: version.submissionVersionId, rubricVersionId: 'rubric-v1' as import('../contracts/common').RubricVersionId, scores: input.scores, rationale: input.rationale, evidenceRefs: input.evidenceRefs, reviewerId: auth.userId, status: 'draft' as const, version: 1 }; repo.assessments.push(assessment); res.status(201).json(assessment);
 }));
 
 backendRouter.post('/reviews/:id/finalize', endpoint((req, res) => { const auth = req.auth!; const input = z.object({ expectedVersion: z.number().int().positive() }).parse(req.body); res.json(finalizeAssessment(repo, auth, id.parse(req.params.id), input.expectedVersion)); }));
@@ -94,7 +96,7 @@ backendRouter.post('/review-appeals/:id/resolve', endpoint((req, res) => {
 }));
 
 backendRouter.get('/cohorts/:id/analytics', endpoint((req, res) => {
-  const auth = req.auth!; requireRole(auth, ['teacher', 'reviewer']); const trainingId = id.parse(req.params.id); requireTraining(auth, trainingId); const users = repo.attempts.filter((item) => item.trainingId === trainingId && item.organizationId === auth.organizationId).map((item) => item.userId); const uniqueUsers = [...new Set(users)]; res.json({ trainingId, learnerCount: uniqueUsers.length, progress: uniqueUsers.map((userId) => ({ userId, knowledge: repo.progress.filter((item) => item.userId === userId), attainment: calculateAttainment(repo, { ...auth, userId } as AuthContext, trainingId) })), reviewWaitingCount: repo.submissions.filter((item) => item.trainingId === trainingId && item.status === 'submitted').length });
+  const auth = req.auth!; requireRole(auth, ['teacher', 'reviewer']); const trainingId = id.parse(req.params.id); requireCurrentTraining(repo, auth, trainingId); const users = repo.attempts.filter((item) => item.trainingId === trainingId && item.organizationId === auth.organizationId).map((item) => item.userId); const uniqueUsers = [...new Set(users)]; res.json({ trainingId, learnerCount: uniqueUsers.length, progress: uniqueUsers.map((userId) => ({ userId, knowledge: repo.progress.filter((item) => item.userId === userId), attainment: calculateAttainment(repo, { ...auth, userId } as AuthContext, trainingId) })), reviewWaitingCount: repo.submissions.filter((item) => item.trainingId === trainingId && item.status === 'submitted').length });
 }));
 
 backendRouter.get('/me/training-profile', endpoint((req, res) => { const auth = req.auth!; const profile = repo.profiles.find((item) => item.userId === auth.userId); res.json(profile || { userId: auth.userId, organizationId: auth.organizationId, experience: '', targetUnits: [], availableTimeMinutes: 0, selfAssessment: {}, version: 0 }); }));
@@ -104,8 +106,9 @@ backendRouter.post('/admin/deletion-requests', endpoint((req, res) => { const au
 backendRouter.post('/admin/deletion-requests/:id/apply', endpoint((req, res) => { const auth = req.auth!; res.json(applyDeletion(repo, auth, id.parse(req.params.id))); }));
 backendRouter.post('/admin/deletion-requests/:id/reapply', endpoint((req, res) => { const auth = req.auth!; res.json(reapplyDeletionLedger(repo, auth, id.parse(req.params.id))); }));
 backendRouter.get('/admin/usage', endpoint((req, res) => { const auth = req.auth!; res.json(getUsage(repo, auth)); }));
+backendRouter.get('/admin/audits', endpoint((req, res) => { const auth = req.auth!; requireRole(auth, ['admin']); res.json({ items: repo.audits.filter((item) => item.organizationId === auth.organizationId) }); }));
 
 backendRouter.post('/admin/policies', endpoint((req, res) => { const auth = req.auth!; requireRole(auth, ['admin']); const input = z.object({ expectedVersion: z.string().optional(), aiEnabled: z.boolean(), dailyAiLimit: z.number().int().positive().max(1000), concurrentJobLimit: z.number().int().positive().max(10), allowAnswer: z.boolean() }).parse(req.body); const existing = repo.getPolicy(auth.organizationId)!; if (input.expectedVersion && input.expectedVersion !== existing.version) throw new DomainError(409, 'CONFLICT', 'ポリシーの版が競合しています'); const policy = { ...existing, ...input, version: `policy-${Number(existing.version.replace('policy-v', '')) + 1}` as typeof existing.version, updatedAt: new Date().toISOString() }; Object.assign(existing, policy); res.json(policy); }));
 
-backendRouter.post('/tutor/jobs', endpoint((req, res) => { const auth = req.auth!; const input = z.object({ question: z.string().min(1).max(2000), requestedAction: z.enum(['hint', 'explanation', 'example', 'answer']) }).parse(req.body); const context = repo.getStudyContext(auth.userId, auth.trainingIds[0], 'assignment-001'); if (input.requestedAction === 'answer' && context?.mode === 'assessment') throw new DomainError(403, 'FORBIDDEN', '評価モードでは正答を要求できません'); reserveAi(repo, auth); const job = { jobId: `job-${randomUUID()}`, userId: auth.userId, organizationId: auth.organizationId, status: 'QUEUED' as const }; repo.jobs.push(job); res.status(202).json({ jobId: job.jobId, status: job.status, pollAfterMs: 500 }); }));
+backendRouter.post('/tutor/jobs', endpoint((req, res) => { const auth = req.auth!; const input = z.object({ question: z.string().min(1).max(2000), requestedAction: z.enum(['hint', 'explanation', 'example', 'answer']) }).parse(req.body); const context = repo.getStudyContext(auth.userId, auth.trainingIds[0], 'assignment-001'); const policy = repo.getPolicy(auth.organizationId); if (input.requestedAction === 'answer' && (context?.mode === 'assessment' || !policy?.allowAnswer)) throw new DomainError(403, 'FORBIDDEN', '現在の援助ポリシーでは正答を要求できません'); reserveAi(repo, auth); const job = { jobId: `job-${randomUUID()}`, userId: auth.userId, organizationId: auth.organizationId, status: 'QUEUED' as const }; repo.jobs.push(job); res.status(202).json({ jobId: job.jobId, status: job.status, pollAfterMs: 500 }); }));
 backendRouter.get('/tutor/jobs/:id', endpoint((req, res) => { const auth = req.auth!; const job = repo.jobs.find((item) => item.jobId === req.params.id && item.userId === auth.userId && item.organizationId === auth.organizationId); if (!job) throw new DomainError(404, 'NOT_FOUND', 'AIジョブが見つかりません'); res.json({ jobId: job.jobId, status: job.status, result: job.result }); }));

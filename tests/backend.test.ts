@@ -91,8 +91,10 @@ describe('担当B backend services', () => {
   it('評価者は自己提出物をレビューできず、他人の提出物を確定できる', async () => {
     const created = await api.post('/api/v1/submissions').set({ ...student, 'Idempotency-Key': 'submission-test-004' }).send({ assignmentId: 'assignment-001', content: 'review target' });
     const submitted = await api.post(`/api/v1/submissions/${created.body.submission.submissionId}/submit`).set(student).send({ expectedVersion: 1 });
+    const assigned = await api.post('/api/v1/reviews/assign').set(teacher).send({ submissionVersionId: submitted.body.version.submissionVersionId, reviewerId: 'user-004' });
     const review = await api.post('/api/v1/reviews').set(reviewer).send({ submissionVersionId: submitted.body.version.submissionVersionId, scores: { P: 2 }, rationale: '実践結果と根拠を確認した', evidenceRefs: ['submission-text'] });
     const finalized = await api.post(`/api/v1/reviews/${review.body.assessmentId}/finalize`).set(reviewer).send({ expectedVersion: 1 });
+    expect(assigned.status).toBe(201);
     expect(review.status).toBe(201);
     expect(finalized.status).toBe(200);
     expect(finalized.body.status).toBe('final');
@@ -101,13 +103,27 @@ describe('担当B backend services', () => {
   it('レビュー確定後に本人が異議申立てできる', async () => {
     const created = await api.post('/api/v1/submissions').set({ ...student, 'Idempotency-Key': 'submission-test-005' }).send({ assignmentId: 'assignment-001', content: 'appeal target' });
     const submitted = await api.post(`/api/v1/submissions/${created.body.submission.submissionId}/submit`).set(student).send({ expectedVersion: 1 });
+    await api.post('/api/v1/reviews/assign').set(teacher).send({ submissionVersionId: submitted.body.version.submissionVersionId, reviewerId: 'user-004' });
     const review = await api.post('/api/v1/reviews').set(reviewer).send({ submissionVersionId: submitted.body.version.submissionVersionId, scores: { P: 1 }, rationale: '改善が必要', evidenceRefs: ['submission-text'] });
     await api.post(`/api/v1/reviews/${review.body.assessmentId}/finalize`).set(reviewer).send({ expectedVersion: 1 });
     const appeal = await api.post('/api/v1/review-appeals').set(student).send({ assessmentId: review.body.assessmentId, reason: '根拠の再確認を希望します' });
     expect(appeal.status).toBe(201);
+    await api.post('/api/v1/reviews/assign').set(teacher).send({ submissionVersionId: submitted.body.version.submissionVersionId, reviewerId: 'user-003' });
     const resolved = await api.post(`/api/v1/review-appeals/${appeal.body.appealId}/resolve`).set(teacher).send({ scores: { P: 2 }, rationale: '再評価済み' });
     expect(resolved.status).toBe(200);
     expect(resolved.body.appeal.status).toBe('resolved');
+  });
+
+  it('割り当てられていない評価者は評価を作成できない', async () => {
+    const created = await api.post('/api/v1/submissions').set({ ...student, 'Idempotency-Key': 'submission-unassigned-review' }).send({ assignmentId: 'assignment-001', content: 'unassigned review target' });
+    const submitted = await api.post(`/api/v1/submissions/${created.body.submission.submissionId}/submit`).set(student).send({ expectedVersion: 1 });
+    const response = await api.post('/api/v1/reviews').set(reviewer).send({ submissionVersionId: submitted.body.version.submissionVersionId, scores: { P: 2 }, rationale: '割当なし', evidenceRefs: [] });
+    expect(response.status).toBe(403);
+  });
+
+  it('所属解除済みユーザーは研修APIへアクセスできない', async () => {
+    const response = await api.get('/api/v1/quiz/next?lessonId=training-001').set({ Authorization: 'Bearer mock-user-006' });
+    expect(response.status).toBe(404);
   });
 
   it('担当教員は担当研修の分析を取得でき、学生は拒否される', async () => {
@@ -138,5 +154,14 @@ describe('担当B backend services', () => {
     expect(status.status).toBe(200);
     expect(status.body.status).toBe('QUEUED');
     expect(status.body).not.toHaveProperty('message');
+  });
+
+  it('管理者のAI停止ポリシーがジョブ受付を止める', async () => {
+    const stopped = await api.post('/api/v1/admin/policies').set({ Authorization: 'Bearer mock-user-005' }).send({ expectedVersion: 'policy-v1', aiEnabled: false, dailyAiLimit: 20, concurrentJobLimit: 1, allowAnswer: false });
+    const rejected = await api.post('/api/v1/tutor/jobs').set(student).send({ question: '停止中', requestedAction: 'hint' });
+    const restored = await api.post('/api/v1/admin/policies').set({ Authorization: 'Bearer mock-user-005' }).send({ expectedVersion: stopped.body.version, aiEnabled: true, dailyAiLimit: 20, concurrentJobLimit: 1, allowAnswer: true });
+    expect(stopped.status).toBe(200);
+    expect(rejected.status).toBe(503);
+    expect(restored.status).toBe(200);
   });
 });
