@@ -8,9 +8,9 @@
 |---|---|---|---|
 | B-01 / API-01 | ローカル完了 | 共通ID、エラー、OpenAPI、ページング、冪等キー、28パス | API Gatewayの実運用、正式API番号の最終合意 |
 | API-03 | ローカル完了 | 承認済み問題の安全な取得、正答非公開、所属確認、再回答root | 複数問題・複数形式 |
-| API-04 | 部分完了 | 客観採点、問題版保存、練習再回答除外、Idempotency-Key、409 | 複数問題版、DynamoDB原子更新 |
+| API-04 | 部分完了 | 客観採点、問題版保存、練習再回答除外、Idempotency-Key、409、DynamoDB条件更新アダプター | 複数問題版、実DynamoDB接続 |
 | API-05 / B-05 | 部分完了 | 直近10件、重み2/1、3件未満null、信頼度、K/P/E/D/L分離、到達保存 | 正式な全ルーブリック・複数単元の判定 |
-| API-06/07 | 部分完了 | AI受付、評価モード・利用枠・停止確認、本人限定状態取得 | SQS/Lambda実行、Cからの完了通知、30秒期限・DLQ |
+| API-06/07 | 部分完了 | AI受付、評価モード・利用枠・停止確認、本人限定状態取得、完了サービス | SQS/Lambda実行、Cからの実完了通知、30秒期限・DLQ |
 | API-08 / B-08 | 部分完了 | 担当研修の進捗・到達・提出済み・未提出・レビュー待ち集計 | 全集計項目、cursor/CSV、実DB集計 |
 | API-11 / B-09 | 部分完了 | 管理者削除要求、適用、削除台帳再適用 | 再認証、24時間削除、AWSバックアップ連携 |
 | API-12/13 | 契約完了 | InternalStudyContext、ApprovedQuestion、承認版型 | B/C間のサービス認証・実データ受渡し |
@@ -38,12 +38,11 @@
 
 ## AWS依存で未実装
 
-- Cognito JWTのJWKS署名検証、issuer/audience検証
-- API Gateway REST APIとCognito Authorizer
-- Lambda実行ハンドラー・SQS・DLQ・Scheduler
-- DynamoDB条件付き更新、Transaction、PITR
-- S3隔離・Versioning・署名URL・実体検査
-- CloudWatch、SNS、CloudTrail、WAF、KMS、Budgets
+- AWS上でのCognito User Pool、API Gateway、Lambda、DynamoDB、S3、CloudWatchの実リソース作成・デプロイ
+- SQS/DLQ/SchedulerのCDK構成
+- DynamoDBの実接続・Transaction・PITR運用確認
+- S3の実体検査、ウイルス検査、AWS環境での署名URL確認
+- CloudWatch Logs/SNS/CloudTrail/WAF/KMS/Budgetsの実設定
 
 ## 検証済み範囲
 

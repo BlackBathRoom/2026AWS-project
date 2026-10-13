@@ -17,8 +17,11 @@ InMemory実装は、採点・版競合・冪等キー・削除状態・利用枠
 - `StorageProvider`: 非公開S3、短期署名URL、ウイルス/実体検査連携
 - `AiTutorProvider`: SQS/Lambda/Bedrock/Knowledge Bases連携
 - `BackendRepository`: DynamoDBの条件付き更新、トランザクション、PITR
+- `src/repositories/dynamo-repository.ts`: DynamoDBの取得・条件付き更新・削除
+- `src/lambda.ts`: API Gateway/Lambda実行入口
+- `cdk/src/backend-stack.ts`: Cognito、API Gateway、Lambda、DynamoDB、S3、CloudWatch LogsのIaC
 
-AWS API Gateway、Lambda、Cognito、DynamoDB、S3、CloudWatch、WAF、KMSの実リソース作成・デプロイは対象外です。
+AWS API Gateway、Lambda、Cognito、DynamoDB、S3、CloudWatchの実リソース作成・デプロイは対象外です。CDKコードとsynth検証までは完了しています。WAF、KMS、SQS、EventBridge、BudgetsのIaCは未作成です。
 
 ## 重要な保護
 
