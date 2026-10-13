@@ -24,6 +24,17 @@ describe('担当B backend services', () => {
     expect(retry.body).toEqual(first.body);
   });
 
+  it('再回答は同じrootに紐付き、知識スコアへ再加算しない', async () => {
+    const initial = await api.post('/api/v1/attempts').set({ ...student, 'Idempotency-Key': 'attempt-practice-initial' }).send({ attemptId: 'attempt-practice-root', questionId: 'question-001', answer: ['a'], responseTimeMs: 500 });
+    const before = await api.get('/api/v1/progress?concept_id=concept-001').set(student);
+    const retryQuestion = await api.get('/api/v1/quiz/next?lessonId=training-001&retry_of=attempt-practice-root').set(student);
+    const practice = await api.post('/api/v1/attempts').set({ ...student, 'Idempotency-Key': 'attempt-practice-retry' }).send({ attemptId: 'attempt-practice-retry-id', questionId: 'question-001', retryOf: initial.body.attemptId, answer: ['b'], responseTimeMs: 400 });
+    const after = await api.get('/api/v1/progress?concept_id=concept-001').set(student);
+    expect(retryQuestion.body.rootAttemptId).toBe(initial.body.attemptId);
+    expect(practice.body.scored).toBe(false);
+    expect(after.body.items[0].attemptCount).toBe(before.body.items[0].attemptCount);
+  });
+
   it('同じIdempotency-Keyで異なる内容を送ると409になる', async () => {
     const response = await api.post('/api/v1/attempts').set({ ...student, 'Idempotency-Key': 'attempt-key-001' }).send({ attemptId: 'attempt-contract-002', questionId: 'question-001', answer: ['a'], responseTimeMs: 900 });
     expect(response.status).toBe(409);
@@ -78,6 +89,17 @@ describe('担当B backend services', () => {
     expect(response.status).toBe(409);
   });
 
+  it('同じ提出版を同時更新すると一方だけ成功する', async () => {
+    const created = await api.post('/api/v1/submissions').set({ ...student, 'Idempotency-Key': 'submission-concurrent-001' }).send({ assignmentId: 'assignment-001', content: 'concurrent' });
+    const submissionId = created.body.submission.submissionId;
+    const responses = await Promise.all([
+      api.patch(`/api/v1/submissions/${submissionId}`).set(student).send({ expectedVersion: 1, content: 'first' }),
+      api.patch(`/api/v1/submissions/${submissionId}`).set(student).send({ expectedVersion: 1, content: 'second' })
+    ]);
+    expect(responses.filter((response) => response.status === 200)).toHaveLength(1);
+    expect(responses.filter((response) => response.status === 409)).toHaveLength(1);
+  });
+
   it('添付ファイルはサイズとMIMEを検証する', async () => {
     const created = await api.post('/api/v1/submissions').set({ ...student, 'Idempotency-Key': 'submission-test-003' }).send({ assignmentId: 'assignment-001', content: 'file target' });
     const invalid = await api.post(`/api/v1/submissions/${created.body.submission.submissionId}/files`).set(student).send({ filename: 'evil.html', mimeType: 'text/html', size: 10, checksum: 'hash' });
@@ -112,6 +134,7 @@ describe('担当B backend services', () => {
     const resolved = await api.post(`/api/v1/review-appeals/${appeal.body.appealId}/resolve`).set(teacher).send({ scores: { P: 2 }, rationale: '再評価済み' });
     expect(resolved.status).toBe(200);
     expect(resolved.body.appeal.status).toBe('resolved');
+    expect(resolved.body.assessment.status).toBe('final');
   });
 
   it('割り当てられていない評価者は評価を作成できない', async () => {

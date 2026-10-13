@@ -39,14 +39,16 @@ export function getSafeQuestion(repo: InMemoryBackendRepository, auth: AuthConte
   return safeQuestion;
 }
 
-export function nextQuestion(repo: InMemoryBackendRepository, auth: AuthContext, lessonId: string) {
+export function nextQuestion(repo: InMemoryBackendRepository, auth: AuthContext, lessonId: string, retryOf?: string) {
   requireDataAccess(repo, auth, 'learning');
   requireCurrentTraining(repo, auth, lessonId);
-  const question = repo.questions.find((item) => item.trainingId === lessonId && item.organizationId === auth.organizationId && item.approvalStatus === 'APPROVED');
+  const retryAttempt = retryOf ? repo.attempts.find((item) => item.attemptId === retryOf && item.userId === auth.userId) : undefined;
+  if (retryOf && !retryAttempt) throw new DomainError(404, 'NOT_FOUND', '再回答元が見つかりません');
+  const question = repo.questions.find((item) => item.trainingId === lessonId && item.organizationId === auth.organizationId && item.approvalStatus === 'APPROVED' && (!retryAttempt || item.questionId === retryAttempt.questionId));
   if (!question) throw new DomainError(404, 'NOT_FOUND', '出題可能な承認済み問題がありません');
   const root = `attempt-${randomUUID()}` as Attempt['attemptId'];
   const { correctAnswer: _correctAnswer, ...safeQuestion } = question;
-  return { attemptId: root, rootAttemptId: root, ...safeQuestion, reason: '承認済み問題から出題', mode: 'learning' as const };
+  return { attemptId: root, rootAttemptId: retryAttempt?.rootAttemptId || root, ...safeQuestion, reason: retryAttempt ? '同じrootへの練習再回答' : '承認済み問題から出題', mode: 'learning' as const };
 }
 
 function calculateProgress(repo: InMemoryBackendRepository, auth: AuthContext, conceptId: string): KnowledgeProgress {
@@ -68,23 +70,26 @@ function calculateProgress(repo: InMemoryBackendRepository, auth: AuthContext, c
   return progress;
 }
 
-export function saveAttempt(repo: InMemoryBackendRepository, auth: AuthContext, input: { attemptId: string; questionId: string; answer: string[]; responseTimeMs: number; idempotencyKey: string }) {
+export function saveAttempt(repo: InMemoryBackendRepository, auth: AuthContext, input: { attemptId: string; questionId: string; answer: string[]; responseTimeMs: number; idempotencyKey: string; retryOf?: string }) {
   if (!input.idempotencyKey) throw new DomainError(422, 'UNPROCESSABLE_ENTITY', 'Idempotency-Keyが必要です');
   const key = `${auth.userId}:${input.idempotencyKey}`;
   const existing = repo.idempotency.get(key) as { fingerprint: string; response: unknown } | undefined;
-  const fingerprint = JSON.stringify({ questionId: input.questionId, answer: input.answer, responseTimeMs: input.responseTimeMs });
+  const fingerprint = JSON.stringify({ questionId: input.questionId, answer: input.answer, responseTimeMs: input.responseTimeMs, retryOf: input.retryOf });
   if (existing) { if (existing.fingerprint !== fingerprint) throw new DomainError(409, 'CONFLICT', '同じIdempotency-Keyに異なる内容を指定できません'); return existing.response; }
   const question = repo.getQuestion(input.questionId);
   if (!question || question.approvalStatus !== 'APPROVED') throw new DomainError(404, 'NOT_FOUND', '承認済み問題が見つかりません');
   requireOrganization(auth, question.organizationId); requireCurrentTraining(repo, auth, question.trainingId);
   if (!Array.isArray(input.answer) || input.answer.length === 0 || input.responseTimeMs < 0) throw new DomainError(422, 'UNPROCESSABLE_ENTITY', '解答形式が不正です');
+  const retryAttempt = input.retryOf ? repo.attempts.find((item) => item.attemptId === input.retryOf && item.userId === auth.userId) : undefined;
+  if (input.retryOf && (!retryAttempt || retryAttempt.questionId !== question.questionId)) throw new DomainError(409, 'CONFLICT', '再回答元と問題が一致しません');
   const correct = [...input.answer].sort().join(',') === [...question.correctAnswer].sort().join(',');
-  const attempt: Attempt = { attemptId: input.attemptId as Attempt['attemptId'], rootAttemptId: input.attemptId as Attempt['attemptId'], userId: auth.userId, organizationId: auth.organizationId, trainingId: question.trainingId, questionId: question.questionId, questionVersionId: question.version, answer: input.answer, responseTimeMs: input.responseTimeMs, kind: 'initial', status: 'scored', correct, scored: true, conceptId: question.conceptId, idempotencyKey: input.idempotencyKey, createdAt: now() };
+  const isPractice = Boolean(retryAttempt);
+  const attempt: Attempt = { attemptId: input.attemptId as Attempt['attemptId'], rootAttemptId: retryAttempt?.rootAttemptId || input.attemptId as Attempt['attemptId'], retryOf: retryAttempt?.attemptId, userId: auth.userId, organizationId: auth.organizationId, trainingId: question.trainingId, questionId: question.questionId, questionVersionId: question.version, answer: input.answer, responseTimeMs: input.responseTimeMs, kind: isPractice ? 'practice' : 'initial', status: isPractice ? 'unscored' : 'scored', correct, scored: !isPractice, conceptId: question.conceptId, idempotencyKey: input.idempotencyKey, createdAt: now() };
   if (repo.attempts.some((item) => item.attemptId === attempt.attemptId)) throw new DomainError(409, 'CONFLICT', 'attempt_idが重複しています');
   repo.attempts.push(attempt);
   repo.histories.push({ userId: auth.userId, attemptId: attempt.attemptId, conceptId: question.conceptId, action: 'answer', occurredAt: attempt.createdAt });
-  const progress = calculateProgress(repo, auth, question.conceptId);
-  const response = { attemptId: attempt.attemptId, result: correct ? 'correct' : 'incorrect', scored: true, mastery: progress.score, confidence: progress.confidence, nextAction: progress.reasons.length ? 'review' : 'continue' };
+  const progress = isPractice ? repo.progress.find((item) => item.userId === auth.userId && item.conceptId === question.conceptId) : calculateProgress(repo, auth, question.conceptId);
+  const response = { attemptId: attempt.attemptId, result: correct ? 'correct' : 'incorrect', scored: !isPractice, mastery: progress?.score ?? null, confidence: progress?.confidence ?? 'unmeasured', nextAction: isPractice ? 'continue' : progress?.reasons.length ? 'review' : 'continue' };
   repo.idempotency.set(key, { fingerprint, response });
   return response;
 }
@@ -115,7 +120,7 @@ export function createSubmission(repo: InMemoryBackendRepository, auth: AuthCont
 export function updateSubmission(repo: InMemoryBackendRepository, auth: AuthContext, submissionId: string, expectedVersion: number, content: string) {
   requireDataAccess(repo, auth, 'submissions');
   const submission = repo.submissions.find((item) => item.submissionId === submissionId); if (!submission || submission.ownerId !== auth.userId) throw new DomainError(404, 'NOT_FOUND', '提出物が見つかりません');
-  if (submission.status !== 'draft' || submission.expectedVersion !== expectedVersion) throw new DomainError(409, 'CONFLICT', '提出物の版が競合しています');
+  if (submission.status !== 'draft' || !repo.conditionalUpdate(submission.expectedVersion, expectedVersion, () => undefined)) throw new DomainError(409, 'CONFLICT', '提出物の版が競合しています');
   const version = repo.submissionVersions.find((item) => item.submissionId === submissionId && item.versionNumber === submission.currentVersion)!; version.content = content; submission.expectedVersion += 1; submission.updatedAt = now(); return { submission, version };
 }
 
@@ -123,12 +128,12 @@ export function submitSubmission(repo: InMemoryBackendRepository, auth: AuthCont
   requireDataAccess(repo, auth, 'submissions');
   const submission = repo.submissions.find((item) => item.submissionId === submissionId); if (!submission || submission.ownerId !== auth.userId) throw new DomainError(404, 'NOT_FOUND', '提出物が見つかりません');
   if (submission.status === 'submitted' && content !== undefined) {
-    if (submission.expectedVersion !== expectedVersion) throw new DomainError(409, 'CONFLICT', '提出物の版が競合しています');
+    if (!repo.conditionalUpdate(submission.expectedVersion, expectedVersion, () => undefined)) throw new DomainError(409, 'CONFLICT', '提出物の版が競合しています');
     const assignment = repo.getAssignment(submission.assignmentId); if (!assignment) throw new DomainError(404, 'NOT_FOUND', '課題が見つかりません');
     const version: SubmissionVersion = { submissionVersionId: `submission-version-${randomUUID()}` as SubmissionVersion['submissionVersionId'], submissionId: submission.submissionId, assignmentId: submission.assignmentId, assignmentVersion: assignment.version, ownerId: auth.userId, versionNumber: submission.currentVersion + 1, content, fileIds: [], aidDeclaration: 'none', status: 'submitted', submittedAt: now() };
     repo.submissionVersions.push(version); submission.currentVersion = version.versionNumber; submission.expectedVersion += 1; submission.updatedAt = now(); return { submission, version };
   }
-  if (submission.status !== 'draft' || submission.expectedVersion !== expectedVersion) throw new DomainError(409, 'CONFLICT', '提出物の版が競合しています');
+  if (submission.status !== 'draft' || !repo.conditionalUpdate(submission.expectedVersion, expectedVersion, () => undefined)) throw new DomainError(409, 'CONFLICT', '提出物の版が競合しています');
   const version = repo.submissionVersions.find((item) => item.submissionId === submissionId && item.versionNumber === submission.currentVersion)!;
   if (!version.content.trim()) throw new DomainError(422, 'UNPROCESSABLE_ENTITY', '提出本文が必要です');
   submission.status = 'submitted'; version.status = 'submitted'; version.submittedAt = now(); submission.expectedVersion += 1; submission.updatedAt = now(); return { submission, version };
@@ -139,7 +144,7 @@ export function finalizeAssessment(repo: InMemoryBackendRepository, auth: AuthCo
   const submissionVersion = repo.submissionVersions.find((item) => item.submissionVersionId === assessment.submissionVersionId); if (!submissionVersion) throw new DomainError(404, 'NOT_FOUND', '提出版が見つかりません');
   if (submissionVersion.ownerId === auth.userId) throw new DomainError(403, 'FORBIDDEN', '自分の提出物は評価できません');
   if (assessment.reviewerId !== auth.userId) throw new DomainError(403, 'FORBIDDEN', '割り当てられた評価者ではありません');
-  if (assessment.status !== 'draft' || assessment.version !== expectedVersion) throw new DomainError(409, 'CONFLICT', '評価の版が競合しています');
+  if (assessment.status !== 'draft' || !repo.conditionalUpdate(assessment.version, expectedVersion, () => undefined)) throw new DomainError(409, 'CONFLICT', '評価の版が競合しています');
   if (!assessment.rationale.trim() || Object.keys(assessment.scores).length === 0) throw new DomainError(422, 'UNPROCESSABLE_ENTITY', '評価根拠と観点別点数が必要です');
   assessment.status = 'final'; assessment.version += 1;
   const assignment = repo.reviewAssignments.find((item) => item.submissionVersionId === assessment.submissionVersionId && item.reviewerId === auth.userId);
