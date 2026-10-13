@@ -49,6 +49,8 @@ paths:
           in: query
           required: false
           schema: { $ref: '#/components/schemas/TrainingId' }
+        - { name: cursor, in: query, required: false, schema: { type: string } }
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 50, default: 50 } }
       responses:
         '200':
           description: 研修一覧
@@ -80,6 +82,306 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '500': { $ref: '#/components/responses/InternalError' }
+  /quiz/next:
+    get:
+      tags: [learning]
+      summary: 承認済み問題を取得
+      operationId: getNextQuestion
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: lessonId, in: query, required: true, schema: { $ref: '#/components/schemas/TrainingId' } }
+      responses:
+        '200': { description: 問題, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /attempts:
+    post:
+      tags: [learning]
+      summary: 回答を採点して保存
+      operationId: createAttempt
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 1 } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } }
+      responses:
+        '201': { description: 採点結果, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /progress:
+    get:
+      tags: [learning]
+      summary: 知識進捗を取得
+      operationId: getProgress
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: concept_id, in: query, required: false, schema: { type: string } }
+      responses:
+        '200': { description: 知識進捗, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /attainment:
+    get:
+      tags: [learning]
+      summary: 5軸到達状態を取得
+      operationId: getAttainment
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: trainingId, in: query, required: true, schema: { $ref: '#/components/schemas/TrainingId' } }
+      responses:
+        '200': { description: 到達状態, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /recommendations:
+    get:
+      tags: [learning]
+      summary: 復習推薦を取得
+      operationId: getRecommendations
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: trainingId, in: query, required: true, schema: { $ref: '#/components/schemas/TrainingId' } }]
+      responses:
+        '200': { description: 復習候補, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /training-assignments/{id}:
+    get:
+      tags: [training]
+      summary: 指導課題を取得
+      operationId: getTrainingAssignment
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: 課題, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /submissions:
+    post:
+      tags: [submission]
+      summary: 提出下書きを作成
+      operationId: createSubmission
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } }
+      responses:
+        '201': { description: 下書き, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /submissions/{id}:
+    get:
+      tags: [submission]
+      summary: 提出と提出版履歴を取得
+      operationId: getSubmission
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: 提出履歴, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [submission]
+      summary: 提出下書きを更新
+      operationId: updateSubmission
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } }
+      responses:
+        '200': { description: 更新済み提出, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /submissions/{id}/submit:
+    post:
+      tags: [submission]
+      summary: 提出版を確定
+      operationId: submitSubmission
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } }
+      responses:
+        '200': { description: 提出版, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /reviews:
+    get:
+      tags: [review]
+      summary: 担当レビュー一覧を取得
+      operationId: listReviews
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: レビュー一覧, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [review]
+      summary: 人間評価を作成
+      operationId: createReview
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } }
+      responses:
+        '201': { description: 評価下書き, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /reviews/{id}/finalize:
+    post:
+      tags: [review]
+      summary: 人間評価を確定
+      operationId: finalizeReview
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } }
+      responses:
+        '200': { description: 確定評価, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /review-appeals:
+    post:
+      tags: [review]
+      summary: 評価への異議を申し立て
+      operationId: createReviewAppeal
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } }
+      responses:
+        '201': { description: 異議申立て, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /cohorts/{id}/analytics:
+    get:
+      tags: [analytics]
+      summary: 担当研修の分析を取得
+      operationId: getCohortAnalytics
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: 集計, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /me/training-profile:
+    get:
+      tags: [training]
+      summary: 自分の研修プロフィールを取得
+      operationId: getTrainingProfile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: 研修プロフィール, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+    put:
+      tags: [training]
+      summary: 自分の研修プロフィールを更新
+      operationId: updateTrainingProfile
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } }
+      responses:
+        '200': { description: 更新済みプロフィール, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /submissions/{id}/files:
+    post:
+      tags: [submission]
+      summary: 提出添付メタデータを登録
+      operationId: createSubmissionFile
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } }
+      responses:
+        '201': { description: 検査待ち添付, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /files/{id}:
+    get:
+      tags: [submission]
+      summary: 検査済み添付メタデータを取得
+      operationId: getSubmissionFile
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: 添付メタデータ, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/deletion-requests:
+    post:
+      tags: [admin]
+      summary: データ削除要求を受け付け
+      operationId: createDeletionRequest
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } }
+      responses:
+        '202': { description: 削除要求, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /admin/deletion-requests/{id}/apply:
+    post:
+      tags: [admin]
+      summary: データ削除を適用
+      operationId: applyDeletionRequest
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: 適用済み削除要求, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/deletion-requests/{id}/reapply:
+    post:
+      tags: [admin]
+      summary: 削除台帳を再適用
+      operationId: reapplyDeletionLedger
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: 再適用済み, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/usage:
+    get:
+      tags: [admin]
+      summary: 自分のAI利用量を取得
+      operationId: getUsage
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: 利用量, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+  /tutor/jobs:
+    post:
+      tags: [learning]
+      summary: AI支援ジョブを受付
+      operationId: createTutorJob
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } }
+      responses:
+        '202': { description: 受付済みジョブ, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /tutor/jobs/{id}:
+    get:
+      tags: [learning]
+      summary: AIジョブ状態を取得
+      operationId: getTutorJob
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: ジョブ状態, content: { application/json: { schema: { $ref: '#/components/schemas/GenericObject' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
 components:
   securitySchemes:
     bearerAuth:
@@ -96,6 +398,24 @@ components:
     NotFound:
       description: リソースなし
       content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    Forbidden:
+      description: 権限不足
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    Conflict:
+      description: 版または冪等キーの競合
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    UnprocessableEntity:
+      description: 入力値または状態が処理不能
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    PayloadTooLarge:
+      description: ペイロードが大きすぎる
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    RateLimited:
+      description: 利用上限
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    ServiceUnavailable:
+      description: サービス停止中
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
     InternalError:
       description: 内部エラー
       content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
@@ -104,7 +424,7 @@ components:
       type: object
       required: [code, message, requestId, timestamp]
       properties:
-        code: { type: string, enum: [VALIDATION_ERROR, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, RATE_LIMITED, INTERNAL_ERROR, SERVICE_UNAVAILABLE] }
+        code: { type: string, enum: [VALIDATION_ERROR, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY, PAYLOAD_TOO_LARGE, GONE, RATE_LIMITED, INTERNAL_ERROR, SERVICE_UNAVAILABLE] }
         message: { type: string }
         requestId: { type: string }
         timestamp: { type: string, format: date-time }
@@ -135,6 +455,7 @@ components:
       required: [items]
       properties:
         items: { type: array, items: { $ref: '#/components/schemas/Training' } }
+        nextCursor: { type: string }
     StudyContext:
       type: object
       required: [userId, organizationId, trainingId, assignmentId, mode, assistancePolicy, ruleVersionId]
@@ -151,3 +472,6 @@ components:
     TrainingId: { type: string, pattern: '^[A-Za-z0-9_-]+$' }
     AssignmentId: { type: string, pattern: '^[A-Za-z0-9_-]+$' }
     RuleVersionId: { type: string, pattern: '^[A-Za-z0-9_-]+$' }
+    GenericObject:
+      type: object
+      additionalProperties: true
