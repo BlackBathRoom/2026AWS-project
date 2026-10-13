@@ -2,7 +2,7 @@ import { Request, Response, Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { AuthContext } from '../contracts/user';
-import { requireMockAuth } from '../middleware/mock-auth';
+import { requireBackendAuth } from '../middleware/mock-auth';
 import { backendRepository as repo } from '../repositories/backend-repository';
 import { DomainError, applyDeletion, assignReview, calculateAttainment, completeTutorJob, createSubmission, finalizeAssessment, getProgress, getRecommendations, getSafeQuestion, getUsage, nextQuestion, reapplyDeletionLedger, requireCurrentTraining, requireOrganization, requireRole, requireSelf, requireTraining, reserveAi, saveAttempt, submitSubmission, updateSubmission } from '../services/backend-services';
 
@@ -20,7 +20,7 @@ const axisScores = z.object({ K: z.number().int().min(0).max(3), P: z.number().i
 const reviewInput = z.object({ submissionVersionId: id, scores: axisScores, rationale: z.string().min(1).max(10000), evidenceRefs: z.array(z.string().max(256)).max(50) });
 
 export const backendRouter = Router();
-backendRouter.use(requireMockAuth);
+backendRouter.use(requireBackendAuth);
 
 backendRouter.get('/quiz/next', endpoint((req, res) => {
   const auth = req.auth!; const lessonId = id.parse(req.query.lessonId); const retryOf = req.query.retry_of === undefined ? undefined : id.parse(req.query.retry_of); res.json(nextQuestion(repo, auth, lessonId, retryOf));

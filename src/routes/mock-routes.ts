@@ -1,12 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { studyContexts, trainings } from '../mocks/sample-data';
-import { requireMockAuth } from '../middleware/mock-auth';
+import { requireBackendAuth } from '../middleware/mock-auth';
 import { idSchema } from '../contracts/common';
 
 function error(res: Response, req: Request, status: number, code: 'VALIDATION_ERROR' | 'NOT_FOUND', message: string): void { res.status(status).json({ code, message, requestId: req.requestId, timestamp: new Date().toISOString() }); }
 export const mockRouter = Router();
 mockRouter.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
-mockRouter.use(requireMockAuth);
+mockRouter.use(requireBackendAuth);
 mockRouter.get('/me', (req, res) => { const auth = req.auth!; res.json({ userId: auth.userId, organizationId: auth.organizationId, role: auth.role, trainingIds: auth.trainingIds }); });
 mockRouter.get('/trainings', (req, res) => {
   const auth = req.auth!;
