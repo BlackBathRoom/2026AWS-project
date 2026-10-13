@@ -16,6 +16,16 @@ export type SubmissionStatus = 'draft' | 'submitted' | 'reviewed' | 'deleted';
 export type Axis = 'K' | 'P' | 'E' | 'D' | 'L';
 export type AttainmentStatus = 'attained' | 'not_attained' | 'pending';
 
+export interface Organization { organizationId: OrganizationId; name: string; status: 'active' | 'suspended'; }
+export interface UserRecord { userId: UserId; organizationId: OrganizationId; role: 'student' | 'teacher' | 'admin' | 'reviewer'; status: 'active' | 'withdrawn'; }
+export interface Membership { userId: UserId; organizationId: OrganizationId; trainingIds: TrainingId[]; startsAt: string; endsAt: string | null; status: 'active' | 'ended'; }
+export interface ApprovedQuestionReference { questionId: QuestionId; version: QuestionVersionId; sourceRefs: string[]; approvalStatus: 'APPROVED'; }
+export interface KnowledgeEdge { edgeId: string; fromConceptId: ConceptId; toConceptId: ConceptId; relation: 'prerequisite'; organizationId: OrganizationId; version: string; approvalStatus: 'APPROVED'; }
+export interface Answer { attemptId: StudyAttemptId; answer: string[]; correct: boolean | null; scoredAt: string | null; }
+export interface LearningHistory { userId: UserId; attemptId: StudyAttemptId; conceptId: ConceptId; action: 'answer' | 'review'; occurredAt: string; }
+export interface Attainment { userId: UserId; trainingId: TrainingId; axes: Partial<Record<Axis, number | null>>; status: AttainmentStatus; evidenceRefs: string[]; rubricVersionId: RubricVersionId; }
+export interface ReEvaluation { reEvaluationId: string; assessmentId: string; reviewerId: UserId; decision: 'accepted' | 'rejected'; createdAt: string; }
+
 export interface ApprovedQuestion { questionId: QuestionId; version: QuestionVersionId; organizationId: OrganizationId; trainingId: TrainingId; conceptId: ConceptId; format: QuestionFormat; prompt: string; choices: string[]; correctAnswer: string[]; approvalStatus: 'APPROVED'; ruleVersionId: RuleVersionId; }
 export interface Attempt { attemptId: StudyAttemptId; rootAttemptId: StudyAttemptId; userId: UserId; organizationId: OrganizationId; trainingId: TrainingId; questionId: QuestionId; questionVersionId: QuestionVersionId; answer: string[]; responseTimeMs: number; kind: AttemptKind; status: AttemptStatus; correct?: boolean; scored: boolean; conceptId: ConceptId; idempotencyKey: string; createdAt: string; }
 export interface KnowledgeProgress { userId: UserId; organizationId: OrganizationId; trainingId: TrainingId; conceptId: ConceptId; score: number | null; confidence: Confidence; reasons: string[]; nextReviewAt: string | null; mastery: MasteryStatus; attemptCount: number; formatCount: number; }

@@ -8,7 +8,8 @@ export const mockUsers: Record<string, AuthContext> = {
   'mock-user-002': { userId: asUserId('user-002'), organizationId: asOrganizationId('school-002'), role: 'student', trainingIds: [asTrainingId('training-002')], issuedAt: '2026-01-01T00:00:00Z', expiresAt: '2099-01-01T00:00:00Z' },
   'mock-user-003': { userId: asUserId('user-003'), organizationId: asOrganizationId('school-001'), role: 'teacher', trainingIds: [asTrainingId('training-001')], issuedAt: '2026-01-01T00:00:00Z', expiresAt: '2099-01-01T00:00:00Z' },
   'mock-user-004': { userId: asUserId('user-004'), organizationId: asOrganizationId('school-001'), role: 'reviewer', trainingIds: [asTrainingId('training-001')], issuedAt: '2026-01-01T00:00:00Z', expiresAt: '2099-01-01T00:00:00Z' },
-  'mock-user-005': { userId: asUserId('user-005'), organizationId: asOrganizationId('school-001'), role: 'admin', trainingIds: [asTrainingId('training-001')], issuedAt: '2026-01-01T00:00:00Z', expiresAt: '2099-01-01T00:00:00Z' }
+  'mock-user-005': { userId: asUserId('user-005'), organizationId: asOrganizationId('school-001'), role: 'admin', trainingIds: [asTrainingId('training-001')], issuedAt: '2026-01-01T00:00:00Z', expiresAt: '2099-01-01T00:00:00Z' },
+  'mock-user-006': { userId: asUserId('user-006'), organizationId: asOrganizationId('school-001'), role: 'student', trainingIds: [asTrainingId('training-001')], issuedAt: '2026-01-01T00:00:00Z', expiresAt: '2099-01-01T00:00:00Z' }
 };
 export const trainings: Training[] = [
   { trainingId: asTrainingId('training-001'), organizationId: asOrganizationId('school-001'), name: '情報II 基礎', status: 'active' },
