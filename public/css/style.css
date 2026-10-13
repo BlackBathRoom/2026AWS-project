@@ -5,3 +5,156 @@
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 /* v2: 長い正式章名、章選択と静的添付表示 */
 .topbar select{max-width:min(65vw,620px);margin:0}.topbar label{white-space:nowrap}.material-list button{width:100%;text-align:left;white-space:normal;line-height:1.6;background:transparent;border:0;border-radius:8px}.material-list button.selected{background:var(--green-soft,#eaf2eb)}.attachment-preview{max-height:24rem;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}.hero h2{max-width:740px;overflow-wrap:anywhere}.card,.workspace{min-width:0}.prose,.pre,.source{overflow-wrap:anywhere}.table-wrap{overflow-x:auto}.review-form{border-top:1px solid #dce5dd;padding-top:20px;margin-top:20px}.topbar{gap:12px}@media(max-width:700px){.topbar{align-items:flex-start;flex-wrap:wrap}.topbar select{max-width:100%;width:100%;order:3}.hero-art{display:none}.hero h2{font-size:27px}.material-layout{display:block}.grid.five{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* 1枚目：説明とログイン欄を一つのパネルにまとめる */
+.login {
+    width: calc(100% - 48px);
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 40px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 40px;
+    align-items: center;
+  
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+  }
+  
+  .login-intro h1 {
+    font-size: clamp(30px, 3vw, 42px);
+  }
+  
+  .login .large {
+    margin-bottom: 24px;
+  }
+  
+  .login-card {
+    padding: 0;
+    margin-bottom: 0;
+    border: 0;
+    box-shadow: none;
+  }
+  
+  #login-form select {
+    min-height: 44px;
+  }
+  
+  #login-form button {
+    width: 100%;
+  }
+  
+  /* 2枚目：緑のエリアと下のカードを離す */
+  .hero + .grid {
+    margin-top: 24px;
+  }
+  
+  /* 3枚目：下書き保存と提出の間隔 */
+  .task-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  
+  #task-form .task-actions > button {
+    margin: 0;
+    min-height: 44px;
+  }
+  
+  /* ファイル選択と保存ボタンを離す */
+  .attachment-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    margin-top: 12px;
+  }
+  
+  .attachment-controls input[type="file"] {
+    width: 100%;
+    min-width: 0;
+    padding: 12px;
+    font-size: 14px;
+    background: #f7faf8;
+  }
+  
+/* 課題の添付・教材原本のファイル選択欄 */
+:is(#attachment, #content-file) {
+    width: 100%;
+    padding: 12px;
+    border: 1px dashed #9db6a9;
+    border-radius: 12px;
+    background: #f7faf8;
+    color: #52665c;
+    font-size: 14px;
+  }
+  
+  /* ファイルを選択するボタン */
+  :is(#attachment, #content-file)::file-selector-button {
+    margin-right: 16px;
+    padding: 12px 20px;
+    min-height: 44px;
+    border: 1px solid #176b53;
+    border-radius: 9px;
+    background: #e7f3ed;
+    color: #155c48;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  :is(#attachment, #content-file)::file-selector-button:hover {
+    background: #d5eadd;
+  }
+  
+  :is(#attachment, #content-file):focus-visible {
+    outline: 3px solid #d3981c;
+    outline-offset: 3px;
+  }
+  /* キーボード操作時 */
+  #attachment:focus-visible {
+    outline: 3px solid #d3981c;
+    outline-offset: 3px;
+  }
+  
+  /* 「添付を保存」との間隔 */
+  #upload {
+    margin-top: 16px;
+  }
+  .attachment-controls #upload {
+    margin: 0;
+    min-height: 44px;
+  }
+  
+  /* 添付一覧が空なら、余白も表示しない */
+  #files:empty {
+    display: none;
+  }
+  
+  #files:not(:empty) {
+    margin-top: 16px;
+  }
+  
+  /* 右の評価観点カードを、左のフォームの高さまで伸ばさない */
+  .task-layout {
+    align-items: start;
+  }
+  
+  /* スマートフォンでは縦並び */
+  @media (max-width: 760px) {
+    .login {
+      width: calc(100% - 32px);
+      margin: 24px auto;
+      padding: 24px;
+      grid-template-columns: 1fr;
+      gap: 28px;
+    }
+  
+    .task-actions > button {
+      flex: 1 1 140px;
+    }
+  }
+
