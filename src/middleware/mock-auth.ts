@@ -7,7 +7,7 @@ export function requireMockAuth(req: Request, res: Response, next: NextFunction)
   const header = req.header('authorization');
   const token = header?.startsWith('Bearer ') ? header.slice(7) : undefined;
   const auth = process.env.NODE_ENV !== 'production' && token ? mockUsers[token] : undefined;
-  if (!auth) { res.status(401).json({ code: 'UNAUTHORIZED', message: '認証が必要です', requestId: req.requestId, timestamp: new Date().toISOString() }); return; }
+  if (!auth || Date.parse(auth.expiresAt) <= Date.now()) { res.status(401).json({ code: 'UNAUTHORIZED', message: '認証が必要です', requestId: req.requestId, timestamp: new Date().toISOString() }); return; }
   req.auth = auth;
   next();
 }
