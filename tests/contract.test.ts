@@ -42,6 +42,10 @@ describe('B-01 API contract', () => {
     expect(response.status).toBe(200);
     expect(response.body.items).toEqual([{ trainingId: 'training-001', organizationId: 'school-001', name: '情報II 基礎', status: 'active' }]);
   });
+  it('一覧のページサイズを最大50件に制限する', async () => {
+    const response = await api.get('/api/v1/trainings?limit=51').set(auth);
+    expectApiError(response, 400, 'VALIDATION_ERROR');
+  });
   it('認証情報がない場合は401を返す', async () => expectApiError(await api.get('/api/v1/me'), 401, 'UNAUTHORIZED'));
   it('不正な認証情報の場合は401を返す', async () => expectApiError(await api.get('/api/v1/me').set('Authorization', 'Bearer invalid'), 401, 'UNAUTHORIZED'));
   it('他校のデータにアクセスできない', async () => expectApiError(await api.get('/api/v1/trainings?trainingId=training-002').set(auth), 404, 'NOT_FOUND'));
