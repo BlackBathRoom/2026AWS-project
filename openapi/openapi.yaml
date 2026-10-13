@@ -22,6 +22,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/HealthResponse' }
               example: { status: ok, timestamp: '2026-10-10T00:00:00Z' }
+        '500': { $ref: '#/components/responses/InternalError' }
   /me:
     get:
       tags: [common]
@@ -36,6 +37,7 @@ paths:
               schema: { $ref: '#/components/schemas/UserProfile' }
               example: { userId: user-001, organizationId: school-001, role: student, trainingIds: [training-001] }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
   /trainings:
     get:
       tags: [common]
@@ -52,14 +54,12 @@ paths:
           description: 研修一覧
           content:
             application/json:
-              schema:
-                type: object
-                required: [items]
-                properties:
-                  items: { type: array, items: { $ref: '#/components/schemas/Training' } }
+              schema: { $ref: '#/components/schemas/TrainingListResponse' }
               example: { items: [{ trainingId: training-001, organizationId: school-001, name: 情報II 基礎, status: active }] }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '400': { $ref: '#/components/responses/ValidationError' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
   /study-context:
     get:
       tags: [common]
@@ -79,6 +79,7 @@ paths:
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
 components:
   securitySchemes:
     bearerAuth:
@@ -94,6 +95,9 @@ components:
       content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
     NotFound:
       description: リソースなし
+      content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    InternalError:
+      description: 内部エラー
       content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
   schemas:
     ApiError:
@@ -126,6 +130,11 @@ components:
         organizationId: { $ref: '#/components/schemas/OrganizationId' }
         name: { type: string }
         status: { type: string, enum: [active, archived] }
+    TrainingListResponse:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Training' } }
     StudyContext:
       type: object
       required: [userId, organizationId, trainingId, assignmentId, mode, assistancePolicy, ruleVersionId]
