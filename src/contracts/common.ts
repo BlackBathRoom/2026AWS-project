@@ -16,7 +16,7 @@ export type RuleVersionId = Brand<string, 'RuleVersionId'>;
 
 export const roles = ['student', 'teacher', 'admin', 'reviewer'] as const;
 export type Role = (typeof roles)[number];
-export const errorCodes = ['VALIDATION_ERROR', 'UNAUTHORIZED', 'FORBIDDEN', 'NOT_FOUND', 'CONFLICT', 'RATE_LIMITED', 'INTERNAL_ERROR', 'SERVICE_UNAVAILABLE'] as const;
+export const errorCodes = ['VALIDATION_ERROR', 'UNAUTHORIZED', 'FORBIDDEN', 'NOT_FOUND', 'CONFLICT', 'UNPROCESSABLE_ENTITY', 'PAYLOAD_TOO_LARGE', 'GONE', 'RATE_LIMITED', 'INTERNAL_ERROR', 'SERVICE_UNAVAILABLE'] as const;
 export type ErrorCode = (typeof errorCodes)[number];
 export interface ApiError { code: ErrorCode; message: string; requestId: string; timestamp: string; }
 export const idSchema = z.string().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/);
