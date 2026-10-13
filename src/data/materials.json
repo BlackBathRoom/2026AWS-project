@@ -1,0 +1,72 @@
+[
+  {
+    "id": "info2-cover",
+    "chapter": 0,
+    "part": 1,
+    "title": "高等学校情報科「情報Ⅱ」教員研修用教材",
+    "fileName": "00_cover.pdf",
+    "s3Key": "materials/info2/00_cover.pdf",
+    "sourceType": "overview",
+    "enabled": true
+  },
+  {
+    "id": "info2-chapter1",
+    "chapter": 1,
+    "part": 1,
+    "title": "情報社会の進展と情報技術",
+    "fileName": "01_chapter1.pdf",
+    "s3Key": "materials/info2/01_chapter1.pdf",
+    "sourceType": "chapter",
+    "enabled": true
+  },
+  {
+    "id": "info2-chapter2",
+    "chapter": 2,
+    "part": 1,
+    "title": "コミュニケーションとコンテンツ",
+    "fileName": "02_chapter2.pdf",
+    "s3Key": "materials/info2/02_chapter2.pdf",
+    "sourceType": "chapter",
+    "enabled": true
+  },
+  {
+    "id": "info2-chapter3-part1",
+    "chapter": 3,
+    "part": 1,
+    "title": "情報とデータサイエンス",
+    "fileName": "03_chapter3_part1.pdf",
+    "s3Key": "materials/info2/03_chapter3_part1.pdf",
+    "sourceType": "chapter",
+    "enabled": true
+  },
+  {
+    "id": "info2-chapter3-part2",
+    "chapter": 3,
+    "part": 2,
+    "title": "情報とデータサイエンス",
+    "fileName": "03_chapter3_part2.pdf",
+    "s3Key": "materials/info2/03_chapter3_part2.pdf",
+    "sourceType": "chapter",
+    "enabled": true
+  },
+  {
+    "id": "info2-chapter4",
+    "chapter": 4,
+    "part": 1,
+    "title": "情報システムとプログラミング",
+    "fileName": "04_chapter4.pdf",
+    "s3Key": "materials/info2/04_chapter4.pdf",
+    "sourceType": "chapter",
+    "enabled": true
+  },
+  {
+    "id": "info2-chapter5",
+    "chapter": 5,
+    "part": 1,
+    "title": "情報と情報技術を活用した問題発見・解決の探究",
+    "fileName": "05_chapter5.pdf",
+    "s3Key": "materials/info2/05_chapter5.pdf",
+    "sourceType": "chapter",
+    "enabled": true
+  }
+]
