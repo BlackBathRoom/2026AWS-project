@@ -33,4 +33,18 @@ module.exports = [
  ['API-23','post','/reviews/:id/finalize','B','finalizeReview',200],
  ['API-24','post','/review-appeals','B','createAppeal',200],
  ['API-24','post','/review-appeals/:id/resolve','B','resolveAppeal',200],
+ // EXTは今回合意した追加機能。原仕様05の採番とは区別する。
+ ['EXT-25','get','/admin/overview','B','getAdminOverview',200],
+ ['EXT-26','get','/admin/directory','B','getAdminDirectory',200],
+ ['EXT-27','get','/admin/accounts','B','listAccounts',200],
+ ['EXT-27','post','/admin/accounts','B','createAccount',201],
+ ['EXT-27','get','/admin/accounts/:id','B','getAccount',200],
+ ['EXT-27','patch','/admin/accounts/:id','B','updateAccount',200],
+ ['EXT-28','get','/admin/requests','B','listAdminRequests',200],
+ ['EXT-28','post','/admin/requests/:id/decision','B','decideAdminRequest',200],
+ ['EXT-29','get','/admin/deletion-requests','B','listDeletions',200],
+ ['EXT-30','get','/admin/audit','B','listAudit',200],
+ ['EXT-31','get','/admin/reviewer-assignments','B','listReviewerAssignments',200],
+ ['EXT-31','put','/admin/reviewer-assignments/:id','B','assignReviewer',200],
+ ['EXT-31','put','/admin/review-appeals/:id/assignment','B','assignAppealReviewer',200],
 ];

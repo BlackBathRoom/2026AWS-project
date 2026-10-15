@@ -26,7 +26,7 @@ export interface Review {assessment_id:string;version:number;status:'draft'|'fin
 export interface Appeal {appeal_id:string;assessment_id:string;submission_id:string;reason:string;reassigned_reviewer:string;status:'OPEN'|'RESOLVED';new_decision?:string}
 export interface ReviewRow {submission:Submission;assignment:Assignment;reviews:Review[];appeals:Appeal[]}
 export interface Page<T> {items:T[];next_cursor:string|null}
-export interface JobInput {session_id:string;attempt_id?:string;assignment_id?:string;question:string;requested_action:AidAction;draft_version?:number}
+export interface JobInput {session_id:string;attempt_id?:string;assignment_id?:string;lesson_id?:string;question:string;requested_action:AidAction;draft_version?:number}
 export interface AcceptedJob {job_id:string;status:'QUEUED'|'RUNNING';poll_after_ms:number}
 export interface AIResult {status:'SUPPORTED'|'INSUFFICIENT'|'OUT_OF_SCOPE'|'ERROR'|'UNAVAILABLE';response_type:AidAction;message:string;citations:Citation[];next_action:string;reason_code:string}
 export interface Job {job_id:string;status:'QUEUED'|'RUNNING'|'SUCCEEDED'|'FAILED'|'TIMEOUT';result?:AIResult}
@@ -35,3 +35,7 @@ export interface StaticFile {file_id:string;filename:string;content:string;statu
 export interface StudyContext {mode:Mode;purpose:string;concept_ids:string[];error_type:string|null;allow_answer:boolean;aid_policy:{ai_allowed:boolean;allow_answer:boolean};assignment_id:string;policy_version:number}
 /** 正解を含む内部API-13専用。フロントエンドに送信しない。 */
 export interface ApprovedQuestion {question_id:string;version:number;lesson_id:string;concept_id:string;prompt:string;choices:Choice[];answer:string;explanation:string;format:string;source_id:string;status:'APPROVED'}
+
+/** EXT: account administration; production authorization belongs to B. */
+export interface Account {user_id:string;display_name:string;email:string;role:Role;organization_id:string;cohort_ids:string[];active:boolean;status:'ACTIVE'|'INVITED'|'SUSPENDED'|'PENDING_APPROVAL'|'DELETION_PENDING';version:number;admin_scope:'PLATFORM'|null}
+export interface AdminRequest {request_id:string;kind:'ACCOUNT_ROLE'|'ACCOUNT_COHORTS'|'AI_POLICY';target:string;requested_by:string;reason:string;status:'PENDING_APPROVAL'|'APPROVED'|'REJECTED';payload:Record<string,unknown>;decided_by?:string;decision_reason?:string}
