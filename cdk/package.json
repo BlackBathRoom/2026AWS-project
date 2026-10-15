@@ -8,8 +8,9 @@
   },
   "devDependencies": {
     "aws-cdk": "^2.1050.0",
-    "aws-cdk-lib": "^2.95.0",
+    "aws-cdk-lib": "^2.273.0",
     "constructs": "^10.0.0",
+    "esbuild": "^0.28.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.2"
   }
