@@ -10,7 +10,7 @@
 | API-03 | ローカル完了 | 承認済み問題の安全な取得、正答非公開、所属確認、再回答root | 複数問題・複数形式 |
 | API-04 | 部分完了 | 客観採点、問題版保存、練習再回答除外、Idempotency-Key、409、DynamoDB条件更新アダプター | 複数問題版、実DynamoDB接続 |
 | API-05 / B-05 | 部分完了 | 直近10件、重み2/1、3件未満null、信頼度、K/P/E/D/L分離、到達保存 | 正式な全ルーブリック・複数単元の判定 |
-| API-06/07 | 部分完了 | AI受付、評価モード・利用枠・停止確認、本人限定状態取得、完了サービス | SQS/Lambda実行、Cからの実完了通知、30秒期限・DLQ |
+| API-06/07 | 部分完了 | AI受付、評価モード・利用枠・停止確認、SQS provider、本人限定状態取得 | SQS worker、ジョブ状態の永続化、Cからの実完了通知、30秒期限・DLQ |
 | API-08 / B-08 | 部分完了 | 担当研修の進捗・到達・提出済み・未提出・レビュー待ち集計 | 全集計項目、cursor/CSV、実DB集計 |
 | API-11 / B-09 | 部分完了 | 管理者削除要求、適用、削除台帳再適用 | 再認証、24時間削除、AWSバックアップ連携 |
 | API-12/13 | 契約完了 | InternalStudyContext、ApprovedQuestion、承認版型 | B/C間のサービス認証・実データ受渡し |
@@ -18,7 +18,7 @@
 | API-19 | ローカル完了 | 研修プロフィール、expectedVersion、プロフィール履歴 | 実DB条件付き更新 |
 | API-20 | ローカル完了 | 公開課題、所属確認、援助ポリシー | Cからの監修済み課題受渡し、複数課題版 |
 | API-21 | 部分完了 | 下書き、更新、提出固定、再提出版、競合、Idempotency-Key | 必須成果物・添付検査状態の厳密な提出判定 |
-| API-22 | 部分完了 | 2MB、MIME、HTML拒否、検査状態、提出版紐付け | S3隔離、実体検査、署名URL、全5ファイル制限 |
+| API-22 | 部分完了 | 2MB、MIME、HTML拒否、検査状態、提出版紐付け、S3署名URLアダプター | 提出APIへのS3配線、隔離/実体検査、検査worker |
 | API-23 | 部分完了 | 評価者割当、観点点数、根拠、確定、自己レビュー拒否、競合 | 評価者負荷・期限、AWS永続化 |
 | API-24 | 部分完了 | 異議申立て、別評価者の再評価、旧評価superseded、ReEvaluation履歴 | 再評価後の全到達再計算、AWS永続化 |
 | B-06 | 部分完了 | 承認済み問題がある場合の推薦、知識マップ未登録時の教員確認 | Approved KnowledgeEdgeによる前提経路・間隔計算 |
@@ -40,15 +40,17 @@
 
 - AWS上でのCognito User Pool、API Gateway、Lambda、DynamoDB、S3、CloudWatchの実リソース作成・デプロイ
 - SQS/DLQ/SchedulerのCDK構成
-- DynamoDBの実接続・Transaction・PITR運用確認
-- S3の実体検査、ウイルス検査、AWS環境での署名URL確認
+- 全業務RepositoryのDynamoDB永続化配線、Transaction、PITR運用確認
+- S3署名URLを提出APIへ注入し、実体/ウイルス検査workerと統合
 - CloudWatch Logs/SNS/CloudTrail/WAF/KMS/Budgetsの実設定
+- 実AWS環境での認証、権限、負荷、障害、復旧試験
 
 ## 検証済み範囲
 
 ```text
 TypeScript build: 成功
-Vitest: 36 tests passed / 0 failed
+Vitest: 43 tests passed / 0 failed
+CDK TypeScript build/synth: 成功
 OpenAPI: 3.0.3、28 paths、0 validation errors
 静的診断: エラーなし
 ```

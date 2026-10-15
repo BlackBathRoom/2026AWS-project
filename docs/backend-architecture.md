@@ -13,15 +13,20 @@ InMemory実装は、採点・版競合・冪等キー・削除状態・利用枠
 
 ## AWSへ差し替える箇所
 
-- `AuthenticationProvider`: Cognito JWTの署名、issuer、audience、exp検証
-- `StorageProvider`: 非公開S3、短期署名URL、ウイルス/実体検査連携
-- `AiTutorProvider`: SQS/Lambda/Bedrock/Knowledge Bases連携
-- `BackendRepository`: DynamoDBの条件付き更新、トランザクション、PITR
-- `src/repositories/dynamo-repository.ts`: DynamoDBの取得・条件付き更新・削除
+- `CognitoJwtAuthenticationProvider`: JWKS署名、issuer、exp、access-token用途、client_idを検証
+- `requireBackendAuth`: 本番でJWT検証後、DynamoDBから現在のUser/Membershipを再取得
+- `S3StorageProvider`: 非公開オブジェクトの短期PUT/GET署名URLと削除
+- `SqsAiTutorProvider`: FIFO SQS受付アダプター。生成workerは担当C
+- `CloudWatchAuditLogger`: 構造化監査イベント送信
+- `DynamoEntityRepository`: get/put/query(cursor)/conditionalUpdate/delete
 - `src/lambda.ts`: API Gateway/Lambda実行入口
-- `cdk/src/backend-stack.ts`: Cognito、API Gateway、Lambda、DynamoDB、S3、CloudWatch LogsのIaC
+- `cdk/src/backend-stack.ts`: Cognito、Regional API Gateway、Lambda、DynamoDB PITR、非公開Versioned S3、CloudWatch LogsのIaC
 
-AWS API Gateway、Lambda、Cognito、DynamoDB、S3、CloudWatchの実リソース作成・デプロイは対象外です。CDKコードとsynth検証までは完了しています。WAF、KMS、SQS、EventBridge、BudgetsのIaCは未作成です。
+CDKはNode.js 24 Lambda runtimeを指定し、esbuildでLambdaコードと依存をバンドルします。`npm run cdk:synth`でテンプレート生成まで確認できます。
+
+AWS API Gateway、Lambda、Cognito、DynamoDB、S3、CloudWatchの実リソース作成・デプロイは対象外です。CDKコードとsynth検証までは完了しています。WAF、KMS、SQS、EventBridge、Budgets、ファイル実体/ウイルス検査workerのIaCは未作成です。
+
+現行の業務Service群はローカルInMemory Repositoryを利用します。AWS用DynamoDBアダプターは実装済みですが、全業務エンティティへの永続化配線・移行は未完了です。本番APIを有効化する前に業務RepositoryをDynamoDBへ切り替える必要があります。S3署名URLプロバイダーも作成済みですが、提出APIの永続化・検査workflowへの注入は未完了です。
 
 ## 重要な保護
 
