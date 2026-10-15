@@ -33,18 +33,25 @@ export class CognitoJwtAuthenticationProvider implements AuthenticationProvider 
   async verifyBearerToken(token: string): Promise<AuthContext> {
     const { createRemoteJWKSet, jwtVerify } = await import('jose');
     if (!this.jwks) this.jwks = createRemoteJWKSet(new URL(`${this.config.issuer}/.well-known/jwks.json`));
-    const { payload } = await jwtVerify(token, this.jwks as ReturnType<typeof createRemoteJWKSet>, { issuer: this.config.issuer, audience: this.config.audience });
+    const { payload } = await jwtVerify(token, this.jwks as ReturnType<typeof createRemoteJWKSet>, { issuer: this.config.issuer });
     const userId = payload.sub;
+    const tokenUse = payload.token_use;
+    const clientId = payload.client_id;
     const organizationId = this.stringClaim(payload, ['custom:organizationId', 'organizationId']);
     const role = this.stringClaim(payload, ['custom:role', 'role']);
     const trainingClaim = payload['custom:trainingIds'] ?? payload.trainingIds;
-    const trainingIds = Array.isArray(trainingClaim) ? trainingClaim.filter((value): value is string => typeof value === 'string') : [];
-    if (!userId || !organizationId || !role || !roles.includes(role as typeof roles[number]) || !payload.iat || !payload.exp) throw new Error('Required Cognito claims are missing');
+    const parsedTrainingClaim = typeof trainingClaim === 'string' ? this.parseTrainingIds(trainingClaim) : trainingClaim;
+    const trainingIds = Array.isArray(parsedTrainingClaim) ? parsedTrainingClaim.filter((value): value is string => typeof value === 'string') : [];
+    if (!userId || !organizationId || !role || !roles.includes(role as typeof roles[number]) || !payload.iat || !payload.exp || tokenUse !== 'access' || clientId !== this.config.audience) throw new Error('Required Cognito access token claims are invalid');
     return { userId: asUserId(userId), organizationId: asOrganizationId(organizationId), role: role as AuthContext['role'], trainingIds: trainingIds.map(asTrainingId), issuedAt: new Date(payload.iat * 1000).toISOString(), expiresAt: new Date(payload.exp * 1000).toISOString() };
   }
 
   private stringClaim(payload: Record<string, unknown>, names: string[]): string | undefined {
     for (const name of names) if (typeof payload[name] === 'string') return payload[name] as string;
     return undefined;
+  }
+
+  private parseTrainingIds(value: string): unknown[] {
+    try { const parsed: unknown = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
   }
 }

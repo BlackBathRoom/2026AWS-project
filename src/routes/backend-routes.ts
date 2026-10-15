@@ -68,7 +68,7 @@ backendRouter.post('/submissions/:id/files', endpoint((req, res) => {
 }));
 
 backendRouter.post('/files/:id/complete', endpoint((req, res) => {
-  const auth = req.auth!; const file = repo.files.find((item) => item.fileId === req.params.id); if (!file) throw new DomainError(404, 'NOT_FOUND', 'ファイルが見つかりません'); requireSelf(auth, file.ownerId); file.scanStatus = req.body.scanStatus === 'clean' ? 'clean' : 'rejected'; res.json({ fileId: file.fileId, scanStatus: file.scanStatus });
+  const auth = req.auth!; const file = repo.files.find((item) => item.fileId === req.params.id); if (!file) throw new DomainError(404, 'NOT_FOUND', 'ファイルが見つかりません'); requireSelf(auth, file.ownerId); res.status(202).json({ fileId: file.fileId, scanStatus: file.scanStatus, message: 'サーバー側のファイル検査完了を待っています' });
 }));
 
 backendRouter.get('/files/:id', endpoint((req, res) => {

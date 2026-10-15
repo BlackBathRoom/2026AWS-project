@@ -8,6 +8,8 @@ app.use(express.json({ limit: '1mb' }));
 app.use((req, res, next) => { req.requestId = req.header('x-request-id') || `req-${randomUUID()}`; res.setHeader('x-request-id', req.requestId); next(); });
 app.use('/api/v1', mockRouter);
 app.use('/api/v1', backendRouter);
+app.use(mockRouter);
+app.use(backendRouter);
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.use((_req, res) => res.status(404).json({ code: 'NOT_FOUND', message: 'リソースが見つかりません', requestId: res.getHeader('x-request-id'), timestamp: new Date().toISOString() }));
 app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {

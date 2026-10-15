@@ -32,6 +32,11 @@ describe('B-01 API contract', () => {
     expect(response.status).toBe(200);
     expect(response.body.status).toBe('ok');
   });
+  it('API Gatewayのroot proxyパスでもhealthを取得できる', async () => {
+    const response = await api.get('/health');
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('ok');
+  });
   it('正常なAPIレスポンスを取得できる', async () => {
     const response = await api.get('/api/v1/me').set(auth);
     expect(response.status).toBe(200);
