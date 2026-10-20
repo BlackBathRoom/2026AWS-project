@@ -41,4 +41,6 @@ export interface Policy { organizationId: OrganizationId; version: PolicyVersion
 export interface UsageCounter { userId: UserId; dateJst: string; aiCount: number; activeJobs: number; }
 export interface DeletionRecord { requestId: DeletionRequestId; organizationId: OrganizationId; subjectId: UserId; scope: 'all' | 'learning' | 'submissions'; status: 'requested' | 'applied'; requestedAt: string; }
 export interface AuditEvent { eventId: AuditEventId; organizationId: OrganizationId; actorId: UserId; action: string; targetType: string; targetId: string; result: 'allowed' | 'denied'; occurredAt: string; }
-export interface TutorJob { jobId: string; userId: UserId; organizationId: OrganizationId; status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'UNAVAILABLE'; result?: { status: 'SUPPORTED' | 'INSUFFICIENT' | 'OUT_OF_SCOPE' | 'ERROR' | 'UNAVAILABLE'; message?: string; citations?: string[]; nextAction?: string; reasonCode?: string }; }
+export type TutorResponseType = 'GUIDANCE' | 'HINT' | 'EXAMPLE' | 'EXPLANATION' | 'ANSWER' | 'NO_ANSWER';
+export interface TutorResult { status: 'SUPPORTED' | 'INSUFFICIENT' | 'OUT_OF_SCOPE' | 'ERROR' | 'UNAVAILABLE'; responseType?: TutorResponseType; message?: string; citations?: string[]; model?: string; nextAction?: string; reasonCode?: string; }
+export interface TutorJob { jobId: string; userId: UserId; organizationId: OrganizationId; status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'UNAVAILABLE'; result?: TutorResult; }
