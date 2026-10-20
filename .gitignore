@@ -1,6 +1,8 @@
 node_modules/
+dist/
 cdk/node_modules/
 cdk/lib/
+cdk/cdk.out/
 npm-debug.log
 env/
 .env
