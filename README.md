@@ -37,6 +37,18 @@ npm run cdk:synth
 
 ポートは `3000`（`PORT`で変更可能）です。本番環境ではモックトークンを受け付けません。
 
+## フロントエンド(UI)の確認
+
+`public/` に担当Aのフロントエンド(UI・アクセシビリティ対応)が含まれます。`npm run dev` でバックエンドと同一オリジンで配信され、ブラウザで `http://localhost:3000/index.html` を開くと確認できます。
+
+フロントは `/runtime-config.js`(サーバーが提供) の `window.RUNTIME_CONFIG` を読み、`api_base`/`mode`/`upload_origins` を決定します。既定はローカル確認用に `mode=mock`、`api_base=/api/v1` です。デプロイ環境では以下の環境変数で差し替えます。
+
+- `FRONTEND_MODE`: `mock` または実API接続時の値
+- `FRONTEND_API_BASE`: API Gatewayのベース(例 `https://xxxx.execute-api.us-east-1.amazonaws.com/prod/api/v1`)
+- `FRONTEND_UPLOAD_ORIGINS`: 署名URLアップロード先の許可オリジン(カンマ区切り)
+
+本番の静的配信は S3/CloudFront 等を想定しており、Expressの静的配信はローカル確認用です。バックエンド(TypeScript)とBedrock/AWS構成は従来どおり維持しています。フロント↔バックエンドのフィールド命名やジョブ状態名の最終的なすり合わせは担当A/B/Cの合意事項として `frontversion/` の引継ぎ資料を参照してください。
+
 ## テスト実行
 
 ```bash
