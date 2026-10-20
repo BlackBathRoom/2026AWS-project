@@ -41,8 +41,8 @@ export class DynamoEntityRepository {
     return { items: (result.Items || []) as T[], nextCursor };
   }
 
-  async conditionalUpdate(config: DynamoRepositoryConfig, key: Record<string, unknown>, updateExpression: string, expressionAttributeValues: Record<string, unknown>, conditionExpression: string): Promise<void> {
-    await this.client.send(new UpdateCommand({ TableName: config.tableName, Key: key, UpdateExpression: updateExpression, ConditionExpression: conditionExpression, ExpressionAttributeValues: expressionAttributeValues, ReturnValues: 'NONE' }));
+  async conditionalUpdate(config: DynamoRepositoryConfig, key: Record<string, unknown>, updateExpression: string, expressionAttributeValues: Record<string, unknown>, conditionExpression: string, expressionAttributeNames?: Record<string, string>): Promise<void> {
+    await this.client.send(new UpdateCommand({ TableName: config.tableName, Key: key, UpdateExpression: updateExpression, ConditionExpression: conditionExpression, ExpressionAttributeValues: expressionAttributeValues, ExpressionAttributeNames: expressionAttributeNames, ReturnValues: 'NONE' }));
   }
 
   async delete(config: DynamoRepositoryConfig, key: Record<string, unknown>, conditionExpression?: string): Promise<void> { await this.client.send(new DeleteCommand({ TableName: config.tableName, Key: key, ConditionExpression: conditionExpression })); }

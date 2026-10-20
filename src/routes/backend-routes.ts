@@ -4,6 +4,10 @@ import { z } from 'zod';
 import { AuthContext } from '../contracts/user';
 import { requireBackendAuth } from '../middleware/mock-auth';
 import { backendRepository as repo } from '../repositories/backend-repository';
+import { resolveTutorProvider } from '../integrations/tutor-provider-factory';
+import { InternalStudyContext, StudyContext } from '../contracts/study-context';
+import { Policy } from '../contracts/backend';
+import { asAssignmentId, asOrganizationId, asRuleVersionId, asTrainingId, asUserId } from '../contracts/common';
 import { DomainError, applyDeletion, assignReview, calculateAttainment, completeTutorJob, createSubmission, finalizeAssessment, getProgress, getRecommendations, getSafeQuestion, getUsage, nextQuestion, reapplyDeletionLedger, requireCurrentTraining, requireOrganization, requireRole, requireSelf, requireTraining, reserveAi, saveAttempt, submitSubmission, updateSubmission } from '../services/backend-services';
 
 function errorResponse(req: Request, res: Response, error: unknown): void {
@@ -11,13 +15,33 @@ function errorResponse(req: Request, res: Response, error: unknown): void {
   if (error instanceof z.ZodError) { res.status(422).json({ code: 'UNPROCESSABLE_ENTITY', message: '入力値が不正です', requestId: req.requestId, timestamp: new Date().toISOString() }); return; }
   res.status(500).json({ code: 'INTERNAL_ERROR', message: '内部エラーが発生しました', requestId: req.requestId, timestamp: new Date().toISOString() });
 }
-function endpoint(handler: (req: Request, res: Response) => void) { return (req: Request, res: Response) => { try { handler(req, res); } catch (error) { errorResponse(req, res, error); } }; }
+function endpoint(handler: (req: Request, res: Response) => void | Promise<void>) { return (req: Request, res: Response) => { try { const result = handler(req, res); if (result instanceof Promise) result.catch((error) => errorResponse(req, res, error)); } catch (error) { errorResponse(req, res, error); } }; }
 const id = z.string().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/);
 const attemptInput = z.object({ attemptId: id, questionId: id, answer: z.array(z.string()).min(1), responseTimeMs: z.number().int().min(0), retryOf: id.optional() });
 const profileInput = z.object({ experience: z.string().max(2000), targetUnits: z.array(z.string().max(128)).max(20), availableTimeMinutes: z.number().int().min(0).max(1440), selfAssessment: z.record(z.string(), z.number().int().min(0).max(3)) });
 const submissionInput = z.object({ assignmentId: id, content: z.string().max(100000) });
 const axisScores = z.object({ K: z.number().int().min(0).max(3), P: z.number().int().min(0).max(3), E: z.number().int().min(0).max(3), D: z.number().int().min(0).max(3), L: z.number().int().min(0).max(3) }).partial();
 const reviewInput = z.object({ submissionVersionId: id, scores: axisScores, rationale: z.string().min(1).max(10000), evidenceRefs: z.array(z.string().max(256)).max(50) });
+
+// B がサーバー側データから InternalStudyContext を生成する (ai-integration.md: リクエスト値を信頼しない)。
+// mode/assistancePolicy/allowAnswer は StudyContext と Policy から導出し、C(AI worker)はこれに従う。
+function buildInternalContext(auth: AuthContext, context: StudyContext | undefined, policy: Policy | undefined): InternalStudyContext {
+  const mode = context?.mode ?? 'learning';
+  const assistancePolicy = context?.assistancePolicy ?? 'hint';
+  return {
+    userId: asUserId(auth.userId),
+    organizationId: asOrganizationId(auth.organizationId),
+    trainingId: asTrainingId(context?.trainingId ?? auth.trainingIds[0] ?? ''),
+    assignmentId: asAssignmentId(context?.assignmentId ?? 'assignment-001'),
+    mode,
+    assistancePolicy,
+    ruleVersionId: asRuleVersionId(context?.ruleVersionId ?? 'rule-v1'),
+    purpose: mode === 'assessment' ? 'assessment' : 'learning',
+    conceptIds: [],
+    allowAnswer: mode !== 'assessment' && Boolean(policy?.allowAnswer),
+    policyVersion: policy?.version ?? 'policy-v1',
+  };
+}
 
 export const backendRouter = Router();
 backendRouter.use(requireBackendAuth);
@@ -110,5 +134,37 @@ backendRouter.get('/admin/audits', endpoint((req, res) => { const auth = req.aut
 
 backendRouter.post('/admin/policies', endpoint((req, res) => { const auth = req.auth!; requireRole(auth, ['admin']); const input = z.object({ expectedVersion: z.string().optional(), aiEnabled: z.boolean(), dailyAiLimit: z.number().int().positive().max(1000), concurrentJobLimit: z.number().int().positive().max(10), allowAnswer: z.boolean() }).parse(req.body); const existing = repo.getPolicy(auth.organizationId)!; if (input.expectedVersion && input.expectedVersion !== existing.version) throw new DomainError(409, 'CONFLICT', 'ポリシーの版が競合しています'); const policy = { ...existing, ...input, version: `policy-${Number(existing.version.replace('policy-v', '')) + 1}` as typeof existing.version, updatedAt: new Date().toISOString() }; Object.assign(existing, policy); res.json(policy); }));
 
-backendRouter.post('/tutor/jobs', endpoint((req, res) => { const auth = req.auth!; const input = z.object({ question: z.string().min(1).max(2000), requestedAction: z.enum(['hint', 'explanation', 'example', 'answer']) }).parse(req.body); const context = repo.getStudyContext(auth.userId, auth.trainingIds[0], 'assignment-001'); const policy = repo.getPolicy(auth.organizationId); if (input.requestedAction === 'answer' && (context?.mode === 'assessment' || !policy?.allowAnswer)) throw new DomainError(403, 'FORBIDDEN', '現在の援助ポリシーでは正答を要求できません'); reserveAi(repo, auth); const job = { jobId: `job-${randomUUID()}`, userId: auth.userId, organizationId: auth.organizationId, status: 'QUEUED' as const }; repo.jobs.push(job); res.status(202).json({ jobId: job.jobId, status: job.status, pollAfterMs: 500 }); }));
-backendRouter.get('/tutor/jobs/:id', endpoint((req, res) => { const auth = req.auth!; const job = repo.jobs.find((item) => item.jobId === req.params.id && item.userId === auth.userId && item.organizationId === auth.organizationId); if (!job) throw new DomainError(404, 'NOT_FOUND', 'AIジョブが見つかりません'); res.json({ jobId: job.jobId, status: job.status, result: job.result }); }));
+backendRouter.post('/tutor/jobs', endpoint((req, res) => {
+  const auth = req.auth!;
+  const input = z.object({ question: z.string().min(1).max(2000), requestedAction: z.enum(['hint', 'explanation', 'example', 'answer']) }).parse(req.body);
+  const context = repo.getStudyContext(auth.userId, auth.trainingIds[0], 'assignment-001');
+  const policy = repo.getPolicy(auth.organizationId);
+  // B側ガバナンス: 評価モードまたはallowAnswer=falseでは正答要求を拒否 (ai-integration.md)。
+  if (input.requestedAction === 'answer' && (context?.mode === 'assessment' || !policy?.allowAnswer)) throw new DomainError(403, 'FORBIDDEN', '現在の援助ポリシーでは正答を要求できません');
+  reserveAi(repo, auth);
+  const job = { jobId: `job-${randomUUID()}`, userId: auth.userId, organizationId: auth.organizationId, status: 'QUEUED' as const };
+  repo.jobs.push(job);
+  // AWS構成時は Bedrock worker 用に SQS へ投入。ローカルはインメモリのみ。
+  const provider = resolveTutorProvider();
+  if (provider) {
+    const internalContext = buildInternalContext(auth, context, policy);
+    void provider.enqueue({ jobId: job.jobId, userId: auth.userId, question: input.question, context: internalContext, requestedAction: input.requestedAction });
+  }
+  res.status(202).json({ jobId: job.jobId, status: job.status, pollAfterMs: 500 });
+}));
+backendRouter.get('/tutor/jobs/:id', endpoint(async (req, res) => {
+  const auth = req.auth!;
+  const jobId = id.parse(req.params.id);
+  const provider = resolveTutorProvider();
+  if (provider) {
+    // AWS構成: 永続化ストアから所有者境界付きで取得する。
+    const owner = { userId: auth.userId, organizationId: auth.organizationId };
+    const remote = await provider.getJob(jobId, owner);
+    if (remote.status === 'UNAVAILABLE' && !repo.jobs.some((item) => item.jobId === jobId && item.userId === auth.userId)) throw new DomainError(404, 'NOT_FOUND', 'AIジョブが見つかりません');
+    res.json({ jobId, status: remote.status, result: remote.result });
+    return;
+  }
+  const job = repo.jobs.find((item) => item.jobId === jobId && item.userId === auth.userId && item.organizationId === auth.organizationId);
+  if (!job) throw new DomainError(404, 'NOT_FOUND', 'AIジョブが見つかりません');
+  res.json({ jobId: job.jobId, status: job.status, result: job.result });
+}));

@@ -7,9 +7,12 @@
     "start": "tsx src/server.ts",
     "dev": "tsx watch src/server.ts",
     "test": "vitest run",
-    "cdk:synth": "cd cdk && npm run -s build && npx cdk synth"
+    "cdk:synth": "cd cdk && npm run -s build && npx cdk synth",
+    "cdk:deploy:backend": "cd cdk && npm run -s build && npx cdk deploy Information2BackendStack"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-agent-runtime": "^3.1150.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1150.0",
     "@aws-sdk/client-cloudwatch-logs": "^3.1150.0",
     "@aws-sdk/client-dynamodb": "^3.1150.0",
     "@aws-sdk/client-s3": "^3.1150.0",

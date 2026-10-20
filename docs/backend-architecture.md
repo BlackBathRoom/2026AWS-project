@@ -20,9 +20,21 @@ InMemory実装は、採点・版競合・冪等キー・削除状態・利用枠
 - `CloudWatchAuditLogger`: 構造化監査イベント送信
 - `DynamoEntityRepository`: get/put/query(cursor)/conditionalUpdate/delete
 - `src/lambda.ts`: API Gateway/Lambda実行入口
-- `cdk/src/backend-stack.ts`: Cognito、Regional API Gateway、Lambda、DynamoDB PITR、非公開Versioned S3、CloudWatch LogsのIaC
+- `cdk/src/backend-stack.ts`(担当B): Cognito、Regional API Gateway、Lambda、DynamoDB PITR、非公開Versioned S3、CloudWatch LogsのIaC
+- `cdk/src/tutor-ai-stack.ts`(担当C): SQS FIFO/DLQ、AI worker Lambda、Bedrock/KB向けIAM、AI監査LogGroup
 
 CDKはNode.js 24 Lambda runtimeを指定し、esbuildでLambdaコードと依存をバンドルします。`npm run cdk:synth`でテンプレート生成まで確認できます。
+
+## スタック分離とデプロイ境界
+
+CDKは責務境界に沿って2スタックに分離しています。リージョンは `us-east-1` 固定です。
+
+- `Information2BackendStack` (担当B): 上記B領域リソース。単独でデプロイ可能。
+- `Information2TutorAiStack` (担当C): SQS/DLQ/AI worker/Bedrock。BのDynamoDBテーブルを参照。
+
+担当Bは `npm run cdk:deploy:backend` (= `cdk deploy Information2BackendStack`) でC領域に
+一切触れずデプロイできます。両スタックは SQS キューの決定論的な名前を共有することで
+相互の循環依存を避けています。CLI手順の詳細は `docs/deploy-backend.md` を参照してください。
 
 AWS API Gateway、Lambda、Cognito、DynamoDB、S3、CloudWatchの実リソース作成・デプロイは対象外です。CDKコードとsynth検証までは完了しています。WAF、KMS、SQS、EventBridge、Budgets、ファイル実体/ウイルス検査workerのIaCは未作成です。
 

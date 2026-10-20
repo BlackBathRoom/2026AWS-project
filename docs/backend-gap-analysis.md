@@ -31,15 +31,27 @@
 
 以下は仕様上CまたはC主担当のため、B側では契約・認可境界だけを実装しています。
 
-- 教材API、教材承認・公開、Knowledge Base取込
+- 教材API、教材承認・公開、Knowledge Base取込(KBへの教材登録・ベクトル化)
 - 問題作成・監修、KnowledgeEdgeの編集・承認
-- Bedrock、RAG、Guardrails、AIプロンプト
-- AI回答本文、引用生成、AI品質350問評価
+- Guardrails(Bedrock Guardrails)の詳細ポリシー、AIプロンプトの最終チューニング
+- AI品質350問評価セット
+
+## AIサービス活用として実装済み(Bedrock + Lambda)
+
+担当C領域の RAG/Bedrock について、仕様書のガバナンス・回答制御・監査を満たす実装を追加しました。詳細は `docs/aws-ai-services.md`。
+
+- Bedrock Knowledge Base `Retrieve` による教材限定RAG検索(`src/integrations/bedrock-ai-provider.ts`)
+- Bedrock Converse による教材根拠限定の回答本文生成
+- 根拠充足判定・response_type制御・出典整形(`src/integrations/rag-governance.ts`: G-002〜G-005)
+- SQS(FIFO)+DLQ → AI worker Lambda の非同期処理(`src/ai-worker.ts`、STEP6/G-008)
+- TutorJob状態のDynamoDB永続化と所有者境界付き取得(`src/repositories/tutor-job-store.ts`)
+- CDKによるSQS/DLQ/worker Lambda/Bedrock・KB向けIAM/AI監査LogGroupの構成
 
 ## AWS依存で未実装
 
 - AWS上でのCognito User Pool、API Gateway、Lambda、DynamoDB、S3、CloudWatchの実リソース作成・デプロイ
-- SQS/DLQ/SchedulerのCDK構成
+- SchedulerのCDK構成(SQS/DLQ/AI worker LambdaはCDKに追加済み)
+- Bedrock Knowledge Baseの実データセット作成・教材取込(担当C)とKB/モデルARNへのIAM絞り込み
 - 全業務RepositoryのDynamoDB永続化配線、Transaction、PITR運用確認
 - S3署名URLを提出APIへ注入し、実体/ウイルス検査workerと統合
 - CloudWatch Logs/SNS/CloudTrail/WAF/KMS/Budgetsの実設定
@@ -49,8 +61,8 @@
 
 ```text
 TypeScript build: 成功
-Vitest: 43 tests passed / 0 failed
-CDK TypeScript build/synth: 成功
+Vitest: 59 tests passed / 0 failed (Bedrock/ガバナンス/worker 16件を含む)
+CDK TypeScript build/synth: 成功(SQS FIFO + DLQ + AI worker Lambda + Bedrock IAM)
 OpenAPI: 3.0.3、28 paths、0 validation errors
 静的診断: エラーなし
 ```
