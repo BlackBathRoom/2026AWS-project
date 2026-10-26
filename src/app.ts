@@ -15,6 +15,7 @@ app.use((req, res, next) => { req.requestId = req.header('x-request-id') || `req
 app.get('/runtime-config.js', (_req, res) => {
   const config = {
     mode: process.env.FRONTEND_MODE || 'mock',
+    tutor_enabled: Boolean(process.env.TUTOR_QUEUE_URL && process.env.BACKEND_TABLE_NAME),
     api_base: process.env.FRONTEND_API_BASE || '/api/v1',
     upload_origins: (process.env.FRONTEND_UPLOAD_ORIGINS || '').split(',').filter(Boolean),
   };
