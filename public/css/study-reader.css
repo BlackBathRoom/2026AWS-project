@@ -10,3 +10,23 @@
 @media(max-width:1150px){.learner-study{grid-template-columns:170px minmax(0,1fr)}.learner-study main:not(.login){padding:16px}.reader-grid{grid-template-columns:minmax(0,1fr) 290px;gap:12px}.learner-study .sidebar{padding:20px 12px}.learner-study .brand-sub{font-size:.65rem}.reader-toolbar{padding:8px}.reader-pages label{display:none}}
 @media(max-width:950px){.reader-grid{grid-template-columns:minmax(0,1fr)}#reader-tutor{position:static}#reader-chat{height:220px}#reader-canvas-area{height:65dvh;min-height:340px}.reader-suggestions{grid-template-columns:1fr 1fr}.reader-heading h1{font-size:1.35rem}}
 @media(max-width:700px){.learner-study{display:block}.learner-study .sidebar{padding:12px 14px;gap:8px}.learner-study .brand{margin:0}.learner-study .sidebar nav{display:flex;flex-direction:row;flex-wrap:wrap;gap:3px}.learner-study .sidebar nav a{font-size:.75rem;padding:8px}.learner-study .sidebar-note,.learner-study .user{display:none}.learner-study .sidebar-settings{margin:0;padding:0}.learner-study .topbar{padding:10px 14px;gap:8px}.learner-study .topbar label{display:none}.learner-study main:not(.login){padding:14px 10px}.reader-chapters{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}.reader-heading{gap:4px}.reader-heading button{font-size:.75rem}.reader-toolbar{gap:6px}.reader-tools{flex-wrap:wrap}#reader-canvas-area{padding:10px;min-height:300px}.reader-book>h2{padding:12px 12px 0}.reader-grid{gap:12px}}
+
+/* Refined reader header: title and tools share one baseline when space permits. */
+.reader-book-header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:16px 18px;border-bottom:1px solid var(--line);background:#fff}
+.reader-book-header #reader-title{flex:1 1 180px;min-width:0;margin:0;padding:0;font-size:.95rem;line-height:1.6;font-weight:650;overflow-wrap:anywhere}
+.reader-book-header .reader-toolbar{display:flex;flex:0 1 auto;flex-wrap:wrap;justify-content:flex-start;align-items:center;gap:10px 16px;border:0;padding:0;margin-left:auto}
+.reader-book-header .reader-pages{display:flex;align-items:center;gap:4px;background:#f4f5f1;border:1px solid var(--line);border-radius:9px;padding:3px}
+.reader-book-header .reader-pages button{width:36px;height:36px;min-height:36px;padding:0;border:0;border-radius:6px;background:transparent;font-size:1.2rem;font-weight:500;line-height:1}
+.reader-book-header .reader-pages button:hover:not(:disabled){background:#e2e9e2}
+.reader-book-header .reader-pages button:disabled{opacity:.35}
+.reader-book-header .reader-pages input#reader-page{width:44px;height:34px;min-height:34px;margin:0;padding:4px;border:1px solid #d5ddd5;border-radius:5px;font-size:.85rem;font-weight:600;line-height:1.2;appearance:textfield;box-shadow:0 1px 2px #263b2f06}
+.reader-book-header #reader-page::-webkit-inner-spin-button,.reader-book-header #reader-page::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.reader-book-header #reader-total{padding:0 5px;color:var(--muted);font-size:.8rem;font-variant-numeric:tabular-nums;font-weight:500}
+.reader-book-header .reader-tools{gap:8px}
+.reader-book-header .reader-tools select,.reader-book-header #reader-fullscreen{height:44px;min-height:44px;margin:0;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:.8rem;font-weight:500;line-height:1.4}
+.reader-book-header #reader-fullscreen{gap:7px;white-space:nowrap}
+.reader-book-header #reader-fullscreen svg{flex-shrink:0}
+.reader-book-header+.reader-parts:empty+.reader-status{padding-top:7px;padding-bottom:7px;background:#fafbf8;font-size:.7rem}
+@media(max-width:1150px){.reader-book-header{gap:10px;padding:14px}.reader-book-header #reader-title{flex-basis:100%}.reader-book-header .reader-toolbar{margin-left:0;flex:1;justify-content:space-between}}
+@media(max-width:700px){.reader-book-header{padding:12px;gap:10px}.reader-book-header .reader-toolbar{gap:8px}.reader-book-header .reader-tools{gap:6px}.reader-book-header .reader-tools select,.reader-book-header #reader-fullscreen{padding:8px;font-size:.75rem}.reader-book-header .reader-pages{gap:1px}.reader-book-header .reader-pages button{width:30px}.reader-book-header .reader-pages input#reader-page{width:38px}.reader-book-header #reader-total{padding:0 3px}}
+[data-contrast=high] .reader-book-header .reader-pages{background:#fff;border-color:#333}[data-contrast=high] .reader-book-header .reader-pages input#reader-page{border-color:#333}
