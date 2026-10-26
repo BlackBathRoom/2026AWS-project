@@ -94,6 +94,19 @@ views.home=async()=>{
 };
 const pendingRoutes={materials:'教材取得APIとS3の教科書表示を接続する予定です。',quiz:'章と研修・課題の対応、および出題APIの接続を調整中です。',ai:'学習コンテキストとAI回答形式の接続を調整中です。',task:'提出データ形式の接続を調整中です。',progress:'進捗・到達判定のデータ形式を接続中です。',training:'研修集計のデータ形式を接続中です。',review:'レビューのデータ形式を接続中です。',accounts:'現バックエンドのアカウント管理APIは未接続です。',assignments:'評価者割当APIの接続を調整中です。',settings:'運用設定APIのデータ形式を接続中です。',approvals:'変更申請の承認APIは未接続です。',audit:'監査履歴のデータ形式を接続中です。'};
 for(const [route,message] of Object.entries(pendingRoutes)) views[route]=async()=>({html:heading('API連携の準備中')+card('現在の状況',`<p>${esc(message)}</p><p>この画面からの更新処理はまだ行えません。</p><a class="button secondary" href="#home">ホームへ戻る</a>`)});
+views.materials=async()=>{
+ const links=catalog.units.map(u=>`<button class="material-link" data-material="${esc(u.unit_id)}" aria-pressed="${u.unit_id===unitId}">${esc(u.title)}</button>`).join('');
+ return {html:heading('教材を学ぶ',unit().title)+`<div class="material-layout"><section class="card material-list learner-material-list"><h2>教材の構成</h2><button class="material-link" data-material="ii-0">表紙・目次</button>${links}</section><section class="card reading"><div id="pdf-status" role="status">章を選択するとPDFを取得します。</div><div id="pdf-documents"></div><button id="pdf-refresh" class="secondary">閲覧URLを更新する</button></section></div>`,bind(){
+ let selection=unitId,sequence=0;
+ const status=$('#pdf-status'),out=$('#pdf-documents'),refresh=$('#pdf-refresh');
+ const load=async(id)=>{selection=id;const current=++sequence;out.replaceChildren();status.textContent='教材を取得しています…';refresh.disabled=true;
+ try{const result=await api('/materials/'+encodeURIComponent(id)+'/view');if(current!==sequence||!out.isConnected)return;
+ for(const doc of result.documents){const url=new URL(doc.url);if(url.protocol!=='https:')throw new Error('閲覧URLの形式が不正です。');const a=document.createElement('a');a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';a.textContent=doc.filename+' を別タブで開く';const frame=document.createElement('iframe');frame.src=url.href;frame.title=doc.filename;frame.style.cssText='width:100%;height:70vh;border:1px solid #ddd;margin:12px 0';out.append(a,frame);}
+ status.textContent='画面内で表示されない場合は別タブで開いてください。URLの有効期限は5分です。期限切れ時は更新してください。';
+ }catch(e){if(current===sequence&&out.isConnected)status.textContent=e.message;}finally{if(current===sequence)refresh.disabled=false;}};
+ document.querySelectorAll('[data-material]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-material]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));load(b.dataset.material);});refresh.onclick=()=>load(selection);load(selection);
+ }};
+};
 initAccessibility();
 document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#"]');if(!a||a.hash==='#main')return;if(!leave()){e.preventDefault();return;}dirty=false;if(a.hash===location.hash){e.preventDefault();render();}});
 let lastHash=location.hash;window.addEventListener('hashchange',()=>{if(dirty&&!leave()){history.replaceState(null,'',lastHash||'#home');return;}lastHash=location.hash;render();});

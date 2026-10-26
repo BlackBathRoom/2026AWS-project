@@ -2,6 +2,7 @@ import express from 'express';
 import { randomUUID } from 'node:crypto';
 import * as path from 'node:path';
 import { mockRouter } from './routes/mock-routes';
+import { materialRouter } from './routes/material-routes';
 import { backendRouter } from './routes/backend-routes';
 
 export const app = express();
@@ -27,6 +28,7 @@ app.get('/runtime-config.js', (_req, res) => {
 app.use(express.static(path.resolve(__dirname, '..', 'public')));
 app.use(express.static(path.resolve(__dirname, '..', '..', 'public')));
 
+app.use('/api/v1', materialRouter);
 app.use('/api/v1', mockRouter);
 app.use('/api/v1', backendRouter);
 app.use(mockRouter);
