@@ -3,7 +3,7 @@ export class ApiError extends Error {constructor(status,code,message,request_id)
 export async function api(path,{method='GET',body,key,signal}={}){
  const token=await auth.getAccessToken();const headers={Accept:'application/json'};if(token)headers.Authorization='Bearer '+token;if(body!==undefined)headers['Content-Type']='application/json';if(key)headers['Idempotency-Key']=key;
  const response=await fetch(window.RUNTIME_CONFIG.api_base+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body),signal,credentials:window.RUNTIME_CONFIG.mode==='mock'?'same-origin':'omit'});
- const data=await response.json();if(!response.ok){const e=data.error||{};throw new ApiError(response.status,e.code,e.message||'通信に失敗しました。',e.request_id);}return data;
+ const raw=await response.text();let data;try{data=raw?JSON.parse(raw):null;}catch{throw new ApiError(response.status,'INVALID_RESPONSE','APIからJSON以外の応答を受信しました。起動先とAPI設定を確認してください。');}if(!response.ok){const e=data?.error||data||{};throw new ApiError(response.status,e.code,e.message||'通信に失敗しました。',e.requestId||e.request_id);}return data;
 }
 // 通信エラーでの再送は同じキー。同じ操作でも内容を変更した場合は新しいキー。
 export function mutation(){let previous,key;return async(path,body,method='POST')=>{const fingerprint=JSON.stringify([path,body,method]);if(previous!==fingerprint){previous=fingerprint;key=crypto.randomUUID();}const result=await api(path,{method,body,key});previous=undefined;return result;};}
