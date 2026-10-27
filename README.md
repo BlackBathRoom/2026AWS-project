@@ -1,382 +1,127 @@
-# 2026AWS-project
+# 情報II AI学習システム
 
-情報Ⅱを担当する教員を支援するAI学習システムです。
+情報IIの学習・診断・AI支援を行うWebアプリケーションです。フロントエンド(担当A)、バックエンドAPI(担当B)、AI/RAG(担当C)で分担します。共通API契約(OpenAPI)、TypeScriptバックエンド、CDKによるAWS構成、契約テストを含みます。
 
-Amazon Bedrock Knowledge Base と Amazon Nova Pro を利用し、固定された情報Ⅱ教材を根拠として質問に回答します。  
-教材の範囲外の質問には `OUT_OF_SCOPE` を返します。
+## 担当ごとの使用言語・構成（重要）
 
-## 必要環境
+リポジトリ全体で構成がぶつからないよう、担当ごとに言語と配置を固定します。**この指定から外れる構成追加(例: バックエンドを別言語で書き直す、`package.json`を自分の担当都合で全面置換する)は行わないでください。**
 
-- Node.js 22
-- npm
-- AWS CLI
-- Amazon Bedrock を利用できるAWSアカウント
+| 担当 | 役割 | 使用言語 / ランタイム | 配置 | ビルド |
+|---|---|---|---|---|
+| **担当A** | フロントエンド(UI・アクセシビリティ) | **素のJavaScript(ESモジュール)** + HTML/CSS。ビルド・バンドラ・TSは使わない | `public/` 配下のみ | なし(ブラウザが直接読む) |
+| **担当B** | バックエンドAPI・認証・採点・到達判定・AWS基盤 | **TypeScript**(Express) + **AWS CDK(TypeScript)**。AWS SDK は **v3** | `src/`(CDKは`cdk/`) | `tsc`(`npm run build`) |
+| **担当C** | 教材限定RAG・AI回答生成 | **TypeScript**。Bedrock / SQS / Lambda(AWS SDK **v3**) | `src/integrations/bedrock-*`, `src/ai-worker.ts`, `src/integrations/rag-governance.ts` 等 | 担当Bと同じ`tsc` |
 
-プロジェクトルートの `.nvmrc` には、次のNode.jsバージョンを指定しています。
+### 共通ルール(構成の衝突を防ぐため)
+
+- **`package.json` / `package-lock.json` はルートの1つを全担当で共有**します。依存を追加するときは**追記のみ**とし、既存の `scripts` や依存を削除・置換しないでください。
+- **バックエンドとCDKはTypeScript、AWS SDKはv3で統一**します。`aws-sdk`(v2) は追加しないでください。
+- **フロント(担当A)はビルドレスの素のJS**で、`public/` 配下だけを変更します。バックエンド(`src/*.ts`)やそのモックで上書きしないでください。
+- 言語選択そのものは仕様書に指定がありません。上記はチームで決めた統一方針です。**変更したい場合は全担当合意のうえでこの表を更新**してください。
+
+> 背景: 過去にフロント側PRが `package.json` をJS/aws-sdk v2構成へ全面置換し、仕様書準拠のTSバックエンド(AI制御・AWS・認証・監査)がモックで失われる衝突が発生しました。上記ルールはその再発防止です。
+
+## フォルダ構成
 
 ```text
-22
+openapi/              OpenAPI 3.0.3契約
+public/               担当A フロントエンド(JS/HTML/CSS)
+src/                  担当B/C バックエンド(TypeScript)
+  contracts/          ブランド付きID、認証、学習コンテキスト、型
+  routes/             APIルート
+  services/           業務ロジック
+  repositories/       InMemory / DynamoDB リポジトリ
+  integrations/       外部接続(Cognito/S3/SQS/CloudWatch/Bedrock)
+  middleware/         認証ミドルウェア
+  mocks/              サンプルデータ
+  ai-worker.ts        担当C AI worker Lambda(SQS駆動のBedrock RAG)
+cdk/                  AWS CDK(TypeScript): BackendStack / TutorAiStack
+tests/                Vitest契約・サービステスト
+frontversion/         担当A引継ぎ資料
+docs/                 APIルール、A/C連携、AWS構成、デプロイ手順、未確定事項
 ```
 
-また、`package.json` ではNode.js 22系を要求しています。
+## 必要なソフトウェア
 
-```json
-"engines": {
-  "node": ">=22 <23"
-}
-```
+- Node.js LTS
+- npm
 
-nvmを使用する場合は、プロジェクトルートで次を実行してください。
-
-```bash
-nvm use
-```
-
-Node.jsのバージョン確認:
-
-```bash
-node -v
-npm -v
-```
-
-## 依存パッケージのインストール
-
-リポジトリをcloneした後、プロジェクトルートで次を実行します。
+## インストールと起動
 
 ```bash
 npm install
+npm run build
+npm run dev
 ```
 
-## AWS認証
+ポートは `3000`(`PORT`で変更可能)です。本番環境ではモックトークンを受け付けません。
 
-ローカル開発では、AWS CLIの `aws login` を使用します。
+AWS構成テンプレートのローカル検証(デプロイはしません):
 
 ```bash
-aws login
+npm run cdk:synth
 ```
 
-WSLなど、ブラウザを直接開けない環境では次のように実行できます。
+## フロントエンド(UI)の確認
+
+`public/` に担当AのフロントエンドUIが含まれます。`npm run dev` でバックエンドと同一オリジンで配信され、ブラウザで `http://localhost:3000/index.html` を開くと確認できます。
+
+フロントは `/runtime-config.js`(サーバーが提供) の `window.RUNTIME_CONFIG` を読み、`api_base`/`mode`/`upload_origins` を決定します。既定はローカル確認用に `mode=mock`、`api_base=/api/v1` です。デプロイ環境では以下の環境変数で差し替えます。
+
+- `FRONTEND_MODE`: `mock` または実API接続時の値
+- `FRONTEND_API_BASE`: API Gatewayのベース(例 `https://xxxx.execute-api.us-east-1.amazonaws.com/prod/api/v1`)
+- `FRONTEND_UPLOAD_ORIGINS`: 署名URLアップロード先の許可オリジン(カンマ区切り)
+
+本番の静的配信は S3/CloudFront 等を想定しており、Expressの静的配信はローカル確認用です。
+
+## テスト実行
 
 ```bash
-aws login --remote --region us-east-1
+npm test
 ```
 
-認証状態は次のコマンドで確認できます。
+## APIの確認方法
 
 ```bash
-aws sts get-caller-identity
+curl http://localhost:3000/api/v1/health
+curl -H 'Authorization: Bearer mock-user-001' http://localhost:3000/api/v1/me
+curl -H 'Authorization: Bearer mock-user-001' 'http://localhost:3000/api/v1/trainings'
+curl -H 'Authorization: Bearer mock-user-001' 'http://localhost:3000/api/v1/study-context?trainingId=training-001&assignmentId=assignment-001'
 ```
 
-AWS Access Key、Secret Access Key、Session Tokenなどの認証情報は、コードやREADMEには記載しないでください。
+モックユーザーは `mock-user-001`(school-001学生)、`mock-user-002`(school-002学生)、`mock-user-003`(school-001教員)です。認証情報はサーバー側のユーザー情報から決まり、リクエストの組織・役割・modeは信頼しません。
 
-## 必要な環境変数
+## OpenAPIの確認方法
 
-APIサーバーを起動する際には、次の環境変数を設定します。
+契約は [openapi/openapi.yaml](openapi/openapi.yaml) です。`npm test` でYAML構文とOpenAPI 3.0スキーマ、正常レスポンスのスキーマ整合性を検証します。
 
-```text
-AWS_USE_LOGIN_CREDENTIALS=true
-AWS_PROFILE=default
-AWS_REGION=us-east-1
-BEDROCK_KNOWLEDGE_BASE_ID=<Knowledge Base ID>
-BEDROCK_MODEL_ID=amazon.nova-pro-v1:0
-```
+## 担当別の注意点
 
-### 環境変数の説明
+### 担当A(フロント)
 
-| 環境変数 | 内容 |
-|---|---|
-| `AWS_USE_LOGIN_CREDENTIALS` | ローカル開発時に `aws login` の認証情報を使用するか |
-| `AWS_PROFILE` | 使用するAWS CLIプロファイル |
-| `AWS_REGION` | Amazon Bedrockを使用するリージョン |
-| `BEDROCK_KNOWLEDGE_BASE_ID` | 使用するBedrock Knowledge BaseのID |
-| `BEDROCK_MODEL_ID` | 回答生成・根拠判定に使用するBedrockモデル |
+- API のベースURLは `/api/v1`、日時はUTCのISO 8601、エラーは共通形式です。認証済み呼び出しには Cognito の Bearer トークンを付けます。
+- 実装は `public/` 配下の素のJSのみ。`src/` のTypeScriptやそのモックには手を入れないでください。
+- フロント↔バックエンドの**フィールド命名・ジョブ状態名には差異**があり(フロント snake_case/`SUCCEEDED`・`TIMEOUT`、バック camelCase/`COMPLETED`・`FAILED`)、最終的なすり合わせは担当A/B/Cの合意事項です。`frontversion/` の引継ぎ資料を参照してください。
+- 詳細は [docs/frontend-integration.md](docs/frontend-integration.md)。
 
-`BEDROCK_KNOWLEDGE_BASE_ID` には、実際に使用するKnowledge BaseのIDを設定してください。
+### 担当B(バックエンド)
 
-READMEには実際のKnowledge Base IDやAWSアカウントIDなどの環境固有情報を記載しないでください。
+- 実装は TypeScript(`src/`)、インフラは CDK(`cdk/`)。AWS SDK は v3。
+- 組織境界はIDを受け取るだけでなく認証コンテキストと現在の所属を照合します。確定提出・確定評価は上書きせず、`expectedVersion` と `Idempotency-Key` で競合・二重処理を防ぎます。
+- AWS移行境界は [docs/backend-architecture.md](docs/backend-architecture.md)、仕様比較は [docs/backend-gap-analysis.md](docs/backend-gap-analysis.md)、未確定事項は [docs/pending-decisions.md](docs/pending-decisions.md)。
 
-## システム概要
+### 担当C(AI/RAG)
 
-このシステムでは、固定された情報Ⅱ教材だけを回答根拠として使用します。
+- 実装は TypeScript。接続点は `src/integrations/ai-provider.ts` の `AiTutorProvider`。本番は SQS→AI worker(`src/ai-worker.ts`)→Bedrock Knowledge Base の経路です。
+- `src/contracts/study-context.ts` の `StudyContext` に従います。`mode`・`assistancePolicy`・`ruleVersionId` はサーバー管理値で、クライアント入力では変更できません。評価モードでは正答や直接解答を返しません。
+- 教材限定RAG・根拠充足判定・出典必須などのガバナンスは [docs/ai-integration.md](docs/ai-integration.md) と [docs/aws-ai-services.md](docs/aws-ai-services.md)。
 
-処理の流れは次のとおりです。
+## AWSデプロイ (担当B領域 / us-east-1)
 
-```text
-ユーザーの質問
-    ↓
-Amazon Bedrock Knowledge Base
-    ↓
-関連教材検索
-    ↓
-Amazon Nova Proによる根拠十分性判定
-    ↓
-supportingIndexesで回答根拠となる教材チャンクを選択
-    ↓
-Amazon Nova Proによる回答生成
-    ↓
-回答根拠となった教材からcitationsを生成
-    ↓
-APIレスポンス
-```
-
-Knowledge Baseが返した検索結果をすべて回答に使用するのではなく、Nova Proによる根拠十分性判定で、質問への回答に直接利用できる教材チャンクだけを選択します。
-
-これにより、
-
-- 質問と単語が似ているだけの教材
-- 回答には直接必要のない教材
-- 教材中に存在する単なる例示
-
-などが回答根拠として使用されることを抑制します。
-
-## 質問の判定
-
-質問は主に次の3つの状態で判定します。
-
-### `SUPPORTED`
-
-固定教材から取得された1件または複数件の検索結果を利用することで、質問へ正確に回答できる場合です。
-
-### `INSUFFICIENT`
-
-質問自体は情報Ⅱや固定教材のテーマに含まれているものの、取得された検索結果だけでは正確に回答するための情報が不足している場合です。
-
-### `OUT_OF_SCOPE`
-
-固定教材だけでは回答できない質問です。
-
-例:
-
-- 現在の天気
-- 現在のニュース
-- 株価
-- リアルタイム交通情報
-- 地域固有の現在情報
-- 店舗や飲食店のおすすめ
-- 固定教材外の一般的な質問
-
-教材の中に似た単語や例が存在していても、その内容が質問そのものへの回答根拠にならない場合は `OUT_OF_SCOPE` と判定します。
-
-## APIサーバーの起動
-
-Node.js 22を使用しているため、Node.js 18で必要だった次の設定は不要です。
-
-```text
-NODE_OPTIONS=--experimental-global-webcrypto
-```
-
-APIサーバーは次のように起動します。
+担当B領域のリソースを `us-east-1` にCLIで作成する手順は [docs/deploy-backend.md](docs/deploy-backend.md) にあります。`Information2BackendStack` のみをデプロイし、担当C領域(SQS/Bedrock)の `Information2TutorAiStack` は含みません。
 
 ```bash
-AWS_USE_LOGIN_CREDENTIALS=true \
-AWS_PROFILE=default \
-AWS_REGION=us-east-1 \
-BEDROCK_KNOWLEDGE_BASE_ID=<Knowledge Base ID> \
-BEDROCK_MODEL_ID=amazon.nova-pro-v1:0 \
-npm start
+npm run cdk:deploy:backend   # = cdk deploy Information2BackendStack
 ```
 
-## API
-
-### `POST /v1/tutor/ask`
-
-情報Ⅱ教材について質問するためのAPIです。
-
-### リクエスト例
-
-```json
-{
-  "question": "決定木とはどのようなものですか？"
-}
-```
-
-### `SUPPORTED` のレスポンス例
-
-```json
-{
-  "status": "SUPPORTED",
-  "answer": "教材を根拠とした回答",
-  "citations": [
-    {
-      "fileName": "03_chapter3_part2.pdf",
-      "s3Uri": "s3://...",
-      "page": 1
-    }
-  ]
-}
-```
-
-### `OUT_OF_SCOPE` のレスポンス例
-
-```json
-{
-  "status": "OUT_OF_SCOPE",
-  "answer": "固定教材の範囲内に回答の根拠が見つかりませんでした。",
-  "citations": []
-}
-```
-
-### `INSUFFICIENT` のレスポンス例
-
-```json
-{
-  "status": "INSUFFICIENT",
-  "answer": "関連する教材は見つかりましたが、回答するための十分な根拠がありませんでした。",
-  "citations": []
-}
-```
-
-## citations
-
-`SUPPORTED` の場合、回答根拠として実際に選択された教材だけを `citations` として返します。
-
-Knowledge Baseが検索したすべての教材をそのまま出典にするのではなく、`supportingIndexes` で回答根拠として選択された検索結果だけを使用します。
-
-citationには次の情報を含みます。
-
-```json
-{
-  "fileName": "03_chapter3_part2.pdf",
-  "s3Uri": "s3://...",
-  "page": 1
-}
-```
-
-同じPDF・同じページが複数の検索結果として取得された場合は、重複を削除します。
-
-## APIのテスト
-
-APIサーバーを起動した状態で、別のターミナルから次を実行してください。
-
-```bash
-node scripts/testTutorApi.js
-```
-
-現在のテストでは、次の4問を順番にAPIへ送信します。
-
-1. 決定木とはどのようなものですか？
-2. 情報システムとはどのようなものですか？
-3. 今日の京都の天気を教えてください。
-4. おすすめのラーメン屋を教えてください。
-
-期待される結果:
-
-```text
-決定木
-→ SUPPORTED
-
-情報システム
-→ SUPPORTED
-
-今日の京都の天気
-→ OUT_OF_SCOPE
-
-おすすめのラーメン屋
-→ OUT_OF_SCOPE
-```
-
-教材内質問では、回答本文と回答根拠となったPDF・ページ情報が `citations` に含まれることを確認します。
-
-教材外質問では、`OUT_OF_SCOPE` となり、`citations` が空配列になることを確認します。
-
-## 個別テスト
-
-Knowledge Base検索だけを確認する場合:
-
-```bash
-BEDROCK_KNOWLEDGE_BASE_ID=<Knowledge Base ID> \
-AWS_REGION=us-east-1 \
-node scripts/testBedrockRetrieval.js
-```
-
-根拠十分性判定を確認する場合:
-
-```bash
-AWS_USE_LOGIN_CREDENTIALS=true \
-AWS_PROFILE=default \
-BEDROCK_KNOWLEDGE_BASE_ID=<Knowledge Base ID> \
-AWS_REGION=us-east-1 \
-BEDROCK_MODEL_ID=amazon.nova-pro-v1:0 \
-node scripts/testEvidenceService.js
-```
-
-AIサービス全体を確認する場合:
-
-```bash
-AWS_USE_LOGIN_CREDENTIALS=true \
-AWS_PROFILE=default \
-BEDROCK_KNOWLEDGE_BASE_ID=<Knowledge Base ID> \
-AWS_REGION=us-east-1 \
-BEDROCK_MODEL_ID=amazon.nova-pro-v1:0 \
-node scripts/testAiServiceBedrock.js
-```
-
-## 主な構成
-
-```text
-src/
-├── config/
-│   └── awsClientConfig.js
-│
-├── data/
-│   └── materials.json
-│
-├── services/
-│   ├── aiService.js
-│   ├── bedrockRetrievalService.js
-│   ├── evidenceService.js
-│   └── bedrockAnswerService.js
-│
-└── index.js
-
-scripts/
-├── testBedrockRetrieval.js
-├── evaluateRetrieval.js
-├── testEvidenceService.js
-├── testBedrockAnswer.js
-├── testAiServiceBedrock.js
-└── testTutorApi.js
-```
-
-### 各サービスの役割
-
-`bedrockRetrievalService.js`
-
-- Amazon Bedrock Knowledge Baseから関連教材を検索します。
-
-`evidenceService.js`
-
-- 検索結果が質問への回答根拠として十分かをNova Proで判定します。
-- `SUPPORTED`
-- `INSUFFICIENT`
-- `OUT_OF_SCOPE`
-- `supportingIndexes`
-
-を返します。
-
-`bedrockAnswerService.js`
-
-- `supportingIndexes` で選択された教材チャンクだけを根拠としてNova Proで回答を生成します。
-
-`aiService.js`
-
-- 教材検索
-- 根拠十分性判定
-- 回答生成
-- citations生成
-
-を統合します。
-
-`index.js`
-
-- Express APIを提供します。
-
-## AWS認証について
-
-ローカル開発では、`AWS_USE_LOGIN_CREDENTIALS=true` の場合に `aws login` で取得した認証情報を使用します。
-
-本番AWS環境では認証情報をコードに直接設定せず、AWS SDKの標準認証チェーンを使用する構成です。
-
-そのため、Lambda、ECS、EC2などへデプロイする場合はIAM Roleを利用できます。
-
-AWS Access Key、Secret Access Key、Session Tokenなどをソースコードへ直接記述しないでください。
+Bedrock/RAG(担当C領域)の実装概要は [docs/aws-ai-services.md](docs/aws-ai-services.md) を参照してください。
