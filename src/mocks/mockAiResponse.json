@@ -1,0 +1,13 @@
+{
+  "status": "SUPPORTED",
+  "answer": "決定木は、データを条件によって枝分かれさせながら分類や予測を行う手法です。",
+  "citations": [
+    {
+      "documentId": "info2-chapter3-part1",
+      "title": "情報とデータサイエンス",
+      "fileName": "03_chapter3_part1.pdf",
+      "s3Key": "materials/info2/03_chapter3_part1.pdf",
+      "page": null
+    }
+  ]
+}
