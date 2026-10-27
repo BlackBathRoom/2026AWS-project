@@ -68,7 +68,20 @@ async function generateAiResponse(question) {
     throw new Error(`Unexpected evidence status: ${evidence.status}`);
   }
 
-  const answer = await generateGroundedAnswer(question, retrievalResults);
+  const supportingResults = Array.isArray(evidence.supportingIndexes)
+    ? evidence.supportingIndexes
+      .filter((index) => Number.isInteger(index))
+      .map((index) => retrievalResults[index])
+      .filter((result) => result !== undefined)
+    : [];
+
+  if (supportingResults.length === 0) {
+    throw new Error(
+      'SUPPORTED evidence did not identify any valid supporting retrieval results.',
+    );
+  }
+
+  const answer = await generateGroundedAnswer(question, supportingResults);
   if (answer.trim() === 'INSUFFICIENT') {
     return INSUFFICIENT_RESPONSE;
   }
@@ -76,7 +89,7 @@ async function generateAiResponse(question) {
   return {
     status: 'SUPPORTED',
     answer,
-    citations: createCitations(retrievalResults),
+    citations: createCitations(supportingResults),
   };
 }
 
