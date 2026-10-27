@@ -10,9 +10,18 @@ app.get('/', (req, res) => {
   res.send('AI学習システム - API');
 });
 
-app.post('/v1/tutor/ask', (req, res) => {
-  const response = generateAiResponse(req.body && req.body.question);
-  res.json(response);
+app.post('/v1/tutor/ask', async (req, res) => {
+  try {
+    const result = await generateAiResponse(req.body && req.body.question);
+    res.json(result);
+  } catch (error) {
+    console.error('AI processing error:', error?.name || 'UnknownError');
+    res.status(500).json({
+      status: 'ERROR',
+      answer: 'AI処理中にエラーが発生しました。',
+      citations: [],
+    });
+  }
 });
 
 app.use((err, req, res, next) => {
