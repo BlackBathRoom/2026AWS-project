@@ -7,6 +7,9 @@
     "dev": "NODE_ENV=development node src/index.js",
     "cdk:synth": "cd cdk && npm run -s build && npx cdk synth"
   },
+  "engines": {
+    "node": ">=22 <23"
+  },
   "dependencies": {
     "@aws-sdk/client-bedrock-agent-runtime": "^3.1157.0",
     "@aws-sdk/client-bedrock-runtime": "^3.1157.0",
