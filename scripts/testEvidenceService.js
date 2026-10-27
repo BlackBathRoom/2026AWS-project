@@ -4,16 +4,29 @@ const {
 const { evaluateEvidence } = require('../src/services/evidenceService');
 
 const questions = [
-  '決定木とはどのようなものですか？',
-  '情報システムとはどのようなものですか？',
-  '今日の京都の天気を教えてください。',
-  'おすすめのラーメン屋を教えてください。',
+  {
+    question: '決定木とはどのようなものですか？',
+    expectedStatus: 'SUPPORTED',
+  },
+  {
+    question: '情報システムとはどのようなものですか？',
+    expectedStatus: 'SUPPORTED',
+  },
+  {
+    question: '今日の京都の天気を教えてください。',
+    expectedStatus: 'OUT_OF_SCOPE',
+  },
+  {
+    question: 'おすすめのラーメン屋を教えてください。',
+    expectedStatus: 'OUT_OF_SCOPE',
+  },
 ];
 
 async function main() {
-  for (const question of questions) {
+  for (const { question, expectedStatus } of questions) {
     console.log('================================');
     console.log(`質問: ${question}`);
+    console.log(`期待status: ${expectedStatus}`);
 
     try {
       const retrievalResults = await retrieveFromKnowledgeBase(question);
