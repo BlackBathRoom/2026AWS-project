@@ -21,6 +21,7 @@ async function main() {
 
       console.log(`status: ${evaluation.status}`);
       console.log(`reason: ${evaluation.reason}`);
+      console.log(`supportingIndexes: ${JSON.stringify(evaluation.supportingIndexes)}`);
     } catch (error) {
       console.error(`評価に失敗しました: ${error.message}`);
       process.exitCode = 1;

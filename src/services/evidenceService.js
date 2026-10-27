@@ -30,6 +30,7 @@ async function evaluateEvidence(question, retrievalResults) {
     return {
       status: 'OUT_OF_SCOPE',
       reason: '質問が入力されていません。',
+      supportingIndexes: [],
     };
   }
 
@@ -37,10 +38,14 @@ async function evaluateEvidence(question, retrievalResults) {
     return {
       status: 'OUT_OF_SCOPE',
       reason: '回答の根拠となる教材が見つかりませんでした。',
+      supportingIndexes: [],
     };
   }
 
   const evidence = retrievalResults.slice(0, 5).map(getEvidence);
+  const evidenceText = evidence
+    .map((result, index) => `[${index}]\n${result.contentText || ''}`)
+    .join('\n\n');
   const modelId = process.env.BEDROCK_MODEL_ID || 'amazon.nova-pro-v1:0';
   const client = new BedrockRuntimeClient({
     region: process.env.AWS_REGION || 'us-east-1',
@@ -66,12 +71,18 @@ async function evaluateEvidence(question, retrievalResults) {
 ${question}
 
 検索結果（最大5件）:
-${JSON.stringify(evidence, null, 2)}
+${evidenceText}
+
+質問へ直接回答するための根拠として利用できる検索結果だけを、0始まりの番号でsupportingIndexesに含めてください。
+質問と関連しているだけで、回答の直接的な根拠ではない検索結果は含めないでください。
+SUPPORTEDの場合はsupportingIndexesを1件以上にしてください。
+OUT_OF_SCOPEの場合はsupportingIndexesを空配列にしてください。
 
 JSONのみを返してください。Markdownやコードブロックは使用しないでください。
 形式:
-{"status":"SUPPORTED","reason":"簡潔な日本語の理由"}
-statusはSUPPORTED、INSUFFICIENT、OUT_OF_SCOPEのいずれか1つだけです。`,
+{"status":"SUPPORTED","reason":"簡潔な日本語の理由","supportingIndexes":[0,1]}
+statusはSUPPORTED、INSUFFICIENT、OUT_OF_SCOPEのいずれか1つだけです。
+supportingIndexesは検索結果の0始まりのindex配列です。`,
           },
         ],
       },
@@ -97,6 +108,25 @@ statusはSUPPORTED、INSUFFICIENT、OUT_OF_SCOPEのいずれか1つだけです�
   if (!evaluation || !VALID_STATUSES.has(evaluation.status)) {
     throw new Error(
       'Nova Pro returned an invalid status. Expected SUPPORTED, INSUFFICIENT, or OUT_OF_SCOPE.',
+    );
+  }
+
+  if (!Array.isArray(evaluation.supportingIndexes)) {
+    throw new Error('Nova Pro returned invalid supportingIndexes. Expected an array.');
+  }
+
+  const maxSupportingIndex = Math.min(5, retrievalResults.length);
+  if (evaluation.supportingIndexes.some(
+    (index) => !Number.isInteger(index) || index < 0 || index >= maxSupportingIndex,
+  )) {
+    throw new Error(
+      'Nova Pro returned an invalid supportingIndexes value. Each index must reference a retrieved result.',
+    );
+  }
+
+  if (evaluation.status === 'SUPPORTED' && evaluation.supportingIndexes.length === 0) {
+    throw new Error(
+      'Nova Pro returned SUPPORTED without any supportingIndexes.',
     );
   }
 
