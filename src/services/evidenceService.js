@@ -2,6 +2,7 @@ const {
   BedrockRuntimeClient,
   ConverseCommand,
 } = require('@aws-sdk/client-bedrock-runtime');
+const { createAwsClientConfig } = require('../config/awsClientConfig');
 
 const VALID_STATUSES = new Set([
   'SUPPORTED',
@@ -47,9 +48,7 @@ async function evaluateEvidence(question, retrievalResults) {
     .map((result, index) => `[${index}]\n${result.contentText || ''}`)
     .join('\n\n');
   const modelId = process.env.BEDROCK_MODEL_ID || 'amazon.nova-pro-v1:0';
-  const client = new BedrockRuntimeClient({
-    region: process.env.AWS_REGION || 'us-east-1',
-  });
+  const client = new BedrockRuntimeClient(createAwsClientConfig());
 
   const command = new ConverseCommand({
     modelId,

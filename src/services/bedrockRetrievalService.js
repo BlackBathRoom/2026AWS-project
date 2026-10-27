@@ -2,6 +2,7 @@ const {
   BedrockAgentRuntimeClient,
   RetrieveCommand,
 } = require('@aws-sdk/client-bedrock-agent-runtime');
+const { createAwsClientConfig } = require('../config/awsClientConfig');
 
 async function retrieveFromKnowledgeBase(question) {
   if (typeof question !== 'string' || question.trim() === '') {
@@ -13,9 +14,7 @@ async function retrieveFromKnowledgeBase(question) {
     throw new Error('BEDROCK_KNOWLEDGE_BASE_ID is not set.');
   }
 
-  const client = new BedrockAgentRuntimeClient({
-    region: process.env.AWS_REGION || 'us-east-1',
-  });
+  const client = new BedrockAgentRuntimeClient(createAwsClientConfig());
 
   const command = new RetrieveCommand({
     knowledgeBaseId,

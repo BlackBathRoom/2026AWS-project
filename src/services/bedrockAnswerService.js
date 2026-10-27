@@ -2,6 +2,7 @@ const {
   BedrockRuntimeClient,
   ConverseCommand,
 } = require('@aws-sdk/client-bedrock-runtime');
+const { createAwsClientConfig } = require('../config/awsClientConfig');
 
 function getResponseText(response) {
   return response.output?.message?.content
@@ -25,9 +26,7 @@ async function generateGroundedAnswer(question, retrievalResults) {
     .filter((text) => typeof text === 'string' && text.trim() !== '');
 
   const modelId = process.env.BEDROCK_MODEL_ID || 'amazon.nova-pro-v1:0';
-  const client = new BedrockRuntimeClient({
-    region: process.env.AWS_REGION || 'us-east-1',
-  });
+  const client = new BedrockRuntimeClient(createAwsClientConfig());
 
   const materialText = materials
     .map((text, index) => `[教材${index + 1}]\n${text}`)
