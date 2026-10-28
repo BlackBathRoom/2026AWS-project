@@ -6,6 +6,20 @@ import { materialRouter } from './routes/material-routes';
 import { backendRouter } from './routes/backend-routes';
 
 export const app = express();
+// CORS for the deployed frontend. OPTIONS must be unauthenticated at API Gateway too.
+app.use((req, res, next) => {
+  const allowedOrigin = process.env.FRONTEND_ORIGIN || 'https://bittomo.click';
+  if (req.header('origin') === allowedOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+    res.vary('Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Authorization,Content-Type,Idempotency-Key,X-Request-Id');
+    res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
+  }
+  if (req.method === 'OPTIONS') { res.sendStatus(204); return; }
+  next();
+});
+
 app.use(express.json({ limit: '1mb' }));
 app.use((req, res, next) => { req.requestId = req.header('x-request-id') || `req-${randomUUID()}`; res.setHeader('x-request-id', req.requestId); next(); });
 

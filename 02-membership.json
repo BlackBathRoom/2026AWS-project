@@ -1,0 +1,24 @@
+{
+  "pk": {
+    "S": "USER#a4c8e448-d081-709a-1355-b9bab73f682d"
+  },
+  "sk": {
+    "S": "MEMBERSHIP#school-001"
+  },
+  "status": {
+    "S": "active"
+  },
+  "organizationId": {
+    "S": "school-001"
+  },
+  "startsAt": {
+    "S": "2026-01-01T00:00:00.000Z"
+  },
+  "trainingIds": {
+    "L": [
+      {
+        "S": "training-001"
+      }
+    ]
+  }
+}

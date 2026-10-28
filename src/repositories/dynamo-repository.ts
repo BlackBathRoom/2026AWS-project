@@ -14,6 +14,13 @@ export class DynamoEntityRepository {
     return result.Item as T | undefined;
   }
 
+  // Default organization is server-managed; never read it from request parameters.
+  async getAuthContextForUser(tableName: string, userId: string): Promise<AuthContext | undefined> {
+    const user = await this.get<Record<string, unknown>>({ tableName }, { pk: `USER#${userId}`, sk: 'PROFILE' });
+    if (!user || user.status !== 'active' || typeof user.organizationId !== 'string' || !user.organizationId) return undefined;
+    return this.getCurrentAuthContext(tableName, userId, user.organizationId);
+  }
+
   async getCurrentAuthContext(tableName: string, userId: string, tokenOrganizationId: string): Promise<AuthContext | undefined> {
     const [user, membership] = await Promise.all([
       this.get<Record<string, unknown>>({ tableName }, { pk: `USER#${userId}`, sk: 'PROFILE' }),

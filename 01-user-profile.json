@@ -1,0 +1,17 @@
+{
+  "pk": {
+    "S": "USER#a4c8e448-d081-709a-1355-b9bab73f682d"
+  },
+  "sk": {
+    "S": "PROFILE"
+  },
+  "status": {
+    "S": "active"
+  },
+  "role": {
+    "S": "teacher"
+  },
+  "organizationId": {
+    "S": "school-001"
+  }
+}
