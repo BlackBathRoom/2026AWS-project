@@ -68,7 +68,13 @@ export class BackendStack extends cdk.Stack {
     const authorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', { cognitoUserPools: [userPool] });
     const integration = new apigateway.LambdaIntegration(handler);
     api.root.addResource('health').addMethod('GET', integration);
-    api.root.addProxy({ defaultIntegration: integration, defaultMethodOptions: { authorizer, authorizationType: apigateway.AuthorizationType.COGNITO, authorizationScopes: ['openid'] } });
+    // Apply authorization to ANY only. OPTIONS must not inherit OAuth scopes.
+    const proxy = api.root.addProxy({ defaultIntegration: integration, anyMethod: false });
+    proxy.addMethod('ANY', integration, {
+      authorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizationScopes: ['openid'],
+    });
 
     // Gateway-generated failures also need CORS; proxy responses use app.ts.
     for (const [responseId, type] of [
