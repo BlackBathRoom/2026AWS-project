@@ -2,7 +2,7 @@
 // B側API(GET /tutor/jobs/:id) が読み出す。所有者(userId/organizationId)境界を保つ。
 
 import { TutorJob, TutorResult } from '../contracts/backend';
-import { DynamoEntityRepository, DynamoRepositoryConfig } from '../repositories/dynamo-repository';
+import { DynamoEntityRepository, DynamoRepositoryConfig } from './dynamo-repository';
 
 export interface TutorJobStore {
   create(job: TutorJob): Promise<void>;
