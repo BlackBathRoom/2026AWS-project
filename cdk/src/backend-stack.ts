@@ -18,13 +18,39 @@ export class BackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // The deployed frontend and its OAuth callback share this production origin.
+    const frontendOrigin = 'https://bittomo.click';
+    const frontendUrl = `${frontendOrigin}/`;
+
     const userPool = new cognito.UserPool(this, 'UserPool', { selfSignUpEnabled: false, accountRecovery: cognito.AccountRecovery.EMAIL_ONLY, customAttributes: { organizationId: new cognito.StringAttribute({ mutable: false }), role: new cognito.StringAttribute({ mutable: false }), trainingIds: new cognito.StringAttribute({ mutable: true }) }, removalPolicy: cdk.RemovalPolicy.RETAIN });
-    const userPoolClient = userPool.addClient('ApiClient', { generateSecret: false, authFlows: { userSrp: true }, preventUserExistenceErrors: true, enableTokenRevocation: true, readAttributes: new cognito.ClientAttributes().withCustomAttributes('organizationId', 'role', 'trainingIds'), writeAttributes: new cognito.ClientAttributes().withStandardAttributes({ email: true }) });
+    // Preserve construct IDs so the existing pool and client keep their logical IDs.
+    const userPoolClient = userPool.addClient('ApiClient', {
+      generateSecret: false,
+      authFlows: { userSrp: true },
+      preventUserExistenceErrors: true,
+      enableTokenRevocation: true,
+      supportedIdentityProviders: [cognito.UserPoolClientIdentityProvider.COGNITO],
+      oAuth: {
+        flows: { authorizationCodeGrant: true, implicitCodeGrant: false, clientCredentials: false },
+        scopes: [cognito.OAuthScope.OPENID, cognito.OAuthScope.EMAIL, cognito.OAuthScope.PROFILE],
+        callbackUrls: [frontendUrl],
+        defaultRedirectUri: frontendUrl,
+        logoutUrls: [frontendUrl],
+      },
+      readAttributes: new cognito.ClientAttributes()
+        .withStandardAttributes({ email: true, emailVerified: true })
+        .withCustomAttributes('organizationId', 'role', 'trainingIds'),
+      writeAttributes: new cognito.ClientAttributes().withStandardAttributes({ email: true }),
+    });
+    // bittomo-login.auth.us-east-1.amazoncognito.com and its managed-login style
+    // already exist outside this template. Keep them intact; adopt them via a
+    // separate CloudFormation resource import rather than creating duplicates.
+
     const table = new dynamodb.Table(this, 'BackendTable', { partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING }, sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING }, billingMode: dynamodb.BillingMode.PAY_PER_REQUEST, pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true }, removalPolicy: cdk.RemovalPolicy.RETAIN });
     const bucket = new s3.Bucket(this, 'PrivateUploads', { blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL, encryption: s3.BucketEncryption.S3_MANAGED, enforceSSL: true, versioned: true, removalPolicy: cdk.RemovalPolicy.RETAIN });
     const logGroup = new logs.LogGroup(this, 'ApiLogGroup', { retention: logs.RetentionDays.ONE_YEAR, removalPolicy: cdk.RemovalPolicy.RETAIN });
     const repositoryRoot = path.resolve(__dirname, '../..');
-    const handler = new lambdaNodejs.NodejsFunction(this, 'BackendHandler', { runtime: lambda.Runtime.NODEJS_24_X, entry: path.join(repositoryRoot, 'src/lambda.ts'), projectRoot: repositoryRoot, depsLockFilePath: path.join(repositoryRoot, 'package-lock.json'), handler: 'handler', timeout: cdk.Duration.seconds(30), environment: { BACKEND_TABLE_NAME: table.tableName, UPLOAD_BUCKET_NAME: bucket.bucketName, COGNITO_REGION: this.region, COGNITO_USER_POOL_ID: userPool.userPoolId, COGNITO_AUDIENCE: userPoolClient.userPoolClientId } });
+    const handler = new lambdaNodejs.NodejsFunction(this, 'BackendHandler', { runtime: lambda.Runtime.NODEJS_24_X, entry: path.join(repositoryRoot, 'src/lambda.ts'), projectRoot: repositoryRoot, depsLockFilePath: path.join(repositoryRoot, 'package-lock.json'), handler: 'handler', timeout: cdk.Duration.seconds(30), environment: { NODE_ENV: 'production', FRONTEND_ORIGIN: frontendOrigin, BACKEND_TABLE_NAME: table.tableName, UPLOAD_BUCKET_NAME: bucket.bucketName, COGNITO_REGION: this.region, COGNITO_USER_POOL_ID: userPool.userPoolId, COGNITO_AUDIENCE: userPoolClient.userPoolClientId } });
     table.grantReadWriteData(handler);
     bucket.grantReadWrite(handler);
     handler.addToRolePolicy(new iam.PolicyStatement({ actions: ['logs:CreateLogStream', 'logs:PutLogEvents'], resources: [logGroup.logGroupArn, `${logGroup.logGroupArn}:*`] }));
@@ -38,11 +64,26 @@ export class BackendStack extends cdk.Stack {
     handler.addToRolePolicy(new iam.PolicyStatement({ actions: ['sqs:SendMessage', 'sqs:GetQueueUrl'], resources: [tutorQueueArn] }));
     handler.addEnvironment('TUTOR_QUEUE_URL', `https://sqs.${this.region}.amazonaws.com/${this.account}/${tutorQueueName}`);
 
-    const api = new apigateway.RestApi(this, 'BackendApi', { deployOptions: { accessLogDestination: new apigateway.LogGroupLogDestination(logGroup), tracingEnabled: true }, endpointTypes: [apigateway.EndpointType.REGIONAL], defaultCorsPreflightOptions: { allowOrigins: [process.env.FRONTEND_ORIGIN || 'http://localhost:5173'], allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], allowHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'X-Request-Id'] } });
+    const api = new apigateway.RestApi(this, 'BackendApi', { deployOptions: { accessLogDestination: new apigateway.LogGroupLogDestination(logGroup), tracingEnabled: true }, endpointTypes: [apigateway.EndpointType.REGIONAL], defaultCorsPreflightOptions: { allowOrigins: [frontendOrigin], allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], allowHeaders: ['Authorization', 'Content-Type', 'Idempotency-Key', 'X-Request-Id'] } });
     const authorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', { cognitoUserPools: [userPool] });
     const integration = new apigateway.LambdaIntegration(handler);
     api.root.addResource('health').addMethod('GET', integration);
-    api.root.addProxy({ defaultIntegration: integration, defaultMethodOptions: { authorizer, authorizationType: apigateway.AuthorizationType.COGNITO } });
+    api.root.addProxy({ defaultIntegration: integration, defaultMethodOptions: { authorizer, authorizationType: apigateway.AuthorizationType.COGNITO, authorizationScopes: ['openid'] } });
+
+    // Gateway-generated failures also need CORS; proxy responses use app.ts.
+    for (const [responseId, type] of [
+      ['CorsDefault4xx', apigateway.ResponseType.DEFAULT_4XX],
+      ['CorsDefault5xx', apigateway.ResponseType.DEFAULT_5XX],
+    ] as const) {
+      api.addGatewayResponse(responseId, {
+        type,
+        responseHeaders: {
+          'Access-Control-Allow-Origin': `'${frontendOrigin}'`,
+          'Access-Control-Allow-Headers': "'Authorization,Content-Type,Idempotency-Key,X-Request-Id'",
+          'Access-Control-Allow-Methods': "'GET,POST,PUT,PATCH,DELETE,OPTIONS'",
+        },
+      });
+    }
 
     this.table = table;
     this.handler = handler;
