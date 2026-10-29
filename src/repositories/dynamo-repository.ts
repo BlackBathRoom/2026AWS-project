@@ -7,7 +7,7 @@ import { Role, roles } from '../contracts/common';
 export interface DynamoRepositoryConfig { tableName: string; }
 
 export class DynamoEntityRepository {
-  constructor(private readonly client = DynamoDBDocumentClient.from(new DynamoDBClient({}))) {}
+  constructor(private readonly client = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } })) {}
 
   async get<T>(config: DynamoRepositoryConfig, key: Record<string, unknown>): Promise<T | undefined> {
     const result = await this.client.send(new GetCommand({ TableName: config.tableName, Key: key, ConsistentRead: true }));

@@ -32,8 +32,17 @@ export class TutorAiStack extends cdk.Stack {
     const aiAuditLogStream = 'tutor-worker';
 
     // Bedrock の Knowledge Base ID とモデル ID はデプロイ環境ごとに注入する (承認済み教材KBは担当Cが別途作成)。
-    const knowledgeBaseId = process.env.BEDROCK_KNOWLEDGE_BASE_ID || 'REPLACE_WITH_KNOWLEDGE_BASE_ID';
-    const bedrockModelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-5-sonnet-20240620-v1:0';
+    const knowledgeBaseId = new cdk.CfnParameter(this, 'KnowledgeBaseId', {
+      type: 'String', allowedPattern: '[A-Za-z0-9]{10}',
+      description: 'Existing us-east-1 Knowledge Base containing only the approved textbook dataset.',
+    }).valueAsString;
+    const bedrockModelId = new cdk.CfnParameter(this, 'ModelId', {
+      type: 'String', minLength: 1, description: 'Converse-compatible model ID or inference profile ARN.',
+    }).valueAsString;
+    const modelInvokeArns = new cdk.CfnParameter(this, 'ModelInvokeArns', {
+      type: 'CommaDelimitedList',
+      description: 'Exact model/profile ARNs; for cross-region profiles include destination foundation-model ARNs.',
+    }).valueAsList;
 
     const aiWorker = new lambdaNodejs.NodejsFunction(this, 'TutorWorker', {
       runtime: lambda.Runtime.NODEJS_24_X,
@@ -59,7 +68,7 @@ export class TutorAiStack extends cdk.Stack {
     aiWorker.addToRolePolicy(new iam.PolicyStatement({ actions: ['logs:CreateLogStream', 'logs:PutLogEvents'], resources: [aiAuditLogGroup.logGroupArn, `${aiAuditLogGroup.logGroupArn}:*`] }));
     // Bedrock KB 検索 (G-001: 承認済みKB限定) とモデル呼び出し。リソースは実KB/モデルARNに絞ること。
     aiWorker.addToRolePolicy(new iam.PolicyStatement({ actions: ['bedrock:Retrieve'], resources: [`arn:aws:bedrock:${this.region}:${this.account}:knowledge-base/${knowledgeBaseId}`] }));
-    aiWorker.addToRolePolicy(new iam.PolicyStatement({ actions: ['bedrock:InvokeModel'], resources: [`arn:aws:bedrock:${this.region}::foundation-model/${bedrockModelId}`, `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/${bedrockModelId}`] }));
+    aiWorker.addToRolePolicy(new iam.PolicyStatement({ actions: ['bedrock:InvokeModel'], resources: modelInvokeArns }));
 
     // 受付 API Lambda(B) への SQS 送信権限と TUTOR_QUEUE_URL は、循環依存を避けるため
     // BackendStack 側で名前ベースARN/URLを使って付与済み (BackendStack.TUTOR_QUEUE_BASE_NAME)。

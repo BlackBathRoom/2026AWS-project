@@ -113,6 +113,8 @@ const legacyMaterialView=views.materials;
 views.materials=()=>me.role==='teacher'
  ? createStudyView({catalog,initialUnit:unitId,onUnitChange:id=>{unitId=id;const select=$('#unit-select');if(select){if(id==='ii-0'&&!select.querySelector('option[value="ii-0"]'))select.prepend(new Option('表紙・目次','ii-0'));select.value=id;}}})
  : legacyMaterialView();
+// Textbook questions use the same authenticated reader and the textbook-only API.
+views.ai=()=>createStudyView({catalog,initialUnit:unitId,onUnitChange:id=>{unitId=id;}});
 initAccessibility();
 document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#"]');if(!a||a.hash==='#main')return;if(!leave()){e.preventDefault();return;}dirty=false;if(a.hash===location.hash){e.preventDefault();render();}});
 let lastHash=location.hash;window.addEventListener('hashchange',()=>{if(dirty&&!leave()){history.replaceState(null,'',lastHash||'#home');return;}lastHash=location.hash;render();});

@@ -15,14 +15,37 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
  * @licend The above is the entire license notice for the
  * JavaScript code in this page
  */
 
 /**
- * pdfjsVersion = 6.4.299
- * pdfjsBuild = d0991a0d5
+ * pdfjsVersion = 5.7.284
+ * pdfjsBuild = 7e5b36c2d
  */
+/******/ // The require scope
+/******/ var __webpack_require__ = {};
+/******/ 
+/************************************************************************/
+/******/ /* webpack/runtime/define property getters */
+/******/ (() => {
+/******/ 	// define getter functions for harmony exports
+/******/ 	__webpack_require__.d = (exports, definition) => {
+/******/ 		for(var key in definition) {
+/******/ 			if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 				Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 			}
+/******/ 		}
+/******/ 	};
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/hasOwnProperty shorthand */
+/******/ (() => {
+/******/ 	__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ })();
+/******/ 
+/************************************************************************/
 
 ;// ./src/shared/util.js
 const isNodeJS = typeof process === "object" && process + "" === "[object process]" && !process.versions.nw && !(process.versions.electron && process.type && process.type !== "browser");
@@ -32,7 +55,6 @@ const FONT_IDENTITY_MATRIX = [0.001, 0, 0, 0.001, 0, 0];
 const LINE_FACTOR = 1.35;
 const LINE_DESCENT_FACTOR = 0.35;
 const BASELINE_FACTOR = LINE_DESCENT_FACTOR / LINE_FACTOR;
-const SVG_NS = "http://www.w3.org/2000/svg";
 const RenderingIntentFlag = {
   ANY: 0x01,
   DISPLAY: 0x02,
@@ -44,13 +66,12 @@ const RenderingIntentFlag = {
   IS_EDITING: 0x80,
   OPLIST: 0x100
 };
-const AnnotationMode = (/* unused pure expression or super */ null && ({
+const AnnotationMode = {
   DISABLE: 0,
   ENABLE: 1,
   ENABLE_FORMS: 2,
   ENABLE_STORAGE: 3
-}));
-const AnnotationPrefix = "pdfjs_internal_id_";
+};
 const AnnotationEditorPrefix = "pdfjs_internal_editor_";
 const AnnotationEditorType = {
   DISABLE: -1,
@@ -63,7 +84,7 @@ const AnnotationEditorType = {
   SIGNATURE: 101,
   COMMENT: 102
 };
-const AnnotationEditorParamsType = (/* unused pure expression or super */ null && ({
+const AnnotationEditorParamsType = {
   RESIZE: 1,
   CREATE: 2,
   FREETEXT_SIZE: 11,
@@ -78,7 +99,7 @@ const AnnotationEditorParamsType = (/* unused pure expression or super */ null &
   HIGHLIGHT_FREE: 33,
   HIGHLIGHT_SHOW_ALL: 34,
   DRAW_STEP: 41
-}));
+};
 const PermissionFlag = {
   PRINT: 0x04,
   MODIFY_CONTENTS: 0x08,
@@ -137,19 +158,11 @@ const AnnotationType = {
   TRAPNET: 23,
   WATERMARK: 24,
   THREED: 25,
-  REDACT: 26,
-  RICHMEDIA: 27
+  REDACT: 26
 };
 const AnnotationReplyType = {
   GROUP: "Group",
   REPLY: "R"
-};
-const AnnotationRenditionOperation = {
-  PLAY_OR_RESUME: 0,
-  STOP: 1,
-  PAUSE: 2,
-  RESUME: 3,
-  PLAY: 4
 };
 const AnnotationFlag = {
   INVISIBLE: 0x01,
@@ -480,12 +493,18 @@ function stringToBytes(str) {
   }
   return bytes;
 }
+function objectSize(obj) {
+  return Object.keys(obj).length;
+}
+function isLittleEndian() {
+  const buffer8 = new Uint8Array(4);
+  buffer8[0] = 1;
+  const view32 = new Uint32Array(buffer8.buffer, 0, 1);
+  return view32[0] === 1;
+}
 class FeatureTest {
   static get isLittleEndian() {
-    const buffer8 = new Uint8Array(4);
-    buffer8[0] = 1;
-    const view32 = new Uint32Array(buffer8.buffer, 0, 1);
-    return shadow(this, "isLittleEndian", view32[0] === 1);
+    return shadow(this, "isLittleEndian", isLittleEndian());
   }
   static get isOffscreenCanvasSupported() {
     return shadow(this, "isOffscreenCanvasSupported", typeof OffscreenCanvas !== "undefined");
@@ -512,28 +531,75 @@ class FeatureTest {
       isFirefox: userAgent.includes("Firefox")
     });
   }
-  static get isCanvasFilterSupported() {
-    let ctx;
-    if (this.isOffscreenCanvasSupported) {
-      ctx = new OffscreenCanvas(1, 1).getContext("2d");
-    }
-    return shadow(this, "isCanvasFilterSupported", ctx?.filter !== undefined);
+  static get isCSSRoundSupported() {
+    return shadow(this, "isCSSRoundSupported", globalThis.CSS?.supports?.("width: round(1.5px, 1px)"));
   }
   static get isAlphaColorInputSupported() {
-    return shadow(this, "isAlphaColorInputSupported", false);
-  }
-  static get isBackdropFilterSupported() {
-    return shadow(this, "isBackdropFilterSupported", typeof CSS !== "undefined" && CSS.supports("backdrop-filter", "blur(1px)"));
+    return shadow(this, "isAlphaColorInputSupported", (() => {
+      if (typeof document === "undefined") {
+        return false;
+      }
+      const input = document.createElement("input");
+      input.type = "color";
+      input.setAttribute("alpha", "");
+      input.value = "#ff000080";
+      return input.value !== "#ff0000";
+    })());
   }
 }
 class Util {
   static get hexNums() {
-    return shadow(this, "hexNums", Array.from({
-      length: 256
-    }, (_, n) => n.toString(16).padStart(2, "0")));
+    return shadow(this, "hexNums", Array.from(Array(256).keys(), n => n.toString(16).padStart(2, "0")));
   }
   static makeHexColor(r, g, b) {
     return `#${this.hexNums[r]}${this.hexNums[g]}${this.hexNums[b]}`;
+  }
+  static domMatrixToTransform(dm) {
+    return [dm.a, dm.b, dm.c, dm.d, dm.e, dm.f];
+  }
+  static scaleMinMax(transform, minMax) {
+    let temp;
+    if (transform[0]) {
+      if (transform[0] < 0) {
+        temp = minMax[0];
+        minMax[0] = minMax[2];
+        minMax[2] = temp;
+      }
+      minMax[0] *= transform[0];
+      minMax[2] *= transform[0];
+      if (transform[3] < 0) {
+        temp = minMax[1];
+        minMax[1] = minMax[3];
+        minMax[3] = temp;
+      }
+      minMax[1] *= transform[3];
+      minMax[3] *= transform[3];
+    } else {
+      temp = minMax[0];
+      minMax[0] = minMax[1];
+      minMax[1] = temp;
+      temp = minMax[2];
+      minMax[2] = minMax[3];
+      minMax[3] = temp;
+      if (transform[1] < 0) {
+        temp = minMax[1];
+        minMax[1] = minMax[3];
+        minMax[3] = temp;
+      }
+      minMax[1] *= transform[1];
+      minMax[3] *= transform[1];
+      if (transform[2] < 0) {
+        temp = minMax[0];
+        minMax[0] = minMax[2];
+        minMax[2] = temp;
+      }
+      minMax[0] *= transform[2];
+      minMax[2] *= transform[2];
+    }
+    minMax[0] += transform[4];
+    minMax[1] += transform[5];
+    minMax[2] += transform[4];
+    minMax[3] += transform[5];
   }
   static transform(m1, m2) {
     return [m1[0] * m2[0] + m1[2] * m2[1], m1[1] * m2[0] + m1[3] * m2[1], m1[0] * m2[2] + m1[2] * m2[3], m1[1] * m2[2] + m1[3] * m2[3], m1[0] * m2[4] + m1[2] * m2[5] + m1[4], m1[1] * m2[4] + m1[3] * m2[5] + m1[5]];
@@ -643,7 +709,10 @@ class Util {
     }
     const yLow = Math.max(Math.min(rect1[1], rect1[3]), Math.min(rect2[1], rect2[3]));
     const yHigh = Math.min(Math.max(rect1[1], rect1[3]), Math.max(rect2[1], rect2[3]));
-    return yLow > yHigh ? null : [xLow, yLow, xHigh, yHigh];
+    if (yLow > yHigh) {
+      return null;
+    }
+    return [xLow, yLow, xHigh, yHigh];
   }
   static pointBoundingBox(x, y, minMax) {
     minMax[0] = Math.min(minMax[0], x);
@@ -696,6 +765,51 @@ class Util {
     this.#getExtremum(x0, x1, x2, x3, y0, y1, y2, y3, 3 * (-y0 + 3 * (y1 - y2) + y3), 6 * (y0 - 2 * y1 + y2), 3 * (y1 - y0), minMax);
   }
 }
+const PDFStringTranslateTable = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x2d8, 0x2c7, 0x2c6, 0x2d9, 0x2dd, 0x2db, 0x2da, 0x2dc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x2022, 0x2020, 0x2021, 0x2026, 0x2014, 0x2013, 0x192, 0x2044, 0x2039, 0x203a, 0x2212, 0x2030, 0x201e, 0x201c, 0x201d, 0x2018, 0x2019, 0x201a, 0x2122, 0xfb01, 0xfb02, 0x141, 0x152, 0x160, 0x178, 0x17d, 0x131, 0x142, 0x153, 0x161, 0x17e, 0, 0x20ac];
+function stringToPDFString(str, keepEscapeSequence = false) {
+  if (str[0] >= "\xEF") {
+    let encoding;
+    if (str[0] === "\xFE" && str[1] === "\xFF") {
+      encoding = "utf-16be";
+      if (str.length % 2 === 1) {
+        str = str.slice(0, -1);
+      }
+    } else if (str[0] === "\xFF" && str[1] === "\xFE") {
+      encoding = "utf-16le";
+      if (str.length % 2 === 1) {
+        str = str.slice(0, -1);
+      }
+    } else if (str[0] === "\xEF" && str[1] === "\xBB" && str[2] === "\xBF") {
+      encoding = "utf-8";
+    }
+    if (encoding) {
+      try {
+        const decoder = new TextDecoder(encoding, {
+          fatal: true
+        });
+        const buffer = stringToBytes(str);
+        const decoded = decoder.decode(buffer);
+        if (keepEscapeSequence || !decoded.includes("\x1b")) {
+          return decoded;
+        }
+        return decoded.replaceAll(/\x1b[^\x1b]*(?:\x1b|$)/g, "");
+      } catch (ex) {
+        warn(`stringToPDFString: "${ex}".`);
+      }
+    }
+  }
+  const strBuf = [];
+  for (let i = 0, ii = str.length; i < ii; i++) {
+    const charCode = str.charCodeAt(i);
+    if (!keepEscapeSequence && charCode === 0x1b) {
+      while (++i < ii && str.charCodeAt(i) !== 0x1b) {}
+      continue;
+    }
+    const code = PDFStringTranslateTable[charCode];
+    strBuf.push(code ? String.fromCharCode(code) : str.charAt(i));
+  }
+  return strBuf.join("");
+}
 function stringToUTF8String(str) {
   return decodeURIComponent(escape(str));
 }
@@ -713,11 +827,18 @@ function isArrayEqual(arr1, arr2) {
   }
   return true;
 }
+function getModificationDate(date = new Date()) {
+  if (!(date instanceof Date)) {
+    date = new Date(date);
+  }
+  const buffer = [date.getUTCFullYear().toString(), (date.getUTCMonth() + 1).toString().padStart(2, "0"), date.getUTCDate().toString().padStart(2, "0"), date.getUTCHours().toString().padStart(2, "0"), date.getUTCMinutes().toString().padStart(2, "0"), date.getUTCSeconds().toString().padStart(2, "0")];
+  return buffer.join("");
+}
 let NormalizeRegex = null;
 let NormalizationMap = null;
 function normalizeUnicode(str) {
   if (!NormalizeRegex) {
-    NormalizeRegex = /([\u00a0\u00b5\u037e\u0eb3\u2000-\u200a\u202f\u2126\ufb00-\ufb04\ufb06\ufb20-\ufb36\ufb38-\ufb3c\ufb3e\ufb40\ufb41\ufb43\ufb44\ufb46-\ufba1\ufba4-\ufba9\ufbae-\ufbb1\ufbd3-\ufbdc\ufbde-\ufbe7\ufbea-\ufbf8\ufbfc\ufbfd\ufc00-\ufc5d\ufc64-\ufcf1\ufcf5-\ufd3d\ufd88\ufdf4\ufdfa\ufdfb\ufe71\ufe77\ufe79\ufe7b\ufe7d]+)|(\ufb05+)/gu;
+    NormalizeRegex = /([\u00a0\u00b5\u037e\u0eb3\u2000-\u200a\u202f\u2126\ufb00-\ufb04\ufb06\ufb20-\ufb36\ufb38-\ufb3c\ufb3e\ufb40-\ufb41\ufb43-\ufb44\ufb46-\ufba1\ufba4-\ufba9\ufbae-\ufbb1\ufbd3-\ufbdc\ufbde-\ufbe7\ufbea-\ufbf8\ufbfc-\ufbfd\ufc00-\ufc5d\ufc64-\ufcf1\ufcf5-\ufd3d\ufd88\ufdf4\ufdfa-\ufdfb\ufe71\ufe77\ufe79\ufe7b\ufe7d]+)|(\ufb05+)/gu;
     NormalizationMap = new Map([["ﬅ", "ſt"]]);
   }
   return str.replaceAll(NormalizeRegex, (_, p1, p2) => p1 ? p1.normalize("NFKC") : NormalizationMap.get(p2));
@@ -730,6 +851,7 @@ function getUuid() {
   crypto.getRandomValues(buf);
   return bytesToString(buf);
 }
+const AnnotationPrefix = "pdfjs_internal_id_";
 function _isValidExplicitDest(validRef, validName, dest) {
   if (!Array.isArray(dest) || dest.length < 2) {
     return false;
@@ -780,36 +902,25 @@ function _isValidExplicitDest(validRef, validName, dest) {
 const makeArr = () => [];
 const makeMap = () => new Map();
 const makeObj = () => Object.create(null);
-const makeSet = () => new Set();
-if (typeof Iterator.prototype.join !== "function") {
-  Iterator.prototype.join = function (separator) {
-    return [...this].join(separator);
-  };
-}
 
 ;// ./src/core/primitives.js
 
 const CIRCULAR_REF = Symbol("CIRCULAR_REF");
 const EOF = Symbol("EOF");
-const CmdCache = new Map();
-const NameCache = new Map();
-const RefCache = new Map();
+let CmdCache = Object.create(null);
+let NameCache = Object.create(null);
+let RefCache = Object.create(null);
 function clearPrimitiveCaches() {
-  CmdCache.clear();
-  NameCache.clear();
-  RefCache.clear();
+  CmdCache = Object.create(null);
+  NameCache = Object.create(null);
+  RefCache = Object.create(null);
 }
 class Name {
   constructor(name) {
     this.name = name;
   }
   static get(name) {
-    let n = NameCache.get(name);
-    if (!n) {
-      n = new Name(name);
-      NameCache.set(name, n);
-    }
-    return n;
+    return NameCache[name] ||= new Name(name);
   }
 }
 class Cmd {
@@ -817,15 +928,12 @@ class Cmd {
     this.cmd = cmd;
   }
   static get(cmd) {
-    let c = CmdCache.get(cmd);
-    if (!c) {
-      c = new Cmd(cmd);
-      CmdCache.set(cmd, c);
-    }
-    return c;
+    return CmdCache[cmd] ||= new Cmd(cmd);
   }
 }
-const nonSerializable = () => nonSerializable;
+const nonSerializable = function nonSerializableClosure() {
+  return nonSerializable;
+};
 class Dict {
   __nonSerializable__ = nonSerializable;
   #map = new Map();
@@ -841,24 +949,27 @@ class Dict {
   get size() {
     return this.#map.size;
   }
-  #getValue(isAsync, key1, key2) {
+  #getValue(isAsync, key1, key2, key3) {
     let value = this.#map.get(key1);
     if (value === undefined && key2 !== undefined) {
       value = this.#map.get(key2);
+      if (value === undefined && key3 !== undefined) {
+        value = this.#map.get(key3);
+      }
     }
     if (value instanceof Ref && this.xref) {
       return isAsync ? this.xref.fetchAsync(value, this.suppressEncryption) : this.xref.fetch(value, this.suppressEncryption);
     }
     return value;
   }
-  get(key1, key2) {
-    return this.#getValue(false, key1, key2);
+  get(key1, key2, key3) {
+    return this.#getValue(false, key1, key2, key3);
   }
-  async getAsync(key1, key2) {
-    return this.#getValue(true, key1, key2);
+  async getAsync(key1, key2, key3) {
+    return this.#getValue(true, key1, key2, key3);
   }
-  getArray(key1, key2) {
-    let value = this.#getValue(false, key1, key2);
+  getArray(key1, key2, key3) {
+    let value = this.#getValue(false, key1, key2, key3);
     if (Array.isArray(value)) {
       value = value.slice();
       for (let i = 0, ii = value.length; i < ii; i++) {
@@ -943,8 +1054,11 @@ class Dict {
         continue;
       }
       for (const [key, value] of dict.getRawEntries()) {
-        const property = properties.getOrInsertComputed(key, makeArr);
-        if (property.length && !(mergeSubDicts && value instanceof Dict)) {
+        let property = properties.get(key);
+        if (property === undefined) {
+          property = [];
+          properties.set(key, property);
+        } else if (!mergeSubDicts || !(value instanceof Dict)) {
           continue;
         }
         property.push(value);
@@ -980,104 +1094,85 @@ class Dict {
   }
 }
 class Ref {
-  #str;
-  constructor(str, num, gen) {
-    this.#str = str;
+  constructor(num, gen) {
     this.num = num;
     this.gen = gen;
   }
   toString() {
-    return this.#str;
+    if (this.gen === 0) {
+      return `${this.num}R`;
+    }
+    return `${this.num}R${this.gen}`;
   }
   static fromString(str) {
-    let ref = RefCache.get(str);
+    const ref = RefCache[str];
     if (ref) {
       return ref;
     }
-    const m = /^([1-9]\d*)R([1-9]\d*)?$/.exec(str);
-    if (!m) {
+    const m = /^(\d+)R(\d*)$/.exec(str);
+    if (!m || m[1] === "0") {
       return null;
     }
-    ref = new Ref(str, parseInt(m[1], 10), !m[2] ? 0 : parseInt(m[2], 10));
-    RefCache.set(str, ref);
-    return ref;
+    return RefCache[str] = new Ref(parseInt(m[1], 10), !m[2] ? 0 : parseInt(m[2], 10));
   }
   static get(num, gen) {
-    const str = gen === 0 ? `${num}R` : `${num}R${gen}`;
-    let ref = RefCache.get(str);
-    if (!ref) {
-      ref = new Ref(str, num, gen);
-      RefCache.set(str, ref);
-    }
-    return ref;
+    const key = gen === 0 ? `${num}R` : `${num}R${gen}`;
+    return RefCache[key] ||= new Ref(num, gen);
   }
 }
 class RefSet {
-  #set = new Set();
   constructor(parent = null) {
-    if (parent) {
-      for (const refStr of parent) {
-        this.#set.add(refStr);
-      }
-    }
+    this._set = new Set(parent?._set);
   }
   has(ref) {
-    return this.#set.has(ref.toString());
+    return this._set.has(ref.toString());
   }
   put(ref) {
-    this.#set.add(ref.toString());
+    this._set.add(ref.toString());
   }
   remove(ref) {
-    this.#set.delete(ref.toString());
+    this._set.delete(ref.toString());
   }
   [Symbol.iterator]() {
-    return this.#set.keys();
+    return this._set.values();
   }
   clear() {
-    this.#set.clear();
+    this._set.clear();
   }
 }
-class RefMap {
-  #map = new Map();
+class RefSetCache {
+  _map = new Map();
   get size() {
-    return this.#map.size;
+    return this._map.size;
   }
   get(ref) {
-    return this.#map.get(ref.toString());
+    return this._map.get(ref.toString());
   }
   has(ref) {
-    return this.#map.has(ref.toString());
+    return this._map.has(ref.toString());
   }
   put(ref, obj) {
-    this.#map.set(ref.toString(), obj);
+    this._map.set(ref.toString(), obj);
   }
   putAlias(ref, aliasRef) {
-    this.#map.set(ref.toString(), this.get(aliasRef));
-  }
-  getOrPutComputed(ref, callback) {
-    const map = this.#map,
-      refStr = ref.toString();
-    if (!map.has(refStr)) {
-      map.set(refStr, callback(ref));
-    }
-    return map.get(refStr);
+    this._map.set(ref.toString(), this.get(aliasRef));
   }
   [Symbol.iterator]() {
-    return this.#map.values();
+    return this._map.values();
   }
   clear() {
-    this.#map.clear();
+    this._map.clear();
   }
   *values() {
-    yield* this.#map.values();
+    yield* this._map.values();
   }
   *items() {
-    for (const [ref, value] of this.#map) {
+    for (const [ref, value] of this._map) {
       yield [Ref.fromString(ref), value];
     }
   }
   *keys() {
-    for (const ref of this.#map.keys()) {
+    for (const ref of this._map.keys()) {
       yield Ref.fromString(ref);
     }
   }
@@ -1131,7 +1226,7 @@ class BaseStream {
   get canAsyncDecodeImageFromBuffer() {
     return false;
   }
-  async getTransferableImage(width, height) {
+  async getTransferableImage() {
     return null;
   }
   peekByte() {
@@ -1149,7 +1244,10 @@ class BaseStream {
   getUint16() {
     const b0 = this.getByte();
     const b1 = this.getByte();
-    return b0 === -1 || b1 === -1 ? -1 : (b0 << 8) + b1;
+    if (b0 === -1 || b1 === -1) {
+      return -1;
+    }
+    return (b0 << 8) + b1;
   }
   getInt32() {
     const b0 = this.getByte();
@@ -1176,9 +1274,6 @@ class BaseStream {
   makeSubStream(start, length, dict = null) {
     unreachable("Abstract method `makeSubStream` called");
   }
-  clone() {
-    unreachable("Abstract method `clone` called");
-  }
   getBaseStreams() {
     return null;
   }
@@ -1187,109 +1282,7 @@ class BaseStream {
   }
 }
 
-;// ./src/shared/css_utils.js
-const CONTROL_CHAR_REGEXP = /\p{Cc}/u;
-function isCSSString(str) {
-  const quote = str[0];
-  if (str.length < 2 || quote !== `"` && quote !== `'` || str.at(-1) !== quote) {
-    return false;
-  }
-  const end = str.length - 1;
-  for (let i = 1; i < end; i++) {
-    const char = str[i];
-    if (char === quote || CONTROL_CHAR_REGEXP.test(char)) {
-      return false;
-    }
-    if (char === "\\") {
-      if (++i >= end || CONTROL_CHAR_REGEXP.test(str[i])) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-function serializeFontFamily(fontFamily) {
-  if (isCSSString(fontFamily)) {
-    return fontFamily;
-  }
-  const escaped = fontFamily.replaceAll(/["\\\p{Cc}]/gu, char => char === `"` || char === "\\" ? `\\${char}` : `\\${char.codePointAt(0).toString(16)} `);
-  return `"${escaped}"`;
-}
-
-;// ./src/core/string_utils.js
-
-function isAscii(str) {
-  return typeof str === "string" && (!str || /^[\x00-\x7F]*$/.test(str));
-}
-function stringToAsciiOrUTF16BE(str) {
-  return str === null || str === undefined || isAscii(str) ? str : stringToUTF16String(str, true);
-}
-function stringToUTF16HexString(str) {
-  const buf = [];
-  for (let i = 0, ii = str.length; i < ii; i++) {
-    const char = str.charCodeAt(i);
-    buf.push(Util.hexNums[char >> 8 & 0xff], Util.hexNums[char & 0xff]);
-  }
-  return buf.join("");
-}
-function stringToUTF16String(str, bigEndian = false) {
-  const buf = [];
-  if (bigEndian) {
-    buf.push("\xFE\xFF");
-  }
-  for (let i = 0, ii = str.length; i < ii; i++) {
-    const char = str.charCodeAt(i);
-    buf.push(String.fromCharCode(char >> 8 & 0xff), String.fromCharCode(char & 0xff));
-  }
-  return buf.join("");
-}
-const PDFStringTranslateTable = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x2d8, 0x2c7, 0x2c6, 0x2d9, 0x2dd, 0x2db, 0x2da, 0x2dc, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x2022, 0x2020, 0x2021, 0x2026, 0x2014, 0x2013, 0x192, 0x2044, 0x2039, 0x203a, 0x2212, 0x2030, 0x201e, 0x201c, 0x201d, 0x2018, 0x2019, 0x201a, 0x2122, 0xfb01, 0xfb02, 0x141, 0x152, 0x160, 0x178, 0x17d, 0x131, 0x142, 0x153, 0x161, 0x17e, 0, 0x20ac];
-const PDFStringTextDecoders = Object.create(null);
-function stringToPDFString(str, keepEscapeSequence = false) {
-  if (str[0] >= "\xEF") {
-    let encoding;
-    if (str[0] === "\xFE" && str[1] === "\xFF") {
-      encoding = "utf-16be";
-      if (str.length % 2 === 1) {
-        str = str.slice(0, -1);
-      }
-    } else if (str[0] === "\xFF" && str[1] === "\xFE") {
-      encoding = "utf-16le";
-      if (str.length % 2 === 1) {
-        str = str.slice(0, -1);
-      }
-    } else if (str[0] === "\xEF" && str[1] === "\xBB" && str[2] === "\xBF") {
-      encoding = "utf-8";
-    }
-    if (encoding) {
-      try {
-        const decoder = PDFStringTextDecoders[encoding] ??= new TextDecoder(encoding, {
-          fatal: true
-        });
-        const buffer = stringToBytes(str);
-        const decoded = decoder.decode(buffer);
-        return keepEscapeSequence || !decoded.includes("\x1b") ? decoded : decoded.replaceAll(/\x1b[^\x1b]*(?:\x1b|$)/g, "");
-      } catch (ex) {
-        warn(`stringToPDFString: "${ex}".`);
-      }
-    }
-  }
-  const strBuf = [];
-  for (let i = 0, ii = str.length; i < ii; i++) {
-    const charCode = str.charCodeAt(i);
-    if (!keepEscapeSequence && charCode === 0x1b) {
-      while (++i < ii && str.charCodeAt(i) !== 0x1b) {}
-      continue;
-    }
-    const code = PDFStringTranslateTable[charCode];
-    strBuf.push(code ? String.fromCharCode(code) : str.charAt(i));
-  }
-  return strBuf.join("");
-}
-
 ;// ./src/core/core_utils.js
-
-
 
 
 
@@ -1298,11 +1291,11 @@ const MAX_INT_32 = 2 ** 31 - 1;
 const IDENTITY_MATRIX = [1, 0, 0, 1, 0, 0];
 const RESOURCES_KEYS_OPERATOR_LIST = ["ColorSpace", "ExtGState", "Font", "Pattern", "Properties", "Shading", "XObject"];
 const RESOURCES_KEYS_TEXT_CONTENT = ["ExtGState", "Font", "Properties", "XObject"];
-function getLookupTableFactory(initializer, useArray = false) {
+function getLookupTableFactory(initializer) {
   let lookup;
   return function () {
     if (initializer) {
-      lookup = useArray ? [] : Object.create(null);
+      lookup = Object.create(null);
       initializer(lookup);
       initializer = null;
     }
@@ -1410,12 +1403,6 @@ function deepCompare(a, b) {
   if (a === b) {
     return true;
   }
-  if (a instanceof Ref && b instanceof Ref) {
-    return isRefsEqual(a, b);
-  }
-  if (a instanceof Name && b instanceof Name) {
-    return a.name === b.name;
-  }
   if (a instanceof Dict && b instanceof Dict) {
     if (a.size !== b.size) {
       return false;
@@ -1469,13 +1456,16 @@ function lookupNormalRect(arr, fallback) {
   return isNumberArray(arr, 4) ? Util.normalizeRect(arr) : fallback;
 }
 function parseXFAPath(path) {
-  const positionPattern = /^(.+)\[(\d+)\]$/;
+  const positionPattern = /(.+)\[(\d+)\]$/;
   return path.split(".").map(component => {
     const m = component.match(positionPattern);
-    return m ? {
-      name: m[1],
-      pos: parseInt(m[2], 10)
-    } : {
+    if (m) {
+      return {
+        name: m[1],
+        pos: parseInt(m[2], 10)
+      };
+    }
+    return {
       name: component,
       pos: 0
     };
@@ -1490,7 +1480,7 @@ function escapePDFName(str) {
       if (start < i) {
         buffer.push(str.substring(start, i));
       }
-      buffer.push(`#${char.toString(16).padStart(2, "0")}`);
+      buffer.push(`#${char.toString(16)}`);
       start = i + 1;
     }
   }
@@ -1498,7 +1488,7 @@ function escapePDFName(str) {
     return str;
   }
   if (start < str.length) {
-    buffer.push(str.substring(start));
+    buffer.push(str.substring(start, str.length));
   }
   return buffer.join("");
 }
@@ -1549,15 +1539,8 @@ function _collectJS(entry, xref, list, parents) {
     parents.remove(parent);
   }
 }
-function _collectAction(dict, name, xref, actions) {
-  const list = [];
-  _collectJS(dict, xref, list, new RefSet());
-  if (list.length) {
-    actions.set(name, list);
-  }
-}
 function collectActions(xref, dict, eventType) {
-  const actions = new Map();
+  const actions = Object.create(null);
   const additionalActionsDicts = getInheritableProperty({
     dict,
     key: "AA",
@@ -1571,16 +1554,28 @@ function collectActions(xref, dict, eventType) {
       }
       for (const [key, rawActionDict] of additionalActions.getRawEntries()) {
         const action = eventType[key];
-        if (action) {
-          _collectAction(rawActionDict, action, xref, actions);
+        if (!action) {
+          continue;
+        }
+        const parents = new RefSet();
+        const list = [];
+        _collectJS(rawActionDict, xref, list, parents);
+        if (list.length > 0) {
+          actions[action] = list;
         }
       }
     }
   }
   if (dict.has("A")) {
-    _collectAction(dict.get("A"), "Action", xref, actions);
+    const actionDict = dict.get("A");
+    const parents = new RefSet();
+    const list = [];
+    _collectJS(actionDict, xref, list, parents);
+    if (list.length > 0) {
+      actions.Action = list;
+    }
   }
-  return actions.size ? actions : null;
+  return objectSize(actions) > 0 ? actions : null;
 }
 const XMLEntities = {
   0x3c: "&lt;",
@@ -1617,7 +1612,7 @@ function encodeToXmlString(str) {
         buffer.push(str.substring(start, i));
       }
       buffer.push(`&#x${char.toString(16).toUpperCase()};`);
-      if (char > 0xffff) {
+      if (char > 0xd7ff && (char < 0xe000 || char > 0xfffd)) {
         i++;
       }
       start = i + 1;
@@ -1627,7 +1622,7 @@ function encodeToXmlString(str) {
     return str;
   }
   if (start < str.length) {
-    buffer.push(str.substring(start));
+    buffer.push(str.substring(start, str.length));
   }
   return buffer.join("");
 }
@@ -1641,15 +1636,9 @@ function validateFontName(fontFamily, mustWarn = false) {
       }
       return false;
     }
-    if (CONTROL_CHAR_REGEXP.test(fontFamily)) {
-      if (mustWarn) {
-        warn(`FontFamily contains control characters: ${fontFamily}.`);
-      }
-      return false;
-    }
   } else {
     for (const ident of fontFamily.split(/[ \t]+/)) {
-      if (/^(?:\d|-[\d-])/.test(ident) || !/^[\w\\-]+$/.test(ident)) {
+      if (/^(\d|(-(\d|-)))/.test(ident) || !/^[\w-\\]+$/.test(ident)) {
         if (mustWarn) {
           warn(`FontFamily contains invalid <custom-ident>: ${fontFamily}.`);
         }
@@ -1658,9 +1647,6 @@ function validateFontName(fontFamily, mustWarn = false) {
     }
   }
   return true;
-}
-function normalizeCSSFontFamily(fontFamily) {
-  return fontFamily.replaceAll(/( +)(\d)?/g, (_, spaces, digit) => digit ?? " ");
 }
 function validateCSSFont(cssFontInfo) {
   const DEFAULT_CSS_FONT_OBLIQUE = "14";
@@ -1700,7 +1686,10 @@ function numberToString(value) {
   if (roundedValue % 100 === 0) {
     return (roundedValue / 100).toString();
   }
-  return roundedValue % 10 === 0 ? value.toFixed(1) : value.toFixed(2);
+  if (roundedValue % 10 === 0) {
+    return value.toFixed(1);
+  }
+  return value.toFixed(2);
 }
 function getNewAnnotationsMap(annotationStorage) {
   if (!annotationStorage) {
@@ -1715,12 +1704,36 @@ function getNewAnnotationsMap(annotationStorage) {
   }
   return newAnnotationsByPage.size > 0 ? newAnnotationsByPage : null;
 }
-function getModificationDate(date = new Date()) {
-  if (!(date instanceof Date)) {
-    date = new Date(date);
+function stringToAsciiOrUTF16BE(str) {
+  if (str === null || str === undefined) {
+    return str;
   }
-  const buffer = [date.getUTCFullYear().toString(), (date.getUTCMonth() + 1).toString().padStart(2, "0"), date.getUTCDate().toString().padStart(2, "0"), date.getUTCHours().toString().padStart(2, "0"), date.getUTCMinutes().toString().padStart(2, "0"), date.getUTCSeconds().toString().padStart(2, "0")];
-  return buffer.join("");
+  return isAscii(str) ? str : stringToUTF16String(str, true);
+}
+function isAscii(str) {
+  if (typeof str !== "string") {
+    return false;
+  }
+  return !str || /^[\x00-\x7F]*$/.test(str);
+}
+function stringToUTF16HexString(str) {
+  const buf = [];
+  for (let i = 0, ii = str.length; i < ii; i++) {
+    const char = str.charCodeAt(i);
+    buf.push(Util.hexNums[char >> 8 & 0xff], Util.hexNums[char & 0xff]);
+  }
+  return buf.join("");
+}
+function stringToUTF16String(str, bigEndian = false) {
+  const buf = [];
+  if (bigEndian) {
+    buf.push("\xFE\xFF");
+  }
+  for (let i = 0, ii = str.length; i < ii; i++) {
+    const char = str.charCodeAt(i);
+    buf.push(String.fromCharCode(char >> 8 & 0xff), String.fromCharCode(char & 0xff));
+  }
+  return buf.join("");
 }
 function getRotationMatrix(rotation, width, height) {
   switch (rotation) {
@@ -1739,14 +1752,15 @@ function getSizeInBytes(x) {
 }
 
 ;// ./external/qcms/qcms_utils.js
-const ALPHA_MASK = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1 ? 0xff000000 : 0x000000ff;
-const RGB_MASK = ~ALPHA_MASK;
 class QCMS {
   static #memoryArray = null;
   static _memory = null;
+  static _mustAddAlpha = false;
   static _destBuffer = null;
   static _destOffset = 0;
-  static _keepAlpha = false;
+  static _destLength = 0;
+  static _cssColor = "";
+  static _makeHexColor = null;
   static get _memoryArray() {
     const array = this.#memoryArray;
     if (array?.byteLength) {
@@ -1757,30 +1771,46 @@ class QCMS {
 }
 function copy_result(ptr, len) {
   const {
+    _mustAddAlpha,
     _destBuffer,
     _destOffset,
-    _keepAlpha,
+    _destLength,
     _memoryArray
   } = QCMS;
-  if (!_keepAlpha) {
+  if (len === _destLength) {
     _destBuffer.set(_memoryArray.subarray(ptr, ptr + len), _destOffset);
     return;
   }
-  const count = len >> 2;
-  const destStart = _destBuffer.byteOffset + _destOffset;
-  if (((destStart | ptr) & 3) === 0) {
-    const dest32 = new Uint32Array(_destBuffer.buffer, destStart, count);
-    const src32 = new Uint32Array(QCMS._memory.buffer, ptr, count);
-    for (let i = 0; i < count; i++) {
-      dest32[i] = dest32[i] & ALPHA_MASK | src32[i] & RGB_MASK;
+  if (_mustAddAlpha) {
+    for (let i = ptr, ii = ptr + len, j = _destOffset; i < ii; i += 3, j += 4) {
+      _destBuffer[j] = _memoryArray[i];
+      _destBuffer[j + 1] = _memoryArray[i + 1];
+      _destBuffer[j + 2] = _memoryArray[i + 2];
+      _destBuffer[j + 3] = 255;
     }
-    return;
+  } else {
+    for (let i = ptr, ii = ptr + len, j = _destOffset; i < ii; i += 3, j += 4) {
+      _destBuffer[j] = _memoryArray[i];
+      _destBuffer[j + 1] = _memoryArray[i + 1];
+      _destBuffer[j + 2] = _memoryArray[i + 2];
+    }
   }
-  for (let i = ptr, ii = ptr + len, j = _destOffset; i < ii; i += 4, j += 4) {
-    _destBuffer[j] = _memoryArray[i];
-    _destBuffer[j + 1] = _memoryArray[i + 1];
-    _destBuffer[j + 2] = _memoryArray[i + 2];
-  }
+}
+function copy_rgb(ptr) {
+  const {
+    _destBuffer,
+    _destOffset,
+    _memoryArray
+  } = QCMS;
+  _destBuffer[_destOffset] = _memoryArray[ptr];
+  _destBuffer[_destOffset + 1] = _memoryArray[ptr + 1];
+  _destBuffer[_destOffset + 2] = _memoryArray[ptr + 2];
+}
+function make_cssRGB(ptr) {
+  const {
+    _memoryArray
+  } = QCMS;
+  QCMS._cssColor = QCMS._makeHexColor(_memoryArray[ptr], _memoryArray[ptr + 1], _memoryArray[ptr + 2]);
 }
 
 ;// ./external/qcms/qcms.js
@@ -1809,22 +1839,19 @@ const Intent = Object.freeze({
   AbsoluteColorimetric: 3,
   "3": "AbsoluteColorimetric"
 });
-function qcms_convert_array(transformer, src, add_alpha) {
+function qcms_convert_array(transformer, src) {
   const ptr0 = passArray8ToWasm0(src, wasm.__wbindgen_malloc);
   const len0 = WASM_VECTOR_LEN;
-  wasm.qcms_convert_array(transformer, ptr0, len0, add_alpha);
+  wasm.qcms_convert_array(transformer, ptr0, len0);
 }
-function qcms_convert_four(transformer, src1, src2, src3, src4) {
-  const ret = wasm.qcms_convert_four(transformer, src1, src2, src3, src4);
-  return ret >>> 0;
+function qcms_convert_four(transformer, src1, src2, src3, src4, css) {
+  wasm.qcms_convert_four(transformer, src1, src2, src3, src4, css);
 }
-function qcms_convert_one(transformer, src) {
-  const ret = wasm.qcms_convert_one(transformer, src);
-  return ret >>> 0;
+function qcms_convert_one(transformer, src, css) {
+  wasm.qcms_convert_one(transformer, src, css);
 }
-function qcms_convert_three(transformer, src1, src2, src3) {
-  const ret = wasm.qcms_convert_three(transformer, src1, src2, src3);
-  return ret >>> 0;
+function qcms_convert_three(transformer, src1, src2, src3, css) {
+  wasm.qcms_convert_three(transformer, src1, src2, src3, css);
 }
 function qcms_drop_transformer(transformer) {
   wasm.qcms_drop_transformer(transformer);
@@ -1838,11 +1865,17 @@ function qcms_transformer_from_memory(mem, in_type, intent) {
 function __wbg_get_imports() {
   const import0 = {
     __proto__: null,
-    __wbg___wbindgen_throw_344f42d3211c4765: function (arg0, arg1) {
+    __wbg___wbindgen_throw_6b64449b9b9ed33c: function (arg0, arg1) {
       throw new Error(getStringFromWasm0(arg0, arg1));
     },
     __wbg_copy_result_0d15f3bf9d9012ae: function (arg0, arg1) {
       copy_result(arg0 >>> 0, arg1 >>> 0);
+    },
+    __wbg_copy_rgb_0106d9d9464fce43: function (arg0) {
+      copy_rgb(arg0 >>> 0);
+    },
+    __wbg_make_cssRGB_8e24b34f71f5363e: function (arg0) {
+      make_cssRGB(arg0 >>> 0);
     },
     __wbindgen_init_externref_table: function () {
       const table = wasm.__wbindgen_externrefs;
@@ -1860,7 +1893,8 @@ function __wbg_get_imports() {
   };
 }
 function getStringFromWasm0(ptr, len) {
-  return decodeText(ptr >>> 0, len);
+  ptr = ptr >>> 0;
+  return decodeText(ptr, len);
 }
 let cachedUint8ArrayMemory0 = null;
 function getUint8ArrayMemory0() {
@@ -1895,9 +1929,8 @@ function decodeText(ptr, len) {
   return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
 }
 let WASM_VECTOR_LEN = 0;
-let wasmModule, wasmInstance, wasm;
+let wasmModule, wasm;
 function __wbg_finalize_init(instance, module) {
-  wasmInstance = instance;
   wasm = instance.exports;
   wasmModule = module;
   cachedUint8ArrayMemory0 = null;
@@ -2100,14 +2133,8 @@ class ColorSpace {
   getRgbBuffer(src, srcOffset, count, dest, destOffset, bits, alpha01) {
     unreachable("Should not call ColorSpace.getRgbBuffer");
   }
-  getRgbItems(src, count, dest, destOffset, alpha01) {
-    const {
-      numComps
-    } = this;
-    for (let i = 0, srcOffset = 0; i < count; i++, srcOffset += numComps) {
-      this.getRgbItem(src, srcOffset, dest, destOffset);
-      destOffset += 3 + alpha01;
-    }
+  getOutputLength(inputLength, alpha01) {
+    unreachable("Should not call ColorSpace.getOutputLength");
   }
   isPassthrough(bits) {
     return false;
@@ -2196,21 +2223,6 @@ class AlternateCS extends ColorSpace {
     this.tintFn(src, srcOffset, tmpBuf, 0);
     this.base.getRgbItem(tmpBuf, 0, dest, destOffset);
   }
-  getRgbItems(src, count, dest, destOffset, alpha01) {
-    const {
-      base,
-      numComps,
-      tintFn
-    } = this;
-    const baseNumComps = base.numComps;
-    const tinted = new Float32Array(count * baseNumComps);
-    for (let i = 0, srcOffset = 0, tintedOffset = 0; i < count; i++) {
-      tintFn(src, srcOffset, tinted, tintedOffset);
-      srcOffset += numComps;
-      tintedOffset += baseNumComps;
-    }
-    base.getRgbItems(tinted, count, dest, destOffset, alpha01);
-  }
   getRgbBuffer(src, srcOffset, count, dest, destOffset, bits, alpha01) {
     const tintFn = this.tintFn;
     const base = this.base;
@@ -2242,6 +2254,9 @@ class AlternateCS extends ColorSpace {
       base.getRgbBuffer(baseBuf, 0, count, dest, destOffset, 8, alpha01);
     }
   }
+  getOutputLength(inputLength, alpha01) {
+    return this.base.getOutputLength(inputLength * this.base.numComps / this.numComps, alpha01);
+  }
 }
 class PatternCS extends ColorSpace {
   constructor(baseCS) {
@@ -2253,44 +2268,50 @@ class PatternCS extends ColorSpace {
   }
 }
 class IndexedCS extends ColorSpace {
-  #rgbLookup;
   constructor(base, highVal, lookup) {
     super("Indexed", 1);
+    this.base = base;
     this.highVal = highVal;
-    const count = highVal + 1;
-    const length = base.numComps * count;
-    const palette = new Uint8Array(length);
+    const length = base.numComps * (highVal + 1);
+    this.lookup = new Uint8Array(length);
     if (lookup instanceof BaseStream) {
-      palette.set(lookup.getBytes(length));
+      const bytes = lookup.getBytes(length);
+      this.lookup.set(bytes);
     } else if (typeof lookup === "string") {
       for (let i = 0; i < length; ++i) {
-        palette[i] = lookup.charCodeAt(i);
+        this.lookup[i] = lookup.charCodeAt(i) & 0xff;
       }
     } else {
       throw new FormatError(`IndexedCS - unrecognized lookup table: ${lookup}`);
     }
-    this.#rgbLookup = new Uint8ClampedArray(count * 3);
-    base.getRgbBuffer(palette, 0, count, this.#rgbLookup, 0, 8, 0);
   }
   getRgbItem(src, srcOffset, dest, destOffset) {
-    const rgbLookup = this.#rgbLookup;
-    const pos = MathClamp(Math.round(src[srcOffset]), 0, this.highVal) * 3;
-    dest[destOffset] = rgbLookup[pos];
-    dest[destOffset + 1] = rgbLookup[pos + 1];
-    dest[destOffset + 2] = rgbLookup[pos + 2];
+    const {
+      base,
+      highVal,
+      lookup
+    } = this;
+    const start = MathClamp(Math.round(src[srcOffset]), 0, highVal) * base.numComps;
+    base.getRgbBuffer(lookup, start, 1, dest, destOffset, 8, 0);
   }
   getRgbBuffer(src, srcOffset, count, dest, destOffset, bits, alpha01) {
     const {
-      highVal
+      base,
+      highVal,
+      lookup
     } = this;
-    const rgbLookup = this.#rgbLookup;
+    const {
+      numComps
+    } = base;
+    const outputDelta = base.getOutputLength(numComps, alpha01);
     for (let i = 0; i < count; ++i) {
-      const pos = MathClamp(Math.round(src[srcOffset++]), 0, highVal) * 3;
-      dest[destOffset++] = rgbLookup[pos];
-      dest[destOffset++] = rgbLookup[pos + 1];
-      dest[destOffset++] = rgbLookup[pos + 2];
-      destOffset += alpha01;
+      const lookupPos = MathClamp(Math.round(src[srcOffset++]), 0, highVal) * numComps;
+      base.getRgbBuffer(lookup, lookupPos, 1, dest, destOffset, 8, alpha01);
+      destOffset += outputDelta;
     }
+  }
+  getOutputLength(inputLength, alpha01) {
+    return this.base.getOutputLength(inputLength * this.base.numComps, alpha01);
   }
   isDefaultDecode(decode, bpc) {
     if (isDefaultDecodeHelper(decode, 2)) {
@@ -2323,6 +2344,9 @@ class DeviceGrayCS extends ColorSpace {
       q += alpha01;
     }
   }
+  getOutputLength(inputLength, alpha01) {
+    return inputLength * (3 + alpha01);
+  }
 }
 class DeviceRgbCS extends ColorSpace {
   constructor() {
@@ -2348,6 +2372,9 @@ class DeviceRgbCS extends ColorSpace {
       q += alpha01;
     }
   }
+  getOutputLength(inputLength, alpha01) {
+    return inputLength * (3 + alpha01) / 3 | 0;
+  }
   isPassthrough(bits) {
     return bits === 8;
   }
@@ -2355,6 +2382,9 @@ class DeviceRgbCS extends ColorSpace {
 class DeviceRgbaCS extends ColorSpace {
   constructor() {
     super("DeviceRGBA", 4);
+  }
+  getOutputLength(inputLength, _alpha01) {
+    return inputLength * 4;
   }
   isPassthrough(bits) {
     return bits === 8;
@@ -2390,6 +2420,9 @@ class DeviceCmykCS extends ColorSpace {
       srcOffset += 4;
       destOffset += 3 + alpha01;
     }
+  }
+  getOutputLength(inputLength, alpha01) {
+    return inputLength / 4 * (3 + alpha01) | 0;
   }
 }
 class CalGrayCS extends ColorSpace {
@@ -2435,6 +2468,9 @@ class CalGrayCS extends ColorSpace {
       srcOffset += 1;
       destOffset += 3 + alpha01;
     }
+  }
+  getOutputLength(inputLength, alpha01) {
+    return inputLength * (3 + alpha01);
   }
 }
 class CalRGBCS extends ColorSpace {
@@ -2489,13 +2525,19 @@ class CalRGBCS extends ColorSpace {
     if (color <= 0.0031308) {
       return MathClamp(12.92 * color, 0, 1);
     }
-    return color >= 0.99554525 ? 1 : MathClamp((1 + 0.055) * color ** (1 / 2.4) - 0.055, 0, 1);
+    if (color >= 0.99554525) {
+      return 1;
+    }
+    return MathClamp((1 + 0.055) * color ** (1 / 2.4) - 0.055, 0, 1);
   }
   #decodeL(L) {
     if (L < 0) {
       return -this.#decodeL(-L);
     }
-    return L > 8.0 ? ((L + 16) / 116) ** 3 : L * CalRGBCS.#DECODE_L_CONSTANT;
+    if (L > 8.0) {
+      return ((L + 16) / 116) ** 3;
+    }
+    return L * CalRGBCS.#DECODE_L_CONSTANT;
   }
   #compensateBlackPoint(sourceBlackPoint, XYZ_Flat, result) {
     if (sourceBlackPoint[0] === 0 && sourceBlackPoint[1] === 0 && sourceBlackPoint[2] === 0) {
@@ -2578,6 +2620,9 @@ class CalRGBCS extends ColorSpace {
       destOffset += 3 + alpha01;
     }
   }
+  getOutputLength(inputLength, alpha01) {
+    return inputLength * (3 + alpha01) / 3 | 0;
+  }
 }
 class LabCS extends ColorSpace {
   constructor(whitePoint, blackPoint, range) {
@@ -2659,6 +2704,9 @@ class LabCS extends ColorSpace {
       destOffset += 3 + alpha01;
     }
   }
+  getOutputLength(inputLength, alpha01) {
+    return inputLength * (3 + alpha01) / 3 | 0;
+  }
   isDefaultDecode(decode, bpc) {
     return true;
   }
@@ -2694,15 +2742,15 @@ class IccColorSpace extends ColorSpace {
     switch (numComps) {
       case 1:
         inType = DataType.Gray8;
-        this.#convertPixel = (src, srcOffset) => qcms_convert_one(this.#transformer, src[srcOffset] * 255);
+        this.#convertPixel = (src, srcOffset, css) => qcms_convert_one(this.#transformer, src[srcOffset] * 255, css);
         break;
       case 3:
         inType = DataType.RGB8;
-        this.#convertPixel = (src, srcOffset) => qcms_convert_three(this.#transformer, src[srcOffset] * 255, src[srcOffset + 1] * 255, src[srcOffset + 2] * 255);
+        this.#convertPixel = (src, srcOffset, css) => qcms_convert_three(this.#transformer, src[srcOffset] * 255, src[srcOffset + 1] * 255, src[srcOffset + 2] * 255, css);
         break;
       case 4:
         inType = DataType.CMYK;
-        this.#convertPixel = (src, srcOffset) => qcms_convert_four(this.#transformer, src[srcOffset] * 255, src[srcOffset + 1] * 255, src[srcOffset + 2] * 255, src[srcOffset + 3] * 255);
+        this.#convertPixel = (src, srcOffset, css) => qcms_convert_four(this.#transformer, src[srcOffset] * 255, src[srcOffset + 1] * 255, src[srcOffset + 2] * 255, src[srcOffset + 3] * 255, css);
         break;
       default:
         throw new Error(`Unsupported number of components: ${numComps}`);
@@ -2717,28 +2765,14 @@ class IccColorSpace extends ColorSpace {
     IccColorSpace.#finalizer.register(this, this.#transformer);
   }
   getRgbHex(src, srcOffset) {
-    const color = this.#convertPixel(src, srcOffset);
-    return Util.makeHexColor(color >> 16, color >> 8 & 0xff, color & 0xff);
+    this.#convertPixel(src, srcOffset, true);
+    return QCMS._cssColor;
   }
   getRgbItem(src, srcOffset, dest, destOffset) {
-    const color = this.#convertPixel(src, srcOffset);
-    dest[destOffset] = color >> 16;
-    dest[destOffset + 1] = color >> 8 & 0xff;
-    dest[destOffset + 2] = color & 0xff;
-  }
-  getRgbItems(src, count, dest, destOffset, alpha01) {
-    const {
-      numComps
-    } = this;
-    const length = count * numComps;
-    const scaled = new Uint8Array(length);
-    for (let i = 0; i < length; i++) {
-      scaled[i] = src[i] * 255;
-    }
     QCMS._destBuffer = dest;
     QCMS._destOffset = destOffset;
-    QCMS._keepAlpha = alpha01 === 1;
-    qcms_convert_array(this.#transformer, scaled, alpha01 === 1);
+    QCMS._destLength = 3;
+    this.#convertPixel(src, srcOffset, false);
     QCMS._destBuffer = null;
   }
   getRgbBuffer(src, srcOffset, count, dest, destOffset, bits, alpha01) {
@@ -2749,11 +2783,16 @@ class IccColorSpace extends ColorSpace {
         src[i] *= scale;
       }
     }
+    QCMS._mustAddAlpha = alpha01 && dest.buffer === src.buffer;
     QCMS._destBuffer = dest;
     QCMS._destOffset = destOffset;
-    QCMS._keepAlpha = alpha01 === 1 && dest.buffer !== src.buffer;
-    qcms_convert_array(this.#transformer, src, alpha01 === 1);
+    QCMS._destLength = count * (3 + alpha01);
+    qcms_convert_array(this.#transformer, src);
+    QCMS._mustAddAlpha = false;
     QCMS._destBuffer = null;
+  }
+  getOutputLength(inputLength, alpha01) {
+    return inputLength / this.numComps * (3 + alpha01) | 0;
   }
   static setOptions({
     useWasm,
@@ -2777,6 +2816,7 @@ class IccColorSpace extends ColorSpace {
           });
           isUsable = !!this._module;
           QCMS._memory = this._module.memory;
+          QCMS._makeHexColor = Util.makeHexColor.bind(Util);
         } catch (e) {
           warn(`ICCBased color space: "${e}".`);
         }
@@ -2830,13 +2870,25 @@ class Stream extends BaseStream {
     return this.length === 0;
   }
   getByte() {
-    return this.pos >= this.end ? -1 : this.bytes[this.pos++];
+    if (this.pos >= this.end) {
+      return -1;
+    }
+    return this.bytes[this.pos++];
   }
   getBytes(length) {
+    const bytes = this.bytes;
     const pos = this.pos;
-    const endPos = !length ? this.end : Math.min(pos + length, this.end);
-    this.pos = endPos;
-    return this.bytes.subarray(pos, endPos);
+    const strEnd = this.end;
+    if (!length) {
+      this.pos = strEnd;
+      return bytes.subarray(pos, strEnd);
+    }
+    let end = pos + length;
+    if (end > strEnd) {
+      end = strEnd;
+    }
+    this.pos = end;
+    return bytes.subarray(pos, end);
   }
   getByteRange(begin, end) {
     if (begin < 0) {
@@ -2857,12 +2909,12 @@ class Stream extends BaseStream {
     return new Stream(this.bytes.buffer, start, length, dict);
   }
   clone() {
-    return new Stream(this.bytes.buffer, this.start, this.length, this.dict?.clone());
+    return new Stream(this.bytes.buffer, this.start, this.end - this.start, this.dict.clone());
   }
 }
 class StringStream extends Stream {
-  constructor(str, dict = null) {
-    super(stringToBytes(str), NaN, NaN, dict);
+  constructor(str) {
+    super(stringToBytes(str));
   }
 }
 class NullStream extends Stream {
@@ -2933,7 +2985,10 @@ class ChunkedStream extends Stream {
       return;
     }
     const chunk = Math.floor(pos / this.chunkSize);
-    if (chunk > this.numChunks || chunk === this._lastSuccessfulEnsureByteChunk) {
+    if (chunk > this.numChunks) {
+      return;
+    }
+    if (chunk === this._lastSuccessfulEnsureByteChunk) {
       return;
     }
     if (!this._loadedChunks.has(chunk)) {
@@ -2942,7 +2997,10 @@ class ChunkedStream extends Stream {
     this._lastSuccessfulEnsureByteChunk = chunk;
   }
   ensureRange(begin, end) {
-    if (begin >= end || end <= this.progressiveDataLength) {
+    if (begin >= end) {
+      return;
+    }
+    if (end <= this.progressiveDataLength) {
       return;
     }
     const beginChunk = Math.floor(begin / this.chunkSize);
@@ -2980,13 +3038,25 @@ class ChunkedStream extends Stream {
     return this.bytes[this.pos++];
   }
   getBytes(length) {
+    const bytes = this.bytes;
     const pos = this.pos;
-    const endPos = !length ? this.end : Math.min(pos + length, this.end);
-    if (endPos > this.progressiveDataLength) {
-      this.ensureRange(pos, endPos);
+    const strEnd = this.end;
+    if (!length) {
+      if (strEnd > this.progressiveDataLength) {
+        this.ensureRange(pos, strEnd);
+      }
+      this.pos = strEnd;
+      return bytes.subarray(pos, strEnd);
     }
-    this.pos = endPos;
-    return this.bytes.subarray(pos, endPos);
+    let end = pos + length;
+    if (end > strEnd) {
+      end = strEnd;
+    }
+    if (end > this.progressiveDataLength) {
+      this.ensureRange(pos, end);
+    }
+    this.pos = end;
+    return bytes.subarray(pos, end);
   }
   getByteRange(begin, end) {
     if (begin < 0) {
@@ -3024,7 +3094,10 @@ class ChunkedStream extends Stream {
     };
     Object.defineProperty(ChunkedStreamSubstream.prototype, "isDataLoaded", {
       get() {
-        return this.numChunksLoaded === this.numChunks || this.getMissingChunks().length === 0;
+        if (this.numChunksLoaded === this.numChunks) {
+          return true;
+        }
+        return this.getMissingChunks().length === 0;
       },
       configurable: true
     });
@@ -3039,10 +3112,10 @@ class ChunkedStream extends Stream {
   }
 }
 class ChunkedStreamManager {
-  #aborted = false;
-  #requestId = 0;
-  #chunksNeededByRequest = new Map();
-  #loadedStreamCapability = Promise.withResolvers();
+  aborted = false;
+  currRequestId = 0;
+  _chunksNeededByRequest = new Map();
+  _loadedStreamCapability = Promise.withResolvers();
   _promisesByRequest = new Map();
   _requestsByChunk = new Map();
   constructor(pdfStream, args) {
@@ -3061,7 +3134,7 @@ class ChunkedStreamManager {
         value,
         done
       } = await rangeReader.read();
-      if (this.#aborted) {
+      if (this.aborted) {
         chunks = null;
         return;
       }
@@ -3085,10 +3158,12 @@ class ChunkedStreamManager {
       const missingChunks = this.stream.getMissingChunks();
       this._requestChunks(missingChunks);
     }
-    return this.#loadedStreamCapability.promise;
+    return this._loadedStreamCapability.promise;
   }
   _requestChunks(chunks) {
+    const requestId = this.currRequestId++;
     const chunksNeeded = new Set();
+    this._chunksNeededByRequest.set(requestId, chunksNeeded);
     for (const chunk of chunks) {
       if (!this.stream.hasChunk(chunk)) {
         chunksNeeded.add(chunk);
@@ -3097,16 +3172,16 @@ class ChunkedStreamManager {
     if (chunksNeeded.size === 0) {
       return Promise.resolve();
     }
-    const requestId = this.#requestId++;
-    this.#chunksNeededByRequest.set(requestId, chunksNeeded);
     const capability = Promise.withResolvers();
     this._promisesByRequest.set(requestId, capability);
     const chunksToRequest = [];
     for (const chunk of chunksNeeded) {
-      const requestIds = this._requestsByChunk.getOrInsertComputed(chunk, () => {
+      let requestIds = this._requestsByChunk.get(chunk);
+      if (!requestIds) {
+        requestIds = [];
+        this._requestsByChunk.set(chunk, requestIds);
         chunksToRequest.push(chunk);
-        return [];
-      });
+      }
       requestIds.push(requestId);
     }
     if (chunksToRequest.length > 0) {
@@ -3118,7 +3193,7 @@ class ChunkedStreamManager {
       }
     }
     return capability.promise.catch(reason => {
-      if (this.#aborted) {
+      if (this.aborted) {
         return;
       }
       throw reason;
@@ -3195,7 +3270,7 @@ class ChunkedStreamManager {
       stream.onReceiveData(begin, chunk);
     }
     if (stream.isDataLoaded) {
-      this.#loadedStreamCapability.resolve(stream);
+      this._loadedStreamCapability.resolve(stream);
     }
     const loadedRequests = [];
     for (let curChunk = beginChunk; curChunk < endChunk; ++curChunk) {
@@ -3205,7 +3280,7 @@ class ChunkedStreamManager {
       }
       this._requestsByChunk.delete(curChunk);
       for (const requestId of requestIds) {
-        const chunksNeeded = this.#chunksNeededByRequest.get(requestId);
+        const chunksNeeded = this._chunksNeededByRequest.get(requestId);
         if (chunksNeeded.has(curChunk)) {
           chunksNeeded.delete(curChunk);
         }
@@ -3239,6 +3314,9 @@ class ChunkedStreamManager {
       total: length
     });
   }
+  onError(err) {
+    this._loadedStreamCapability.reject(err);
+  }
   getBeginChunk(begin) {
     return Math.floor(begin / this.chunkSize);
   }
@@ -3246,12 +3324,11 @@ class ChunkedStreamManager {
     return Math.floor((end - 1) / this.chunkSize) + 1;
   }
   abort(reason) {
-    this.#aborted = true;
+    this.aborted = true;
     this.pdfStream?.cancelAllRequests(reason);
     for (const capability of this._promisesByRequest.values()) {
       capability.reject(reason);
     }
-    this.#loadedStreamCapability.reject(reason);
   }
 }
 
@@ -3331,7 +3408,7 @@ function convertRGBToRGBA({
       dest[destPos + 2] = s2 >>> 16 | s3 << 16 | alphaMask;
       dest[destPos + 3] = s3 >>> 8 | alphaMask;
     }
-    for (let j = srcPos + i * 4, jj = srcPos + len; j < jj; j += 3) {
+    for (let j = i * 4, jj = srcPos + len; j < jj; j += 3) {
       dest[destPos++] = src[j] | src[j + 1] << 8 | src[j + 2] << 16 | alphaMask;
     }
   } else {
@@ -3344,7 +3421,7 @@ function convertRGBToRGBA({
       dest[destPos + 2] = s2 << 16 | s3 >>> 16 | alphaMask;
       dest[destPos + 3] = s3 << 8 | alphaMask;
     }
-    for (let j = srcPos + i * 4, jj = srcPos + len; j < jj; j += 3) {
+    for (let j = i * 4, jj = srcPos + len; j < jj; j += 3) {
       dest[destPos++] = src[j] << 24 | src[j + 1] << 16 | src[j + 2] << 8 | alphaMask;
     }
   }
@@ -3407,23 +3484,21 @@ class ImageResizer {
     const maxArea = this.MAX_AREA = this.#goodSquareLength ** 2;
     return area > maxArea;
   }
-  static getReducePower(width, height, maxArea = Infinity) {
-    if (!Number.isInteger(width) || width <= 0 || !Number.isInteger(height) || height <= 0) {
-      return 0;
-    }
+  static getReducePowerForJPX(width, height, componentsCount) {
     const area = width * height;
+    const maxJPXArea = 2 ** 30 / (componentsCount * 4);
     if (!this.needsToBeResized(width, height)) {
-      return area > maxArea ? Math.ceil(Math.log2(area / maxArea)) : 0;
+      if (area > maxJPXArea) {
+        return Math.ceil(Math.log2(area / maxJPXArea));
+      }
+      return 0;
     }
     const {
       MAX_DIM,
       MAX_AREA
     } = this;
-    const minFactor = Math.max(width / MAX_DIM, height / MAX_DIM, Math.sqrt(area / Math.min(maxArea, MAX_AREA)));
-    return Math.max(0, Math.ceil(Math.log2(minFactor)));
-  }
-  static getReducePowerForJPX(width, height, componentsCount) {
-    return this.getReducePower(width, height, 2 ** 30 / (componentsCount * 4));
+    const minFactor = Math.max(width / MAX_DIM, height / MAX_DIM, Math.sqrt(area / Math.min(maxJPXArea, MAX_AREA)));
+    return Math.ceil(Math.log2(minFactor));
   }
   static get MAX_DIM() {
     return shadow(this, "MAX_DIM", this._guessMax(MIN_IMAGE_DIM, MAX_IMAGE_DIM, 0, 1));
@@ -3740,28 +3815,449 @@ class ImageResizer {
   }
 }
 
-;// ./src/core/decode_stream.js
+;// ./external/jbig2/jbig2.js
+async function JBig2(moduleArg = {}) {
+  var moduleRtn;
+  var Module = moduleArg;
+  var ENVIRONMENT_IS_WEB = true;
+  var ENVIRONMENT_IS_WORKER = false;
+  var arguments_ = [];
+  var thisProgram = "./this.program";
+  var quit_ = (status, toThrow) => {
+    throw toThrow;
+  };
+  var _scriptName = import.meta.url;
+  var scriptDirectory = "";
+  var readAsync, readBinary;
+  if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
+    try {
+      scriptDirectory = new URL(".", _scriptName).href;
+    } catch {}
+    readAsync = async url => {
+      var response = await fetch(url, {
+        credentials: "same-origin"
+      });
+      if (response.ok) {
+        return response.arrayBuffer();
+      }
+      throw new Error(response.status + " : " + response.url);
+    };
+  } else {}
+  var out = console.log.bind(console);
+  var err = console.error.bind(console);
+  var wasmBinary;
+  var ABORT = false;
+  var EXITSTATUS;
+  var readyPromiseResolve, readyPromiseReject;
+  var HEAP8, HEAPU8, HEAP16, HEAPU16, HEAP32, HEAPU32, HEAPF32, HEAPF64;
+  var HEAP64, HEAPU64;
+  var runtimeInitialized = false;
+  function updateMemoryViews() {
+    var b = wasmMemory.buffer;
+    HEAP8 = new Int8Array(b);
+    HEAP16 = new Int16Array(b);
+    HEAPU8 = new Uint8Array(b);
+    HEAPU16 = new Uint16Array(b);
+    HEAP32 = new Int32Array(b);
+    HEAPU32 = new Uint32Array(b);
+    HEAPF32 = new Float32Array(b);
+    HEAPF64 = new Float64Array(b);
+    HEAP64 = new BigInt64Array(b);
+    HEAPU64 = new BigUint64Array(b);
+  }
+  function preRun() {
+    if (Module["preRun"]) {
+      if (typeof Module["preRun"] == "function") Module["preRun"] = [Module["preRun"]];
+      while (Module["preRun"].length) {
+        addOnPreRun(Module["preRun"].shift());
+      }
+    }
+    callRuntimeCallbacks(onPreRuns);
+  }
+  function initRuntime() {
+    runtimeInitialized = true;
+    wasmExports["j"]();
+  }
+  function postRun() {
+    if (Module["postRun"]) {
+      if (typeof Module["postRun"] == "function") Module["postRun"] = [Module["postRun"]];
+      while (Module["postRun"].length) {
+        addOnPostRun(Module["postRun"].shift());
+      }
+    }
+    callRuntimeCallbacks(onPostRuns);
+  }
+  function abort(what) {
+    Module["onAbort"]?.(what);
+    what = "Aborted(" + what + ")";
+    err(what);
+    ABORT = true;
+    what += ". Build with -sASSERTIONS for more info.";
+    var e = new WebAssembly.RuntimeError(what);
+    readyPromiseReject?.(e);
+    throw e;
+  }
+  var wasmBinaryFile;
+  function getWasmImports() {
+    var imports = {
+      a: wasmImports
+    };
+    return imports;
+  }
+  async function createWasm() {
+    function receiveInstance(instance, module) {
+      wasmExports = instance.exports;
+      assignWasmExports(wasmExports);
+      updateMemoryViews();
+      return wasmExports;
+    }
+    var info = getWasmImports();
+    return new Promise((resolve, reject) => {
+      Module["instantiateWasm"](info, (inst, mod) => {
+        resolve(receiveInstance(inst, mod));
+      });
+    });
+  }
+  class ExitStatus {
+    name = "ExitStatus";
+    constructor(status) {
+      this.message = `Program terminated with exit(${status})`;
+      this.status = status;
+    }
+  }
+  var callRuntimeCallbacks = callbacks => {
+    while (callbacks.length > 0) {
+      callbacks.shift()(Module);
+    }
+  };
+  var onPostRuns = [];
+  var addOnPostRun = cb => onPostRuns.push(cb);
+  var onPreRuns = [];
+  var addOnPreRun = cb => onPreRuns.push(cb);
+  var noExitRuntime = true;
+  var __abort_js = () => abort("");
+  var runtimeKeepaliveCounter = 0;
+  var __emscripten_runtime_keepalive_clear = () => {
+    noExitRuntime = false;
+    runtimeKeepaliveCounter = 0;
+  };
+  var timers = {};
+  var handleException = e => {
+    if (e instanceof ExitStatus || e == "unwind") {
+      return EXITSTATUS;
+    }
+    quit_(1, e);
+  };
+  var keepRuntimeAlive = () => noExitRuntime || runtimeKeepaliveCounter > 0;
+  var _proc_exit = code => {
+    EXITSTATUS = code;
+    if (!keepRuntimeAlive()) {
+      Module["onExit"]?.(code);
+      ABORT = true;
+    }
+    quit_(code, new ExitStatus(code));
+  };
+  var exitJS = (status, implicit) => {
+    EXITSTATUS = status;
+    _proc_exit(status);
+  };
+  var _exit = exitJS;
+  var maybeExit = () => {
+    if (!keepRuntimeAlive()) {
+      try {
+        _exit(EXITSTATUS);
+      } catch (e) {
+        handleException(e);
+      }
+    }
+  };
+  var callUserCallback = func => {
+    if (ABORT) {
+      return;
+    }
+    try {
+      return func();
+    } catch (e) {
+      handleException(e);
+    } finally {
+      maybeExit();
+    }
+  };
+  var _emscripten_get_now = () => performance.now();
+  var __setitimer_js = (which, timeout_ms) => {
+    if (timers[which]) {
+      clearTimeout(timers[which].id);
+      delete timers[which];
+    }
+    if (!timeout_ms) return 0;
+    var id = setTimeout(() => {
+      delete timers[which];
+      callUserCallback(() => __emscripten_timeout(which, _emscripten_get_now()));
+    }, timeout_ms);
+    timers[which] = {
+      id,
+      timeout_ms
+    };
+    return 0;
+  };
+  function _createImageData(size) {
+    Module.imageData = new Uint8Array(size);
+  }
+  var getHeapMax = () => 2147483648;
+  var alignMemory = (size, alignment) => Math.ceil(size / alignment) * alignment;
+  var growMemory = size => {
+    var oldHeapSize = wasmMemory.buffer.byteLength;
+    var pages = (size - oldHeapSize + 65535) / 65536 | 0;
+    try {
+      wasmMemory.grow(pages);
+      updateMemoryViews();
+      return 1;
+    } catch (e) {}
+  };
+  var _emscripten_resize_heap = requestedSize => {
+    var oldSize = HEAPU8.length;
+    requestedSize >>>= 0;
+    var maxHeapSize = getHeapMax();
+    if (requestedSize > maxHeapSize) {
+      return false;
+    }
+    for (var cutDown = 1; cutDown <= 4; cutDown *= 2) {
+      var overGrownHeapSize = oldSize * (1 + .2 / cutDown);
+      overGrownHeapSize = Math.min(overGrownHeapSize, requestedSize + 100663296);
+      var newSize = Math.min(maxHeapSize, alignMemory(Math.max(requestedSize, overGrownHeapSize), 65536));
+      var replacement = growMemory(newSize);
+      if (replacement) {
+        return true;
+      }
+    }
+    return false;
+  };
+  function _setImageData(array_ptr, pitch8, pitch32, height) {
+    if (pitch32 === pitch8) {
+      Module.imageData = new Uint8ClampedArray(HEAPU8.subarray(array_ptr, array_ptr + pitch32 * height));
+      return;
+    }
+    const destSize = pitch8 * height;
+    const imageData = Module.imageData = new Uint8ClampedArray(destSize);
+    for (let srcStart = array_ptr, destStart = 0; destStart < destSize; srcStart += pitch32, destStart += pitch8) {
+      imageData.set(HEAPU8.subarray(srcStart, srcStart + pitch8), destStart);
+    }
+  }
+  function _setLineData(line_ptr, pitch8, offset) {
+    Module.imageData.set(HEAPU8.subarray(line_ptr, line_ptr + pitch8), offset);
+  }
+  var writeArrayToMemory = (array, buffer) => {
+    HEAP8.set(array, buffer);
+  };
+  if (Module["noExitRuntime"]) noExitRuntime = Module["noExitRuntime"];
+  if (Module["print"]) out = Module["print"];
+  if (Module["printErr"]) err = Module["printErr"];
+  if (Module["wasmBinary"]) wasmBinary = Module["wasmBinary"];
+  if (Module["arguments"]) arguments_ = Module["arguments"];
+  if (Module["thisProgram"]) thisProgram = Module["thisProgram"];
+  if (Module["preInit"]) {
+    if (typeof Module["preInit"] == "function") Module["preInit"] = [Module["preInit"]];
+    while (Module["preInit"].length > 0) {
+      Module["preInit"].shift()();
+    }
+  }
+  Module["writeArrayToMemory"] = writeArrayToMemory;
+  var _malloc, _free, _jbig2_decode, _ccitt_decode, __emscripten_timeout, memory, __indirect_function_table, wasmMemory;
+  function assignWasmExports(wasmExports) {
+    _malloc = Module["_malloc"] = wasmExports["k"];
+    _free = Module["_free"] = wasmExports["l"];
+    _jbig2_decode = Module["_jbig2_decode"] = wasmExports["m"];
+    _ccitt_decode = Module["_ccitt_decode"] = wasmExports["n"];
+    __emscripten_timeout = wasmExports["o"];
+    memory = wasmMemory = wasmExports["i"];
+    __indirect_function_table = wasmExports["__indirect_function_table"];
+  }
+  var wasmImports = {
+    e: __abort_js,
+    b: __emscripten_runtime_keepalive_clear,
+    c: __setitimer_js,
+    g: _createImageData,
+    d: _emscripten_resize_heap,
+    a: _proc_exit,
+    h: _setImageData,
+    f: _setLineData
+  };
+  function run() {
+    preRun();
+    function doRun() {
+      Module["calledRun"] = true;
+      if (ABORT) return;
+      initRuntime();
+      readyPromiseResolve?.(Module);
+      Module["onRuntimeInitialized"]?.();
+      postRun();
+    }
+    if (Module["setStatus"]) {
+      Module["setStatus"]("Running...");
+      setTimeout(() => {
+        setTimeout(() => Module["setStatus"](""), 1);
+        doRun();
+      }, 1);
+    } else {
+      doRun();
+    }
+  }
+  var wasmExports;
+  wasmExports = await createWasm();
+  run();
+  if (runtimeInitialized) {
+    moduleRtn = Module;
+  } else {
+    moduleRtn = new Promise((resolve, reject) => {
+      readyPromiseResolve = resolve;
+      readyPromiseReject = reject;
+    });
+  }
+  return moduleRtn;
+}
+/* harmony default export */ const jbig2 = (JBig2);
+;// ./src/core/jbig2_ccittFax.js
 
+
+
+class Jbig2Error extends BaseException {
+  constructor(msg) {
+    super(msg, "Jbig2Error");
+  }
+}
+class JBig2CCITTFaxImage {
+  static #buffer = null;
+  static #handler = null;
+  static #modulePromise = null;
+  static #useWasm = true;
+  static #useWorkerFetch = true;
+  static #wasmUrl = null;
+  static setOptions({
+    handler,
+    useWasm,
+    useWorkerFetch,
+    wasmUrl
+  }) {
+    this.#useWasm = useWasm;
+    this.#useWorkerFetch = useWorkerFetch;
+    this.#wasmUrl = wasmUrl;
+    if (!useWorkerFetch) {
+      this.#handler = handler;
+    }
+  }
+  static async #getJsModule(fallbackCallback) {
+    const path = `${this.#wasmUrl}jbig2_nowasm_fallback.js`;
+    let instance = null;
+    try {
+      const mod = await import(
+      /*webpackIgnore: true*/
+      /*@vite-ignore*/
+      path);
+      instance = mod.default();
+    } catch (e) {
+      warn(`JBig2CCITTFaxImage#getJsModule: ${e}`);
+    }
+    fallbackCallback(instance);
+  }
+  static async #instantiateWasm(fallbackCallback, imports, successCallback) {
+    const filename = "jbig2.wasm";
+    try {
+      if (!this.#buffer) {
+        if (this.#useWorkerFetch) {
+          this.#buffer = await fetchBinaryData(`${this.#wasmUrl}${filename}`);
+        } else {
+          this.#buffer = await this.#handler.sendWithPromise("FetchBinaryData", {
+            kind: "wasmUrl",
+            filename
+          });
+        }
+      }
+      const results = await WebAssembly.instantiate(this.#buffer, imports);
+      return successCallback(results.instance);
+    } catch (reason) {
+      warn(`JBig2CCITTFaxImage#instantiateWasm: ${reason}`);
+      this.#getJsModule(fallbackCallback);
+      return null;
+    } finally {
+      this.#handler = null;
+    }
+  }
+  static async decode(bytes, width, height, globals, CCITTOptions) {
+    if (!this.#modulePromise) {
+      const {
+        promise,
+        resolve
+      } = Promise.withResolvers();
+      const promises = [promise];
+      if (!this.#useWasm) {
+        this.#getJsModule(resolve);
+      } else {
+        promises.push(jbig2({
+          warn: warn,
+          instantiateWasm: this.#instantiateWasm.bind(this, resolve)
+        }));
+      }
+      this.#modulePromise = Promise.race(promises);
+    }
+    const module = await this.#modulePromise;
+    if (!module) {
+      throw new Jbig2Error("JBig2 failed to initialize");
+    }
+    let ptr, globalsPtr;
+    try {
+      const size = bytes.length;
+      ptr = module._malloc(size);
+      module.writeArrayToMemory(bytes, ptr);
+      if (CCITTOptions) {
+        module._ccitt_decode(ptr, size, width, height, CCITTOptions.K, CCITTOptions.EndOfLine ? 1 : 0, CCITTOptions.EncodedByteAlign ? 1 : 0, CCITTOptions.BlackIs1 ? 1 : 0, CCITTOptions.Columns, CCITTOptions.Rows);
+      } else {
+        const globalsSize = globals ? globals.length : 0;
+        if (globalsSize > 0) {
+          globalsPtr = module._malloc(globalsSize);
+          module.writeArrayToMemory(globals, globalsPtr);
+        }
+        module._jbig2_decode(ptr, size, width, height, globalsPtr, globalsSize);
+      }
+      if (!module.imageData) {
+        throw new Jbig2Error("Unknown error");
+      }
+      const {
+        imageData
+      } = module;
+      module.imageData = null;
+      return imageData;
+    } finally {
+      if (ptr) {
+        module._free(ptr);
+      }
+      if (globalsPtr) {
+        module._free(globalsPtr);
+      }
+    }
+  }
+  static cleanup() {
+    this.#modulePromise = null;
+  }
+}
+
+;// ./src/core/decode_stream.js
 
 
 const emptyBuffer = new Uint8Array(0);
 class DecodeStream extends BaseStream {
-  buffer = emptyBuffer;
-  bufferLength = 0;
-  eof = false;
-  minBufferLength = 512;
-  pos = 0;
   constructor(maybeMinBufferLength) {
     super();
     this._rawMinBufferLength = maybeMinBufferLength || 0;
+    this.pos = 0;
+    this.bufferLength = 0;
+    this.eof = false;
+    this.buffer = emptyBuffer;
+    this.minBufferLength = 512;
     if (maybeMinBufferLength) {
       while (this.minBufferLength < maybeMinBufferLength) {
         this.minBufferLength *= 2;
       }
     }
-  }
-  readBlock() {
-    unreachable("Abstract method `readBlock` called");
   }
   get isEmpty() {
     while (!this.eof && this.bufferLength === 0) {
@@ -3816,7 +4312,10 @@ class DecodeStream extends BaseStream {
   }
   async getImageData(length, decoderOptions) {
     if (!this.canAsyncDecodeImageFromBuffer) {
-      return this.isAsyncDecoder ? this.decodeImage(null, length, decoderOptions) : this.getBytes(length, decoderOptions);
+      if (this.isAsyncDecoder) {
+        return this.decodeImage(null, length, decoderOptions);
+      }
+      return this.getBytes(length, decoderOptions);
     }
     const data = await this.stream.asyncGetBytes();
     return this.decodeImage(data, length, decoderOptions);
@@ -3874,14 +4373,14 @@ class DecodeStream extends BaseStream {
     }
     return new Stream(this.buffer, start, length, dict);
   }
+  getBaseStreams() {
+    return this.stream ? this.stream.getBaseStreams() : null;
+  }
   clone() {
     while (!this.eof) {
       this.readBlock();
     }
-    return new Stream(this.buffer, 0, this.bufferLength, this.dict?.clone());
-  }
-  getBaseStreams() {
-    return this.stream ? this.stream.getBaseStreams() : null;
+    return new Stream(this.buffer, this.start, this.end - this.start, this.dict.clone());
   }
 }
 class StreamsSequenceStream extends DecodeStream {
@@ -4114,7 +4613,9 @@ class ColorSpaceUtils {
           break;
         case "Pattern":
           baseCS = cs[1] || null;
-          baseCS &&= this.#subParse(baseCS, options);
+          if (baseCS) {
+            baseCS = this.#subParse(baseCS, options);
+          }
           return new PatternCS(baseCS);
         case "I":
         case "Indexed":
@@ -4304,7 +4805,10 @@ function decodeScan(data, view, offset, frame, components, resetInterval, spectr
       return readBit() === 1 ? 1 : -1;
     }
     const n = receive(length);
-    return n >= 1 << length - 1 ? n : n + (-1 << length) + 1;
+    if (n >= 1 << length - 1) {
+      return n;
+    }
+    return n + (-1 << length) + 1;
   }
   function decodeBaseline(component, blockOffset) {
     const t = decodeHuffman(component.huffmanTableDC);
@@ -4785,20 +5289,22 @@ function skipData(data, view, offset) {
   offset += 2;
   const endOffset = offset + length - 2;
   const fileMarker = findNextFileMarker(data, view, endOffset, offset);
-  return fileMarker?.invalid ? fileMarker.offset : endOffset;
+  if (fileMarker?.invalid) {
+    return fileMarker.offset;
+  }
+  return endOffset;
 }
 class JpegImage {
-  constructor(options) {
-    this._colorTransform = options?.colorTransform ?? -1;
+  constructor({
+    decodeTransform = null,
+    colorTransform = -1
+  } = {}) {
+    this._decodeTransform = decodeTransform;
+    this._colorTransform = colorTransform;
   }
   static canUseImageDecoder(data, colorTransform = -1) {
     const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-    const info = {
-      width: 0,
-      height: 0,
-      exifStart: 0,
-      exifEnd: 0
-    };
+    let exifOffsets = null;
     let offset = 0;
     let numComponents = null;
     let fileMarker = view.getUint16(offset);
@@ -4818,11 +5324,13 @@ class JpegImage {
           } = readDataBlock(data, view, offset);
           offset = newOffset;
           if (appData[0] === 0x45 && appData[1] === 0x78 && appData[2] === 0x69 && appData[3] === 0x66 && appData[4] === 0 && appData[5] === 0) {
-            if (info.exifStart) {
+            if (exifOffsets) {
               throw new JpegError("Duplicate EXIF-blocks found.");
             }
-            info.exifStart = oldOffset + 6;
-            info.exifEnd = newOffset;
+            exifOffsets = {
+              exifStart: oldOffset + 6,
+              exifEnd: newOffset
+            };
           }
           fileMarker = view.getUint16(offset);
           offset += 2;
@@ -4830,8 +5338,6 @@ class JpegImage {
         case 0xffc0:
         case 0xffc1:
         case 0xffc2:
-          info.height = view.getUint16(offset + (2 + 1));
-          info.width = view.getUint16(offset + (2 + 1 + 2));
           numComponents = data[offset + (2 + 1 + 2 + 2)];
           break markerLoop;
         case 0xffff:
@@ -4850,7 +5356,7 @@ class JpegImage {
     if (numComponents === 3 && colorTransform === 0) {
       return null;
     }
-    return info;
+    return exifOffsets || {};
   }
   parse(data, {
     dnlScanLines = null
@@ -5104,12 +5610,14 @@ class JpegImage {
     this.numComponents = this.components.length;
     return undefined;
   }
-  #getLinearizedBlockData(width, height) {
+  _getLinearizedBlockData(width, height, isSourcePDF = false) {
     const scaleX = this.width / width,
       scaleY = this.height / height;
     let component, componentScaleX, componentScaleY, blocksPerScanline;
     let x, y, i, j, k;
+    let index;
     let offset = 0;
+    let output;
     const numComponents = this.components.length;
     const dataLength = width * height * numComponents;
     const data = new Uint8ClampedArray(dataLength);
@@ -5121,7 +5629,7 @@ class JpegImage {
       componentScaleX = component.scaleX * scaleX;
       componentScaleY = component.scaleY * scaleY;
       offset = i;
-      const output = component.output;
+      output = component.output;
       blocksPerScanline = component.blocksPerLine + 1 << 3;
       if (componentScaleX !== lastComponentScaleX) {
         for (x = 0; x < width; x++) {
@@ -5132,10 +5640,21 @@ class JpegImage {
       }
       for (y = 0; y < height; y++) {
         j = 0 | y * componentScaleY;
-        const index = blocksPerScanline * (j & mask3LSB) | (j & 7) << 3;
+        index = blocksPerScanline * (j & mask3LSB) | (j & 7) << 3;
         for (x = 0; x < width; x++) {
           data[offset] = output[index + xScaleBlockOffset[x]];
           offset += numComponents;
+        }
+      }
+    }
+    let transform = this._decodeTransform;
+    if (!isSourcePDF && numComponents === 4 && !transform) {
+      transform = new Int32Array([-256, 255, -256, 255, -256, 255, -256, 255]);
+    }
+    if (transform) {
+      for (i = 0; i < dataLength;) {
+        for (j = 0, k = 0; j < numComponents; j++, i++, k += 2) {
+          data[i] = (data[i] * transform[k] >> 8) + transform[k + 1];
         }
       }
     }
@@ -5160,7 +5679,7 @@ class JpegImage {
   }
   _convertYccToRgb(data) {
     let Y, Cb, Cr;
-    for (let i = 0, ii = data.length; i < ii; i += 3) {
+    for (let i = 0, length = data.length; i < length; i += 3) {
       Y = data[i];
       Cb = data[i + 1];
       Cr = data[i + 2];
@@ -5171,7 +5690,7 @@ class JpegImage {
     return data;
   }
   _convertYccToRgba(data, out) {
-    for (let i = 0, j = 0, ii = data.length; i < ii; i += 3, j += 4) {
+    for (let i = 0, j = 0, length = data.length; i < length; i += 3, j += 4) {
       const Y = data[i];
       const Cb = data[i + 1];
       const Cr = data[i + 2];
@@ -5192,7 +5711,7 @@ class JpegImage {
   }
   _convertYcckToCmyk(data) {
     let Y, Cb, Cr;
-    for (let i = 0, ii = data.length; i < ii; i += 4) {
+    for (let i = 0, length = data.length; i < length; i += 4) {
       Y = data[i];
       Cb = data[i + 1];
       Cr = data[i + 2];
@@ -5220,19 +5739,20 @@ class JpegImage {
     width,
     height,
     forceRGBA = false,
-    forceRGB = false
+    forceRGB = false,
+    isSourcePDF = false
   }) {
     if (this.numComponents > 4) {
       throw new JpegError("Unsupported color mode");
     }
-    const data = this.#getLinearizedBlockData(width, height);
+    const data = this._getLinearizedBlockData(width, height, isSourcePDF);
     if (this.numComponents === 1 && (forceRGBA || forceRGB)) {
       const len = data.length * (forceRGBA ? 4 : 3);
       const rgbaData = new Uint8ClampedArray(len);
+      let offset = 0;
       if (forceRGBA) {
         grayToRGBA(data, new Uint32Array(rgbaData.buffer));
       } else {
-        let offset = 0;
         for (const grayColor of data) {
           rgbaData[offset++] = grayColor;
           rgbaData[offset++] = grayColor;
@@ -5251,7 +5771,10 @@ class JpegImage {
         if (forceRGBA) {
           return this._convertYcckToRgba(data);
         }
-        return forceRGB ? this._convertYcckToRgb(data) : this._convertYcckToCmyk(data);
+        if (forceRGB) {
+          return this._convertYcckToRgb(data);
+        }
+        return this._convertYcckToCmyk(data);
       } else if (forceRGBA) {
         return this._convertCmykToRgba(data);
       } else if (forceRGB) {
@@ -5263,7 +5786,6 @@ class JpegImage {
 }
 
 ;// ./src/core/jpeg_stream.js
-
 
 
 
@@ -5294,8 +5816,27 @@ class JpegStream extends DecodeStream {
   }
   get jpegOptions() {
     const jpegOptions = {
+      decodeTransform: undefined,
       colorTransform: undefined
     };
+    const decodeArr = this.dict.getArray("D", "Decode");
+    if ((this.forceRGBA || this.forceRGB) && Array.isArray(decodeArr)) {
+      const bitsPerComponent = this.dict.get("BPC", "BitsPerComponent") || 8;
+      const decodeArrLength = decodeArr.length;
+      const transform = new Int32Array(decodeArrLength);
+      let transformNeeded = false;
+      const maxValue = (1 << bitsPerComponent) - 1;
+      for (let i = 0; i < decodeArrLength; i += 2) {
+        transform[i] = (decodeArr[i + 1] - decodeArr[i]) * 256 | 0;
+        transform[i + 1] = decodeArr[i] * maxValue | 0;
+        if (transform[i] !== 256 || transform[i + 1] !== 0) {
+          transformNeeded = true;
+        }
+      }
+      if (transformNeeded) {
+        jpegOptions.decodeTransform = transform;
+      }
+    }
     if (this.params instanceof Dict) {
       const colorTransform = this.params.get("ColorTransform");
       if (Number.isInteger(colorTransform)) {
@@ -5326,7 +5867,8 @@ class JpegStream extends DecodeStream {
       width: this.drawWidth,
       height: this.drawHeight,
       forceRGBA: this.forceRGBA,
-      forceRGB: this.forceRGB
+      forceRGB: this.forceRGB,
+      isSourcePDF: true
     });
     this.buffer = data;
     this.bufferLength = data.length;
@@ -5336,11 +5878,14 @@ class JpegStream extends DecodeStream {
   get canAsyncDecodeImageFromBuffer() {
     return this.stream.isAsync;
   }
-  async getTransferableImage(width, height) {
+  async getTransferableImage() {
     if (!(await JpegStream.canUseImageDecoder)) {
       return null;
     }
     const jpegOptions = this.jpegOptions;
+    if (jpegOptions.decodeTransform) {
+      return null;
+    }
     let decoder;
     try {
       const bytes = this.canAsyncDecodeImageFromBuffer && (await this.stream.asyncGetBytes()) || this.bytes;
@@ -5352,29 +5897,15 @@ class JpegStream extends DecodeStream {
       if (!useImageDecoder) {
         return null;
       }
-      const {
-        width: frameWidth,
-        height: frameHeight
-      } = useImageDecoder;
-      const reducePower = ImageResizer.getReducePower(frameWidth, frameHeight);
-      if ((frameWidth !== width || frameHeight !== height) && (reducePower || !frameHeight)) {
-        return null;
-      }
       if (useImageDecoder.exifStart) {
         data = data.slice();
         data.fill(0x00, useImageDecoder.exifStart, useImageDecoder.exifEnd);
       }
-      const init = {
+      decoder = new ImageDecoder({
         data,
         type: "image/jpeg",
         preferAnimation: false
-      };
-      if (reducePower) {
-        const factor = 2 ** reducePower;
-        init.desiredWidth = Math.ceil(frameWidth / factor);
-        init.desiredHeight = Math.ceil(frameHeight / factor);
-      }
-      decoder = new ImageDecoder(init);
+      });
       return (await decoder.decode()).image;
     } catch (reason) {
       warn(`getTransferableImage - failed: "${reason}".`);
@@ -5385,6 +5916,706 @@ class JpegStream extends DecodeStream {
   }
   get isImageStream() {
     return true;
+  }
+}
+
+;// ./external/openjpeg/openjpeg.js
+async function OpenJPEG(moduleArg = {}) {
+  var moduleRtn;
+  var Module = moduleArg;
+  var ENVIRONMENT_IS_WEB = true;
+  var ENVIRONMENT_IS_WORKER = false;
+  var arguments_ = [];
+  var thisProgram = "./this.program";
+  var quit_ = (status, toThrow) => {
+    throw toThrow;
+  };
+  var _scriptName = import.meta.url;
+  var scriptDirectory = "";
+  var readAsync, readBinary;
+  if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
+    try {
+      scriptDirectory = new URL(".", _scriptName).href;
+    } catch {}
+    readAsync = async url => {
+      var response = await fetch(url, {
+        credentials: "same-origin"
+      });
+      if (response.ok) {
+        return response.arrayBuffer();
+      }
+      throw new Error(response.status + " : " + response.url);
+    };
+  } else {}
+  var out = console.log.bind(console);
+  var err = console.error.bind(console);
+  var wasmBinary;
+  var ABORT = false;
+  var EXITSTATUS;
+  class EmscriptenEH {}
+  class EmscriptenSjLj extends EmscriptenEH {}
+  var readyPromiseResolve, readyPromiseReject;
+  var runtimeInitialized = false;
+  function updateMemoryViews() {
+    var b = wasmMemory.buffer;
+    HEAP8 = new Int8Array(b);
+    HEAP16 = new Int16Array(b);
+    HEAPU8 = new Uint8Array(b);
+    HEAPU16 = new Uint16Array(b);
+    HEAP32 = new Int32Array(b);
+    HEAPU32 = new Uint32Array(b);
+    HEAPF32 = new Float32Array(b);
+    HEAPF64 = new Float64Array(b);
+    HEAP64 = new BigInt64Array(b);
+    HEAPU64 = new BigUint64Array(b);
+  }
+  function preRun() {
+    if (Module["preRun"]) {
+      if (typeof Module["preRun"] == "function") Module["preRun"] = [Module["preRun"]];
+      while (Module["preRun"].length) {
+        addOnPreRun(Module["preRun"].shift());
+      }
+    }
+    callRuntimeCallbacks(onPreRuns);
+  }
+  function initRuntime() {
+    runtimeInitialized = true;
+    wasmExports["s"]();
+  }
+  function postRun() {
+    if (Module["postRun"]) {
+      if (typeof Module["postRun"] == "function") Module["postRun"] = [Module["postRun"]];
+      while (Module["postRun"].length) {
+        addOnPostRun(Module["postRun"].shift());
+      }
+    }
+    callRuntimeCallbacks(onPostRuns);
+  }
+  function abort(what) {
+    Module["onAbort"]?.(what);
+    what = `Aborted(${what})`;
+    err(what);
+    ABORT = true;
+    what += ". Build with -sASSERTIONS for more info.";
+    var e = new WebAssembly.RuntimeError(what);
+    readyPromiseReject?.(e);
+    throw e;
+  }
+  var wasmBinaryFile;
+  function getWasmImports() {
+    var imports = {
+      a: wasmImports
+    };
+    return imports;
+  }
+  async function createWasm() {
+    function receiveInstance(instance, module) {
+      wasmExports = instance.exports;
+      assignWasmExports(wasmExports);
+      updateMemoryViews();
+      return wasmExports;
+    }
+    var info = getWasmImports();
+    return new Promise((resolve, reject) => {
+      Module["instantiateWasm"](info, (inst, mod) => {
+        resolve(receiveInstance(inst, mod));
+      });
+    });
+  }
+  class ExitStatus {
+    name = "ExitStatus";
+    constructor(status) {
+      this.message = `Program terminated with exit(${status})`;
+      this.status = status;
+    }
+  }
+  var HEAP16;
+  var HEAP32;
+  var HEAP64;
+  var HEAP8;
+  var HEAPF32;
+  var HEAPF64;
+  var HEAPU16;
+  var HEAPU32;
+  var HEAPU64;
+  var HEAPU8;
+  var callRuntimeCallbacks = callbacks => {
+    while (callbacks.length > 0) {
+      callbacks.shift()(Module);
+    }
+  };
+  var onPostRuns = [];
+  var addOnPostRun = cb => onPostRuns.push(cb);
+  var onPreRuns = [];
+  var addOnPreRun = cb => onPreRuns.push(cb);
+  var noExitRuntime = true;
+  var __abort_js = () => abort("");
+  var runtimeKeepaliveCounter = 0;
+  var __emscripten_runtime_keepalive_clear = () => {
+    noExitRuntime = false;
+    runtimeKeepaliveCounter = 0;
+  };
+  var timers = {};
+  var handleException = e => {
+    if (e instanceof ExitStatus || e == "unwind") {
+      return EXITSTATUS;
+    }
+    quit_(1, e);
+  };
+  var keepRuntimeAlive = () => noExitRuntime || runtimeKeepaliveCounter > 0;
+  var _proc_exit = code => {
+    EXITSTATUS = code;
+    if (!keepRuntimeAlive()) {
+      Module["onExit"]?.(code);
+      ABORT = true;
+    }
+    quit_(code, new ExitStatus(code));
+  };
+  var exitJS = (status, implicit) => {
+    EXITSTATUS = status;
+    _proc_exit(status);
+  };
+  var _exit = exitJS;
+  var maybeExit = () => {
+    if (!keepRuntimeAlive()) {
+      try {
+        _exit(EXITSTATUS);
+      } catch (e) {
+        handleException(e);
+      }
+    }
+  };
+  var callUserCallback = func => {
+    if (ABORT) {
+      return;
+    }
+    try {
+      return func();
+    } catch (e) {
+      handleException(e);
+    } finally {
+      maybeExit();
+    }
+  };
+  var _emscripten_get_now = () => performance.now();
+  var __setitimer_js = (which, timeout_ms) => {
+    if (timers[which]) {
+      clearTimeout(timers[which].id);
+      delete timers[which];
+    }
+    if (!timeout_ms) return 0;
+    var id = setTimeout(() => {
+      delete timers[which];
+      callUserCallback(() => __emscripten_timeout(which, _emscripten_get_now()));
+    }, timeout_ms);
+    timers[which] = {
+      id,
+      timeout_ms
+    };
+    return 0;
+  };
+  function _copy_pixels_1(compG_ptr, nb_pixels) {
+    compG_ptr >>= 2;
+    const imageData = Module.imageData = new Uint8ClampedArray(nb_pixels);
+    const compG = HEAP32.subarray(compG_ptr, compG_ptr + nb_pixels);
+    imageData.set(compG);
+  }
+  function _copy_pixels_3(compR_ptr, compG_ptr, compB_ptr, nb_pixels) {
+    compR_ptr >>= 2;
+    compG_ptr >>= 2;
+    compB_ptr >>= 2;
+    const imageData = Module.imageData = new Uint8ClampedArray(nb_pixels * 3);
+    const compR = HEAP32.subarray(compR_ptr, compR_ptr + nb_pixels);
+    const compG = HEAP32.subarray(compG_ptr, compG_ptr + nb_pixels);
+    const compB = HEAP32.subarray(compB_ptr, compB_ptr + nb_pixels);
+    for (let i = 0; i < nb_pixels; i++) {
+      imageData[3 * i] = compR[i];
+      imageData[3 * i + 1] = compG[i];
+      imageData[3 * i + 2] = compB[i];
+    }
+  }
+  function _copy_pixels_4(compR_ptr, compG_ptr, compB_ptr, compA_ptr, nb_pixels) {
+    compR_ptr >>= 2;
+    compG_ptr >>= 2;
+    compB_ptr >>= 2;
+    compA_ptr >>= 2;
+    const imageData = Module.imageData = new Uint8ClampedArray(nb_pixels * 4);
+    const compR = HEAP32.subarray(compR_ptr, compR_ptr + nb_pixels);
+    const compG = HEAP32.subarray(compG_ptr, compG_ptr + nb_pixels);
+    const compB = HEAP32.subarray(compB_ptr, compB_ptr + nb_pixels);
+    const compA = HEAP32.subarray(compA_ptr, compA_ptr + nb_pixels);
+    for (let i = 0; i < nb_pixels; i++) {
+      imageData[4 * i] = compR[i];
+      imageData[4 * i + 1] = compG[i];
+      imageData[4 * i + 2] = compB[i];
+      imageData[4 * i + 3] = compA[i];
+    }
+  }
+  var getHeapMax = () => 2147483648;
+  var alignMemory = (size, alignment) => Math.ceil(size / alignment) * alignment;
+  var growMemory = size => {
+    var oldHeapSize = wasmMemory.buffer.byteLength;
+    var pages = (size - oldHeapSize + 65535) / 65536 | 0;
+    try {
+      wasmMemory.grow(pages);
+      updateMemoryViews();
+      return 1;
+    } catch (e) {}
+  };
+  var _emscripten_resize_heap = requestedSize => {
+    var oldSize = HEAPU8.length;
+    requestedSize >>>= 0;
+    var maxHeapSize = getHeapMax();
+    if (requestedSize > maxHeapSize) {
+      return false;
+    }
+    for (var cutDown = 1; cutDown <= 4; cutDown *= 2) {
+      var overGrownHeapSize = oldSize * (1 + .2 / cutDown);
+      overGrownHeapSize = Math.min(overGrownHeapSize, requestedSize + 100663296);
+      var newSize = Math.min(maxHeapSize, alignMemory(Math.max(requestedSize, overGrownHeapSize), 65536));
+      var replacement = growMemory(newSize);
+      if (replacement) {
+        return true;
+      }
+    }
+    return false;
+  };
+  var ENV = {};
+  var getExecutableName = () => thisProgram || "./this.program";
+  var getEnvStrings = () => {
+    if (!getEnvStrings.strings) {
+      var lang = (globalThis.navigator?.language ?? "C").replace("-", "_") + ".UTF-8";
+      var env = {
+        USER: "web_user",
+        LOGNAME: "web_user",
+        PATH: "/",
+        PWD: "/",
+        HOME: "/home/web_user",
+        LANG: lang,
+        _: getExecutableName()
+      };
+      for (var x in ENV) {
+        if (ENV[x] === undefined) delete env[x];else env[x] = ENV[x];
+      }
+      var strings = [];
+      for (var x in env) {
+        strings.push(`${x}=${env[x]}`);
+      }
+      getEnvStrings.strings = strings;
+    }
+    return getEnvStrings.strings;
+  };
+  var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
+    if (!(maxBytesToWrite > 0)) return 0;
+    var startIdx = outIdx;
+    var endIdx = outIdx + maxBytesToWrite - 1;
+    for (var i = 0; i < str.length; ++i) {
+      var u = str.codePointAt(i);
+      if (u <= 127) {
+        if (outIdx >= endIdx) break;
+        heap[outIdx++] = u;
+      } else if (u <= 2047) {
+        if (outIdx + 1 >= endIdx) break;
+        heap[outIdx++] = 192 | u >> 6;
+        heap[outIdx++] = 128 | u & 63;
+      } else if (u <= 65535) {
+        if (outIdx + 2 >= endIdx) break;
+        heap[outIdx++] = 224 | u >> 12;
+        heap[outIdx++] = 128 | u >> 6 & 63;
+        heap[outIdx++] = 128 | u & 63;
+      } else {
+        if (outIdx + 3 >= endIdx) break;
+        heap[outIdx++] = 240 | u >> 18;
+        heap[outIdx++] = 128 | u >> 12 & 63;
+        heap[outIdx++] = 128 | u >> 6 & 63;
+        heap[outIdx++] = 128 | u & 63;
+        i++;
+      }
+    }
+    heap[outIdx] = 0;
+    return outIdx - startIdx;
+  };
+  var stringToUTF8 = (str, outPtr, maxBytesToWrite) => stringToUTF8Array(str, HEAPU8, outPtr, maxBytesToWrite);
+  var _environ_get = (__environ, environ_buf) => {
+    var bufSize = 0;
+    var envp = 0;
+    for (var string of getEnvStrings()) {
+      var ptr = environ_buf + bufSize;
+      HEAPU32[__environ + envp >> 2] = ptr;
+      bufSize += stringToUTF8(string, ptr, Infinity) + 1;
+      envp += 4;
+    }
+    return 0;
+  };
+  var lengthBytesUTF8 = str => {
+    var len = 0;
+    for (var i = 0; i < str.length; ++i) {
+      var c = str.charCodeAt(i);
+      if (c <= 127) {
+        len++;
+      } else if (c <= 2047) {
+        len += 2;
+      } else if (c >= 55296 && c <= 57343) {
+        len += 4;
+        ++i;
+      } else {
+        len += 3;
+      }
+    }
+    return len;
+  };
+  var _environ_sizes_get = (penviron_count, penviron_buf_size) => {
+    var strings = getEnvStrings();
+    HEAPU32[penviron_count >> 2] = strings.length;
+    var bufSize = 0;
+    for (var string of strings) {
+      bufSize += lengthBytesUTF8(string) + 1;
+    }
+    HEAPU32[penviron_buf_size >> 2] = bufSize;
+    return 0;
+  };
+  var INT53_MAX = 9007199254740992;
+  var INT53_MIN = -9007199254740992;
+  var bigintToI53Checked = num => num < INT53_MIN || num > INT53_MAX ? NaN : Number(num);
+  function _fd_seek(fd, offset, whence, newOffset) {
+    offset = bigintToI53Checked(offset);
+    return 70;
+  }
+  var printCharBuffers = [null, [], []];
+  var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
+  var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
+    var maxIdx = idx + maxBytesToRead;
+    if (ignoreNul) return maxIdx;
+    while (heapOrArray[idx] && !(idx >= maxIdx)) ++idx;
+    return idx;
+  };
+  var UTF8ArrayToString = (heapOrArray, idx = 0, maxBytesToRead, ignoreNul) => {
+    var endPtr = findStringEnd(heapOrArray, idx, maxBytesToRead, ignoreNul);
+    if (endPtr - idx > 16 && heapOrArray.buffer && UTF8Decoder) {
+      return UTF8Decoder.decode(heapOrArray.subarray(idx, endPtr));
+    }
+    var str = "";
+    while (idx < endPtr) {
+      var u0 = heapOrArray[idx++];
+      if (!(u0 & 128)) {
+        str += String.fromCharCode(u0);
+        continue;
+      }
+      var u1 = heapOrArray[idx++] & 63;
+      if ((u0 & 224) == 192) {
+        str += String.fromCharCode((u0 & 31) << 6 | u1);
+        continue;
+      }
+      var u2 = heapOrArray[idx++] & 63;
+      if ((u0 & 240) == 224) {
+        u0 = (u0 & 15) << 12 | u1 << 6 | u2;
+      } else {
+        u0 = (u0 & 7) << 18 | u1 << 12 | u2 << 6 | heapOrArray[idx++] & 63;
+      }
+      if (u0 < 65536) {
+        str += String.fromCharCode(u0);
+      } else {
+        var ch = u0 - 65536;
+        str += String.fromCharCode(55296 | ch >> 10, 56320 | ch & 1023);
+      }
+    }
+    return str;
+  };
+  var printChar = (stream, curr) => {
+    var buffer = printCharBuffers[stream];
+    if (curr === 0 || curr === 10) {
+      (stream === 1 ? out : err)(UTF8ArrayToString(buffer));
+      buffer.length = 0;
+    } else {
+      buffer.push(curr);
+    }
+  };
+  var UTF8ToString = (ptr, maxBytesToRead, ignoreNul) => ptr ? UTF8ArrayToString(HEAPU8, ptr, maxBytesToRead, ignoreNul) : "";
+  var _fd_write = (fd, iov, iovcnt, pnum) => {
+    var num = 0;
+    for (var i = 0; i < iovcnt; i++) {
+      var ptr = HEAPU32[iov >> 2];
+      var len = HEAPU32[iov + 4 >> 2];
+      iov += 8;
+      for (var j = 0; j < len; j++) {
+        printChar(fd, HEAPU8[ptr + j]);
+      }
+      num += len;
+    }
+    HEAPU32[pnum >> 2] = num;
+    return 0;
+  };
+  function _gray_to_rgba(compG_ptr, nb_pixels) {
+    compG_ptr >>= 2;
+    const imageData = Module.imageData = new Uint8ClampedArray(nb_pixels * 4);
+    const compG = HEAP32.subarray(compG_ptr, compG_ptr + nb_pixels);
+    for (let i = 0; i < nb_pixels; i++) {
+      imageData[4 * i] = imageData[4 * i + 1] = imageData[4 * i + 2] = compG[i];
+      imageData[4 * i + 3] = 255;
+    }
+  }
+  function _graya_to_rgba(compG_ptr, compA_ptr, nb_pixels) {
+    compG_ptr >>= 2;
+    compA_ptr >>= 2;
+    const imageData = Module.imageData = new Uint8ClampedArray(nb_pixels * 4);
+    const compG = HEAP32.subarray(compG_ptr, compG_ptr + nb_pixels);
+    const compA = HEAP32.subarray(compA_ptr, compA_ptr + nb_pixels);
+    for (let i = 0; i < nb_pixels; i++) {
+      imageData[4 * i] = imageData[4 * i + 1] = imageData[4 * i + 2] = compG[i];
+      imageData[4 * i + 3] = compA[i];
+    }
+  }
+  function _jsPrintWarning(message_ptr) {
+    const message = UTF8ToString(message_ptr);
+    (Module.warn || console.warn)(`OpenJPEG: ${message}`);
+  }
+  function _rgb_to_rgba(compR_ptr, compG_ptr, compB_ptr, nb_pixels) {
+    compR_ptr >>= 2;
+    compG_ptr >>= 2;
+    compB_ptr >>= 2;
+    const imageData = Module.imageData = new Uint8ClampedArray(nb_pixels * 4);
+    const compR = HEAP32.subarray(compR_ptr, compR_ptr + nb_pixels);
+    const compG = HEAP32.subarray(compG_ptr, compG_ptr + nb_pixels);
+    const compB = HEAP32.subarray(compB_ptr, compB_ptr + nb_pixels);
+    for (let i = 0; i < nb_pixels; i++) {
+      imageData[4 * i] = compR[i];
+      imageData[4 * i + 1] = compG[i];
+      imageData[4 * i + 2] = compB[i];
+      imageData[4 * i + 3] = 255;
+    }
+  }
+  function _storeErrorMessage(message_ptr) {
+    const message = UTF8ToString(message_ptr);
+    if (!Module.errorMessages) {
+      Module.errorMessages = message;
+    } else {
+      Module.errorMessages += "\n" + message;
+    }
+  }
+  var writeArrayToMemory = (array, buffer) => {
+    HEAP8.set(array, buffer);
+  };
+  if (Module["noExitRuntime"]) noExitRuntime = Module["noExitRuntime"];
+  if (Module["print"]) out = Module["print"];
+  if (Module["printErr"]) err = Module["printErr"];
+  if (Module["wasmBinary"]) wasmBinary = Module["wasmBinary"];
+  if (Module["arguments"]) arguments_ = Module["arguments"];
+  if (Module["thisProgram"]) thisProgram = Module["thisProgram"];
+  if (Module["preInit"]) {
+    if (typeof Module["preInit"] == "function") Module["preInit"] = [Module["preInit"]];
+    while (Module["preInit"].length > 0) {
+      Module["preInit"].shift()();
+    }
+  }
+  Module["writeArrayToMemory"] = writeArrayToMemory;
+  var _malloc, _free, _jp2_decode, __emscripten_timeout, memory, __indirect_function_table, wasmMemory;
+  function assignWasmExports(wasmExports) {
+    _malloc = Module["_malloc"] = wasmExports["t"];
+    _free = Module["_free"] = wasmExports["u"];
+    _jp2_decode = Module["_jp2_decode"] = wasmExports["v"];
+    __emscripten_timeout = wasmExports["w"];
+    memory = wasmMemory = wasmExports["r"];
+    __indirect_function_table = wasmExports["__indirect_function_table"];
+  }
+  var wasmImports = {
+    m: __abort_js,
+    l: __emscripten_runtime_keepalive_clear,
+    i: __setitimer_js,
+    f: _copy_pixels_1,
+    e: _copy_pixels_3,
+    d: _copy_pixels_4,
+    j: _emscripten_resize_heap,
+    o: _environ_get,
+    p: _environ_sizes_get,
+    n: _fd_seek,
+    b: _fd_write,
+    q: _gray_to_rgba,
+    h: _graya_to_rgba,
+    c: _jsPrintWarning,
+    k: _proc_exit,
+    g: _rgb_to_rgba,
+    a: _storeErrorMessage
+  };
+  function run() {
+    preRun();
+    function doRun() {
+      Module["calledRun"] = true;
+      if (ABORT) return;
+      initRuntime();
+      readyPromiseResolve?.(Module);
+      Module["onRuntimeInitialized"]?.();
+      postRun();
+    }
+    if (Module["setStatus"]) {
+      Module["setStatus"]("Running...");
+      setTimeout(() => {
+        setTimeout(() => Module["setStatus"](""), 1);
+        doRun();
+      }, 1);
+    } else {
+      doRun();
+    }
+  }
+  var wasmExports;
+  wasmExports = await createWasm();
+  run();
+  if (runtimeInitialized) {
+    moduleRtn = Module;
+  } else {
+    moduleRtn = new Promise((resolve, reject) => {
+      readyPromiseResolve = resolve;
+      readyPromiseReject = reject;
+    });
+  }
+  return moduleRtn;
+}
+/* harmony default export */ const openjpeg = (OpenJPEG);
+;// ./src/core/jpx.js
+
+
+
+
+class JpxError extends BaseException {
+  constructor(msg) {
+    super(msg, "JpxError");
+  }
+}
+class JpxImage {
+  static #buffer = null;
+  static #handler = null;
+  static #modulePromise = null;
+  static #useWasm = true;
+  static #useWorkerFetch = true;
+  static #wasmUrl = null;
+  static setOptions({
+    handler,
+    useWasm,
+    useWorkerFetch,
+    wasmUrl
+  }) {
+    this.#useWasm = useWasm;
+    this.#useWorkerFetch = useWorkerFetch;
+    this.#wasmUrl = wasmUrl;
+    if (!useWorkerFetch) {
+      this.#handler = handler;
+    }
+  }
+  static async #getJsModule(fallbackCallback) {
+    const path = `${this.#wasmUrl}openjpeg_nowasm_fallback.js`;
+    let instance = null;
+    try {
+      const mod = await import(
+      /*webpackIgnore: true*/
+      /*@vite-ignore*/
+      path);
+      instance = mod.default();
+    } catch (e) {
+      warn(`JpxImage#getJsModule: ${e}`);
+    }
+    fallbackCallback(instance);
+  }
+  static async #instantiateWasm(fallbackCallback, imports, successCallback) {
+    const filename = "openjpeg.wasm";
+    try {
+      if (!this.#buffer) {
+        if (this.#useWorkerFetch) {
+          this.#buffer = await fetchBinaryData(`${this.#wasmUrl}${filename}`);
+        } else {
+          this.#buffer = await this.#handler.sendWithPromise("FetchBinaryData", {
+            kind: "wasmUrl",
+            filename
+          });
+        }
+      }
+      const results = await WebAssembly.instantiate(this.#buffer, imports);
+      return successCallback(results.instance);
+    } catch (reason) {
+      warn(`JpxImage#instantiateWasm: ${reason}`);
+      this.#getJsModule(fallbackCallback);
+      return null;
+    } finally {
+      this.#handler = null;
+    }
+  }
+  static async decode(bytes, {
+    numComponents = 4,
+    isIndexedColormap = false,
+    smaskInData = false,
+    reducePower = 0
+  } = {}) {
+    if (!this.#modulePromise) {
+      const {
+        promise,
+        resolve
+      } = Promise.withResolvers();
+      const promises = [promise];
+      if (!this.#useWasm) {
+        this.#getJsModule(resolve);
+      } else {
+        promises.push(openjpeg({
+          warn: warn,
+          instantiateWasm: this.#instantiateWasm.bind(this, resolve)
+        }));
+      }
+      this.#modulePromise = Promise.race(promises);
+    }
+    const module = await this.#modulePromise;
+    if (!module) {
+      throw new JpxError("OpenJPEG failed to initialize");
+    }
+    let ptr;
+    try {
+      const size = bytes.length;
+      ptr = module._malloc(size);
+      module.writeArrayToMemory(bytes, ptr);
+      const ret = module._jp2_decode(ptr, size, numComponents > 0 ? numComponents : 0, !!isIndexedColormap, !!smaskInData, reducePower);
+      if (ret) {
+        const {
+          errorMessages
+        } = module;
+        if (errorMessages) {
+          delete module.errorMessages;
+          throw new JpxError(errorMessages);
+        }
+        throw new JpxError("Unknown error");
+      }
+      const {
+        imageData
+      } = module;
+      module.imageData = null;
+      return imageData;
+    } finally {
+      if (ptr) {
+        module._free(ptr);
+      }
+    }
+  }
+  static cleanup() {
+    this.#modulePromise = null;
+  }
+  static parseImageProperties(stream) {
+    let newByte = stream.getByte();
+    while (newByte >= 0) {
+      const oldByte = newByte;
+      newByte = stream.getByte();
+      const code = oldByte << 8 | newByte;
+      if (code === 0xff51) {
+        stream.skip(4);
+        const Xsiz = stream.getInt32() >>> 0;
+        const Ysiz = stream.getInt32() >>> 0;
+        const XOsiz = stream.getInt32() >>> 0;
+        const YOsiz = stream.getInt32() >>> 0;
+        stream.skip(16);
+        const Csiz = stream.getUint16();
+        return {
+          width: Xsiz - XOsiz,
+          height: Ysiz - YOsiz,
+          bitsPerComponent: 8,
+          componentsCount: Csiz
+        };
+      }
+    }
+    throw new JpxError("No size marker found in JPX stream");
   }
 }
 
@@ -5847,6 +7078,7 @@ class OperatorList {
     this.argsArray = [];
     this.optimizer = streamSink && !(intent & RenderingIntentFlag.OPLIST) ? new QueueOptimizer(this) : new NullOptimizer(this);
     this.dependencies = new Set();
+    this._totalLength = 0;
     this.weight = 0;
     this._resolved = streamSink ? null : Promise.resolve();
   }
@@ -5860,6 +7092,9 @@ class OperatorList {
   }
   get ready() {
     return this._resolved || this._streamSink.ready;
+  }
+  get totalLength() {
+    return this._totalLength + this.length;
   }
   addOp(fn, args) {
     this.optimizer.push(fn, args);
@@ -5967,12 +7202,14 @@ class OperatorList {
   }
   flush(lastChunk = false, separateAnnots = null) {
     this.optimizer.flush();
+    const length = this.length;
+    this._totalLength += length;
     this._streamSink.enqueue({
       fnArray: this.fnArray,
       argsArray: this.argsArray,
       lastChunk,
       separateAnnots,
-      length: this.length
+      length
     }, 1, this._transfers);
     this.dependencies.clear();
     this.fnArray.length = 0;
@@ -5983,19 +7220,19 @@ class OperatorList {
 }
 class CheckedOperatorList extends OperatorList {
   needsIsolation = false;
-  hasSoftMask = false;
   addOp(fn, args) {
-    if (!this.needsIsolation || !this.hasSoftMask) {
+    if (!this.needsIsolation) {
       if (fn === OPS.beginGroup) {
-        this.needsIsolation ||= args[0].needsIsolation;
-        this.hasSoftMask ||= args[0].hasSoftMask;
+        this.needsIsolation = args[0].needsIsolation;
       } else if (fn === OPS.setGState) {
         for (const [key, val] of args[0]) {
           if (key === "BM" && val !== "source-over") {
             this.needsIsolation = true;
-          } else if (key === "SMask" && val !== false) {
+            break;
+          }
+          if (key === "SMask" && val !== false) {
             this.needsIsolation = true;
-            this.hasSoftMask = true;
+            break;
           }
         }
       }
@@ -6019,17 +7256,6 @@ const ShadingType = {
   COONS_PATCH_MESH: 6,
   TENSOR_PATCH_MESH: 7
 };
-const MAX_SAMPLED_COLOR_COMPONENTS = 1 << 16;
-function getColorConversionBatchSize(count, numComps) {
-  return MathClamp(Math.floor(MAX_SAMPLED_COLOR_COMPONENTS / numComps), 1, count);
-}
-function parseShadingFunction(fnObj, pdfFunctionFactory, numInputs, numOutputs) {
-  const fn = pdfFunctionFactory.create(fnObj, true);
-  if (fn.numInputs !== numInputs || fn.numOutputs !== numOutputs) {
-    throw new FormatError(`Invalid shading function: expected ${numInputs}-in ${numOutputs}-out, ` + `got ${fn.numInputs}-in ${fn.numOutputs}-out.`);
-  }
-  return fn;
-}
 class Pattern {
   static #hasGPU = false;
   constructor() {
@@ -6096,12 +7322,22 @@ class RadialAxialShading extends BaseShading {
       localColorSpaceCache
     });
     this.bbox = lookupNormalRect(dict.getArray("BBox"), null);
+    let t0 = 0.0,
+      t1 = 1.0;
     const domainArr = dict.getArray("Domain");
-    const [t0, t1] = isNumberArray(domainArr, 2) ? domainArr : [0.0, 1.0];
+    if (isNumberArray(domainArr, 2)) {
+      [t0, t1] = domainArr;
+    }
+    let extendStart = false,
+      extendEnd = false;
     const extendArr = dict.getArray("Extend");
-    const [extendStart, extendEnd] = isBooleanArray(extendArr, 2) ? extendArr : [false, false];
+    if (isBooleanArray(extendArr, 2)) {
+      [extendStart, extendEnd] = extendArr;
+    }
+    this.extendStart = extendStart;
+    this.extendEnd = extendEnd;
     const fnObj = dict.getRaw("Function");
-    const fn = parseShadingFunction(fnObj, pdfFunctionFactory, 1, cs.numComps);
+    const fn = pdfFunctionFactory.create(fnObj, true);
     const NUMBER_OF_SAMPLES = 840;
     const step = (t1 - t0) / NUMBER_OF_SAMPLES;
     const colorStops = this.colorStops = [];
@@ -6109,30 +7345,20 @@ class RadialAxialShading extends BaseShading {
       info("Bad shading domain.");
       return;
     }
-    const {
-      numComps
-    } = cs;
-    const ratio = new Float32Array(1);
-    const batchSize = getColorConversionBatchSize(NUMBER_OF_SAMPLES, numComps);
-    const comps = new Float32Array(batchSize * numComps);
-    const rgb = new Uint8ClampedArray(NUMBER_OF_SAMPLES * 3);
-    for (let start = 0; start < NUMBER_OF_SAMPLES; start += batchSize) {
-      const count = Math.min(batchSize, NUMBER_OF_SAMPLES - start);
-      for (let i = 0, offset = 0; i < count; i++, offset += numComps) {
-        ratio[0] = t0 + (start + i) * step;
-        fn(ratio, 0, comps, offset);
-      }
-      cs.getRgbItems(comps, count, rgb, start * 3, 0);
-    }
+    const color = new Float32Array(cs.numComps),
+      ratio = new Float32Array(1);
     let iBase = 0;
-    let rBase = rgb[0],
-      gBase = rgb[1],
-      bBase = rgb[2];
+    ratio[0] = t0;
+    fn(ratio, 0, color, 0);
+    const rgbBuffer = new Uint8ClampedArray(3);
+    cs.getRgb(color, 0, rgbBuffer);
+    let [rBase, gBase, bBase] = rgbBuffer;
     colorStops.push([0, Util.makeHexColor(rBase, gBase, bBase)]);
     let iPrev = 1;
-    let rPrev = rgb[3],
-      gPrev = rgb[4],
-      bPrev = rgb[5];
+    ratio[0] = t0 + step;
+    fn(ratio, 0, color, 0);
+    cs.getRgb(color, 0, rgbBuffer);
+    let [rPrev, gPrev, bPrev] = rgbBuffer;
     let maxSlopeR = rPrev - rBase + 1;
     let maxSlopeG = gPrev - gBase + 1;
     let maxSlopeB = bPrev - bBase + 1;
@@ -6140,10 +7366,10 @@ class RadialAxialShading extends BaseShading {
     let minSlopeG = gPrev - gBase - 1;
     let minSlopeB = bPrev - bBase - 1;
     for (let i = 2; i < NUMBER_OF_SAMPLES; i++) {
-      const rgbOffset = i * 3;
-      const r = rgb[rgbOffset],
-        g = rgb[rgbOffset + 1],
-        b = rgb[rgbOffset + 2];
+      ratio[0] = t0 + i * step;
+      fn(ratio, 0, color, 0);
+      cs.getRgb(color, 0, rgbBuffer);
+      const [r, g, b] = rgbBuffer;
       const run = i - iBase;
       maxSlopeR = Math.min(maxSlopeR, (r - rBase + 1) / run);
       maxSlopeG = Math.min(maxSlopeG, (g - gBase + 1) / run);
@@ -6172,7 +7398,10 @@ class RadialAxialShading extends BaseShading {
       bPrev = b;
     }
     colorStops.push([1, Util.makeHexColor(rPrev, gPrev, bPrev)]);
-    const background = dict.has("Background") ? cs.getRgbHex(dict.get("Background"), 0) : "transparent";
+    let background = "transparent";
+    if (dict.has("Background")) {
+      background = cs.getRgbHex(dict.get("Background"), 0);
+    }
     if (!extendStart) {
       colorStops.unshift([0, background]);
       colorStops[1][0] += BaseShading.SMALL_NUMBER;
@@ -6181,6 +7410,7 @@ class RadialAxialShading extends BaseShading {
       colorStops.at(-1)[0] -= BaseShading.SMALL_NUMBER;
       colorStops.push([1, background]);
     }
+    this.colorStops = colorStops;
   }
   getIR() {
     const {
@@ -6316,7 +7546,7 @@ class FunctionBasedShading extends BaseShading {
     if (!fnObj) {
       throw new FormatError("FunctionBasedShading: missing /Function");
     }
-    const fn = parseShadingFunction(fnObj, pdfFunctionFactory, 2, cs.numComps);
+    const fn = pdfFunctionFactory.create(fnObj, true);
     const [x0, x1, y0, y1] = lookupRect(dict.getArray("Domain"), [0, 1, 0, 1]);
     const matrix = lookupMatrix(dict.getArray("Matrix"), IDENTITY_MATRIX);
     this.bounds = BBOX_INIT.slice();
@@ -6329,19 +7559,13 @@ class FunctionBasedShading extends BaseShading {
     const totalVertices = (stepsY + 1) * verticesPerRow;
     const coords = this.coords = new Float32Array(totalVertices * 2);
     const colors = this.colors = new Uint8ClampedArray(totalVertices * 4);
-    const {
-      numComps
-    } = cs;
     const xyBuf = new Float32Array(2);
-    const batchSize = getColorConversionBatchSize(totalVertices, numComps);
-    const comps = new Float32Array(batchSize * numComps);
+    const colorBuf = new Float32Array(cs.numComps);
     const rangeX = (x1 - x0) / stepsX;
     const rangeY = (y1 - y0) / stepsY;
     const halfStepX = rangeX / 2;
     const halfStepY = rangeY / 2;
     let coordOffset = 0;
-    let compOffset = 0;
-    let batchCount = 0;
     let colorOffset = 0;
     for (let row = 0; row <= stepsY; row++) {
       const yDomain = y0 + rangeY * row;
@@ -6349,22 +7573,14 @@ class FunctionBasedShading extends BaseShading {
       for (let col = 0; col <= stepsX; col++) {
         const xDomain = x0 + rangeX * col;
         xyBuf[0] = col === stepsX ? xDomain - halfStepX : xDomain;
-        fn(xyBuf, 0, comps, compOffset);
-        compOffset += numComps;
-        batchCount++;
+        fn(xyBuf, 0, colorBuf, 0);
         coords[coordOffset] = xDomain;
         coords[coordOffset + 1] = yDomain;
         Util.applyTransform(coords, matrix, coordOffset);
         coordOffset += 2;
-        if (batchCount === batchSize) {
-          cs.getRgbItems(comps, batchCount, colors, colorOffset, 1);
-          colorOffset += batchCount * 4;
-          compOffset = batchCount = 0;
-        }
+        cs.getRgbItem(colorBuf, 0, colors, colorOffset);
+        colorOffset += 4;
       }
-    }
-    if (batchCount > 0) {
-      cs.getRgbItems(comps, batchCount, colors, colorOffset, 1);
     }
     const ps = new Uint32Array(totalVertices);
     for (let i = 0; i < totalVertices; i++) {
@@ -6477,18 +7693,21 @@ class MeshStreamReader {
     return colorSpace.getRgb(color, 0);
   }
 }
-let bCache = null;
-function getB(count) {
-  return (bCache ??= new Map()).getOrInsertComputed(count, () => Array.from({
-    length: count + 1
-  }, (_, i) => {
+let bCache = Object.create(null);
+function buildB(count) {
+  const lut = [];
+  for (let i = 0; i <= count; i++) {
     const t = i / count,
       t_ = 1 - t;
-    return new Float32Array([t_ ** 3, 3 * t * t_ ** 2, 3 * t ** 2 * t_, t ** 3]);
-  }));
+    lut.push(new Float32Array([t_ ** 3, 3 * t * t_ ** 2, 3 * t ** 2 * t_, t ** 3]));
+  }
+  return lut;
+}
+function getB(count) {
+  return bCache[count] ||= buildB(count);
 }
 function clearPatternCaches() {
-  bCache?.clear();
+  bCache = Object.create(null);
 }
 class MeshShading extends BaseShading {
   static MIN_SPLIT_PATCH_CHUNKS_AMOUNT = 3;
@@ -6512,7 +7731,7 @@ class MeshShading extends BaseShading {
     });
     this.background = dict.has("Background") ? cs.getRgb(dict.get("Background"), 0) : null;
     const fnObj = dict.getRaw("Function");
-    const fn = fnObj ? parseShadingFunction(fnObj, pdfFunctionFactory, 1, cs.numComps) : null;
+    const fn = fnObj ? pdfFunctionFactory.create(fnObj, true) : null;
     this.coords = [];
     this.colors = [];
     this.figures = [];
@@ -6992,7 +8211,10 @@ function hexToStr(a, size) {
   if (size === 1) {
     return String.fromCharCode(a[0], a[1]);
   }
-  return size === 3 ? String.fromCharCode(a[0], a[1], a[2], a[3]) : String.fromCharCode(...a.subarray(0, size + 1));
+  if (size === 3) {
+    return String.fromCharCode(a[0], a[1], a[2], a[3]);
+  }
+  return String.fromCharCode(...a.subarray(0, size + 1));
 }
 function addHex(a, b, size) {
   let c = 0;
@@ -7217,7 +8439,10 @@ class BinaryCMapReader {
           throw new Error(`BinaryCMapReader.process - unknown type: ${type}`);
       }
     }
-    return useCMap ? extend(useCMap) : cMap;
+    if (useCMap) {
+      return extend(useCMap);
+    }
+    return cMap;
   }
 }
 
@@ -9288,7 +10513,10 @@ class BrotliStream extends DecodeStream {
     if (!data) {
       return this.getBytes(length);
     }
-    return data.length <= length ? data : data.subarray(0, length);
+    if (data.length <= length) {
+      return data;
+    }
+    return data.subarray(0, length);
   }
   async asyncGetBytes() {
     const {
@@ -9305,432 +10533,6 @@ class BrotliStream extends DecodeStream {
   }
   get isAsync() {
     return this.#isAsync;
-  }
-}
-
-;// ./external/jbig2/jbig2.js
-async function JBig2(moduleArg = {}) {
-  var Module = moduleArg;
-  var ENVIRONMENT_IS_WEB = true;
-  var ENVIRONMENT_IS_WORKER = false;
-  var programArgs = [];
-  var thisProgram = "./this.program";
-  var quit_ = (status, toThrow) => {
-    throw toThrow;
-  };
-  var _scriptName = import.meta.url;
-  var scriptDirectory = "";
-  var readAsync, readBinary;
-  if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
-    try {
-      scriptDirectory = new URL(".", _scriptName).href;
-    } catch {}
-    readAsync = async url => {
-      var response = await fetch(url, {
-        credentials: "same-origin"
-      });
-      if (response.ok) {
-        return response.arrayBuffer();
-      }
-      throw new Error(response.status + " : " + response.url);
-    };
-  } else {}
-  var out = console.log.bind(console);
-  var err = console.error.bind(console);
-  var wasmBinary;
-  var ABORT = false;
-  var EXITSTATUS;
-  class EmscriptenEH {}
-  class EmscriptenSjLj extends EmscriptenEH {}
-  var runtimeInitialized = false;
-  function getMemoryBuffer() {
-    return wasmMemory.buffer;
-  }
-  function updateMemoryViews() {
-    if (HEAP8?.buffer?.resizable) return;
-    var b = getMemoryBuffer();
-    HEAP8 = new Int8Array(b);
-    HEAPU8 = new Uint8Array(b);
-  }
-  function preRun() {
-    var preRun = Module["preRun"];
-    if (preRun) {
-      if (typeof preRun == "function") preRun = [preRun];
-      onPreRuns.push(...preRun);
-    }
-    callRuntimeCallbacks(onPreRuns);
-  }
-  function initRuntime() {
-    runtimeInitialized = true;
-    wasmExports["j"]();
-  }
-  function postRun() {
-    var postRun = Module["postRun"];
-    if (postRun) {
-      if (typeof postRun == "function") postRun = [postRun];
-      onPostRuns.push(...postRun);
-    }
-    callRuntimeCallbacks(onPostRuns);
-  }
-  function abort(what) {
-    Module["onAbort"]?.(what);
-    what = `Aborted(${what})`;
-    err(what);
-    ABORT = true;
-    what += ". Build with -sASSERTIONS for more info.";
-    var e = new WebAssembly.RuntimeError(what);
-    throw e;
-  }
-  var wasmBinaryFile;
-  function getWasmImports() {
-    var imports = {
-      a: wasmImports
-    };
-    return imports;
-  }
-  async function createWasm() {
-    function receiveInstance(instance) {
-      wasmExports = instance.exports;
-      assignWasmExports(wasmExports);
-      updateMemoryViews();
-      return wasmExports;
-    }
-    var info = getWasmImports();
-    var instantiateWasm = Module["instantiateWasm"];
-    return new Promise(resolve => {
-      instantiateWasm(info, inst => resolve(receiveInstance(inst)));
-    });
-  }
-  class ExitStatus {
-    name = "ExitStatus";
-    constructor(status) {
-      this.message = `Program terminated with exit(${status})`;
-      this.status = status;
-    }
-  }
-  var HEAP8;
-  var callRuntimeCallbacks = callbacks => {
-    while (callbacks.length > 0) {
-      callbacks.shift()(Module);
-    }
-  };
-  var onPostRuns = [];
-  var onPreRuns = [];
-  var noExitRuntime = true;
-  var __abort_js = () => abort("");
-  var runtimeKeepaliveCounter = 0;
-  var __emscripten_runtime_keepalive_clear = () => {
-    noExitRuntime = false;
-    runtimeKeepaliveCounter = 0;
-  };
-  var timers = {};
-  var handleException = e => {
-    if (e instanceof ExitStatus || e == "unwind") {
-      return EXITSTATUS;
-    }
-    quit_(1, e);
-  };
-  var keepRuntimeAlive = () => noExitRuntime || runtimeKeepaliveCounter > 0;
-  var _proc_exit = code => {
-    EXITSTATUS = code;
-    if (!keepRuntimeAlive()) {
-      Module["onExit"]?.(code);
-      ABORT = true;
-    }
-    quit_(code, new ExitStatus(code));
-  };
-  var exitJS = (status, implicit) => {
-    EXITSTATUS = status;
-    _proc_exit(status);
-  };
-  var _exit = exitJS;
-  var maybeExit = () => {
-    if (!keepRuntimeAlive()) {
-      try {
-        _exit(EXITSTATUS);
-      } catch (e) {
-        handleException(e);
-      }
-    }
-  };
-  var callUserCallback = func => {
-    if (ABORT) {
-      return;
-    }
-    try {
-      return func();
-    } catch (e) {
-      handleException(e);
-    } finally {
-      maybeExit();
-    }
-  };
-  var _emscripten_get_now = () => performance.now();
-  var __setitimer_js = (which, timeout_ms) => {
-    if (timers[which]) {
-      clearTimeout(timers[which].id);
-      delete timers[which];
-    }
-    if (!timeout_ms) return 0;
-    var id = setTimeout(() => {
-      delete timers[which];
-      callUserCallback(() => __emscripten_timeout(which, _emscripten_get_now()));
-    }, timeout_ms);
-    timers[which] = {
-      id,
-      timeout_ms
-    };
-    return 0;
-  };
-  function _createImageData(size) {
-    Module.imageData = new Uint8Array(size);
-  }
-  var getHeapMax = () => 2147483648;
-  var alignMemory = (size, alignment) => Math.ceil(size / alignment) * alignment;
-  var growMemory = size => {
-    var oldHeapSize = wasmMemory.buffer.byteLength;
-    var pages = (size - oldHeapSize + 65535) / 65536 | 0;
-    try {
-      wasmMemory.grow(pages);
-      updateMemoryViews();
-      return 1;
-    } catch (e) {}
-  };
-  var HEAPU8;
-  var _emscripten_resize_heap = requestedSize => {
-    var oldSize = HEAPU8.length;
-    requestedSize >>>= 0;
-    var maxHeapSize = getHeapMax();
-    if (requestedSize > maxHeapSize) {
-      return false;
-    }
-    for (var cutDown = 1; cutDown <= 4; cutDown *= 2) {
-      var overGrownHeapSize = oldSize * (1 + .2 / cutDown);
-      overGrownHeapSize = Math.min(overGrownHeapSize, requestedSize + 100663296);
-      var newSize = Math.min(maxHeapSize, alignMemory(Math.max(requestedSize, overGrownHeapSize), 65536));
-      var replacement = growMemory(newSize);
-      if (replacement) {
-        return true;
-      }
-    }
-    return false;
-  };
-  function _setImageData(array_ptr, pitch8, pitch32, height) {
-    if (pitch32 === pitch8) {
-      Module.imageData = new Uint8ClampedArray(HEAPU8.subarray(array_ptr, array_ptr + pitch32 * height));
-      return;
-    }
-    const destSize = pitch8 * height;
-    const imageData = Module.imageData = new Uint8ClampedArray(destSize);
-    for (let srcStart = array_ptr, destStart = 0; destStart < destSize; srcStart += pitch32, destStart += pitch8) {
-      imageData.set(HEAPU8.subarray(srcStart, srcStart + pitch8), destStart);
-    }
-  }
-  function _setLineData(line_ptr, pitch8, offset) {
-    Module.imageData.set(HEAPU8.subarray(line_ptr, line_ptr + pitch8), offset);
-  }
-  var writeArrayToMemory = (array, buffer) => {
-    HEAP8.set(array, buffer);
-  };
-  if (Module["noExitRuntime"]) noExitRuntime = Module["noExitRuntime"];
-  if (Module["print"]) out = Module["print"];
-  if (Module["printErr"]) err = Module["printErr"];
-  if (Module["arguments"]) programArgs = Module["arguments"];
-  if (Module["thisProgram"]) thisProgram = Module["thisProgram"];
-  var preInit = Module["preInit"];
-  if (preInit) {
-    if (typeof preInit == "function") Module["preInit"] = preInit = [preInit];
-    while (preInit.length > 0) {
-      preInit.shift()();
-    }
-  }
-  Module["writeArrayToMemory"] = writeArrayToMemory;
-  var _malloc, _free, _jbig2_decode, _ccitt_decode, __emscripten_timeout, memory, __indirect_function_table, wasmMemory;
-  function assignWasmExports(wasmExports) {
-    _malloc = Module["_malloc"] = wasmExports["k"];
-    _free = Module["_free"] = wasmExports["l"];
-    _jbig2_decode = Module["_jbig2_decode"] = wasmExports["m"];
-    _ccitt_decode = Module["_ccitt_decode"] = wasmExports["n"];
-    __emscripten_timeout = wasmExports["o"];
-    memory = wasmMemory = wasmExports["i"];
-    __indirect_function_table = wasmExports["__indirect_function_table"];
-  }
-  var wasmImports = {
-    e: __abort_js,
-    d: __emscripten_runtime_keepalive_clear,
-    a: __setitimer_js,
-    g: _createImageData,
-    b: _emscripten_resize_heap,
-    c: _proc_exit,
-    h: _setImageData,
-    f: _setLineData
-  };
-  async function run() {
-    preRun();
-    var setStatus = Module["setStatus"];
-    if (setStatus) {
-      setStatus("Running...");
-      await new Promise(resolve => setTimeout(resolve, 1));
-      setTimeout(setStatus, 1, "");
-    }
-    if (ABORT) return;
-    initRuntime();
-    Module["onRuntimeInitialized"]?.();
-    postRun();
-  }
-  var wasmExports;
-  wasmExports = await createWasm();
-  await run();
-  return Module;
-}
-/* harmony default export */ const jbig2 = (JBig2);
-;// ./src/core/wasm_image.js
-
-
-class WasmImage {
-  static #handler = null;
-  static #instances = new Set();
-  static #useWasm = true;
-  static #useWorkerFetch = true;
-  static #wasmUrl = null;
-  #buffer = null;
-  #modulePromise = null;
-  _filename = null;
-  _noWasmFilename = null;
-  static setOptions({
-    handler,
-    useWasm,
-    useWorkerFetch,
-    wasmUrl
-  }) {
-    WasmImage.#useWasm = useWasm;
-    WasmImage.#useWorkerFetch = useWorkerFetch;
-    WasmImage.#wasmUrl = wasmUrl;
-    if (!useWorkerFetch) {
-      WasmImage.#handler = handler;
-    }
-  }
-  static get instance() {
-    unreachable("Abstract getter `instance` accessed");
-  }
-  static cleanup() {
-    for (const instance of WasmImage.#instances) {
-      instance.#modulePromise = null;
-    }
-  }
-  constructor(trackInstance = false) {
-    if (trackInstance) {
-      WasmImage.#instances.add(this);
-    }
-  }
-  async #getJsModule(fallbackCallback) {
-    let instance = null;
-    try {
-      const mod = await import(
-      /*webpackIgnore: true*/
-      /*@vite-ignore*/
-      `${WasmImage.#wasmUrl}${this._noWasmFilename}`);
-      instance = mod.default();
-    } catch (ex) {
-      warn(`#getJsModule: ${ex}`);
-    }
-    fallbackCallback(instance);
-  }
-  async #instantiateWasm(fallbackCallback, imports, successCallback) {
-    try {
-      if (!this.#buffer) {
-        if (WasmImage.#useWorkerFetch) {
-          this.#buffer = await fetchBinaryData(`${WasmImage.#wasmUrl}${this._filename}`);
-        } else {
-          this.#buffer = await WasmImage.#handler.sendWithPromise("FetchBinaryData", {
-            kind: "wasmUrl",
-            filename: this._filename
-          });
-        }
-      }
-      const results = await WebAssembly.instantiate(this.#buffer, imports);
-      return successCallback(results.instance);
-    } catch (ex) {
-      warn(`#instantiateWasm: ${ex}`);
-      this.#getJsModule(fallbackCallback);
-      return null;
-    }
-  }
-  _getModule(ImageDecoder) {
-    if (!this.#modulePromise) {
-      const {
-        promise,
-        resolve
-      } = Promise.withResolvers();
-      const promises = [promise];
-      if (!WasmImage.#useWasm) {
-        this.#getJsModule(resolve);
-      } else {
-        promises.push(ImageDecoder({
-          warn: warn,
-          instantiateWasm: this.#instantiateWasm.bind(this, resolve)
-        }));
-      }
-      this.#modulePromise = Promise.race(promises);
-    }
-    return this.#modulePromise;
-  }
-  async decode(bytes, _params) {
-    unreachable("Abstract method `decode` called");
-  }
-}
-
-;// ./src/core/jbig2_ccittFax.js
-
-
-
-class Jbig2Error extends BaseException {
-  constructor(msg) {
-    super(msg, "Jbig2Error");
-  }
-}
-class JBig2CCITTFaxImage extends WasmImage {
-  _filename = "jbig2.wasm";
-  _noWasmFilename = "jbig2_nowasm_fallback.js";
-  static get instance() {
-    return shadow(this, "instance", new JBig2CCITTFaxImage(true));
-  }
-  async decode(bytes, width, height, globals, CCITTOptions) {
-    const module = await this._getModule(jbig2);
-    if (!module) {
-      throw new Jbig2Error("JBig2 failed to initialize");
-    }
-    let ptr, globalsPtr;
-    try {
-      const size = bytes.length;
-      ptr = module._malloc(size);
-      module.writeArrayToMemory(bytes, ptr);
-      if (CCITTOptions) {
-        module._ccitt_decode(ptr, size, width, height, CCITTOptions.K, CCITTOptions.EndOfLine ? 1 : 0, CCITTOptions.EncodedByteAlign ? 1 : 0, CCITTOptions.BlackIs1 ? 1 : 0, CCITTOptions.Columns, CCITTOptions.Rows);
-      } else {
-        const globalsSize = globals ? globals.length : 0;
-        if (globalsSize > 0) {
-          globalsPtr = module._malloc(globalsSize);
-          module.writeArrayToMemory(globals, globalsPtr);
-        }
-        module._jbig2_decode(ptr, size, width, height, globalsPtr, globalsSize);
-      }
-      if (!module.imageData) {
-        throw new Jbig2Error("Unknown error");
-      }
-      const {
-        imageData
-      } = module;
-      module.imageData = null;
-      return imageData;
-    } finally {
-      if (ptr) {
-        module._free(ptr);
-      }
-      if (globalsPtr) {
-        module._free(globalsPtr);
-      }
-    }
   }
 }
 
@@ -9761,6 +10563,9 @@ class CCITTFaxStream extends DecodeStream {
   get bytes() {
     return shadow(this, "bytes", this.stream.getBytes(this.maybeLength));
   }
+  readBlock() {
+    unreachable("CCITTFaxStream.readBlock");
+  }
   get isImageStream() {
     return true;
   }
@@ -9771,8 +10576,10 @@ class CCITTFaxStream extends DecodeStream {
     if (this.eof) {
       return this.buffer;
     }
-    bytes ??= this.stream.isAsync ? (await this.stream.asyncGetBytes()) || this.bytes : this.bytes;
-    this.buffer = await JBig2CCITTFaxImage.instance.decode(bytes, this.dict.get("W", "Width"), this.dict.get("H", "Height"), null, this.params);
+    if (!bytes) {
+      bytes = this.stream.isAsync ? (await this.stream.asyncGetBytes()) || this.bytes : this.bytes;
+    }
+    this.buffer = await JBig2CCITTFaxImage.decode(bytes, this.dict.get("W", "Width"), this.dict.get("H", "Height"), null, this.params);
     this.bufferLength = this.buffer.length;
     this.eof = true;
     return this.buffer;
@@ -9816,7 +10623,10 @@ class FlateStream extends DecodeStream {
     if (!data) {
       return this.getBytes(length);
     }
-    return data.length <= length ? data : data.subarray(0, length);
+    if (data.length <= length) {
+      return data;
+    }
+    return data.subarray(0, length);
   }
   async asyncGetBytes() {
     const {
@@ -10073,32 +10883,28 @@ class Jbig2Stream extends DecodeStream {
     return shadow(this, "bytes", this.stream.getBytes(this.maybeLength));
   }
   ensureBuffer(requested) {}
+  readBlock() {
+    unreachable("Jbig2Stream.readBlock");
+  }
   get isAsyncDecoder() {
     return true;
   }
   get isImageStream() {
     return true;
   }
-  static stripFileHeader(bytes) {
-    if (bytes.length >= 9 && bytes[0] === 0x97 && bytes[1] === 0x4a && bytes[2] === 0x42 && bytes[3] === 0x32 && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) {
-      const headerLength = (bytes[8] & 2) === 0 ? 13 : 9;
-      return bytes.subarray(headerLength);
-    }
-    return bytes;
-  }
   async decodeImage(bytes, length, _decoderOptions) {
     if (this.eof) {
       return this.buffer;
     }
-    bytes = Jbig2Stream.stripFileHeader(bytes || this.bytes);
+    bytes ||= this.bytes;
     let globals = null;
     if (this.params instanceof Dict) {
       const globalsStream = this.params.get("JBIG2Globals");
       if (globalsStream instanceof BaseStream) {
-        globals = Jbig2Stream.stripFileHeader(globalsStream.getBytes());
+        globals = globalsStream.getBytes();
       }
     }
-    this.buffer = await JBig2CCITTFaxImage.instance.decode(bytes, this.dict.get("Width"), this.dict.get("Height"), globals);
+    this.buffer = await JBig2CCITTFaxImage.decode(bytes, this.dict.get("Width"), this.dict.get("Height"), globals);
     this.bufferLength = this.buffer.length;
     this.eof = true;
     return this.buffer;
@@ -10108,620 +10914,25 @@ class Jbig2Stream extends DecodeStream {
   }
 }
 
-;// ./external/openjpeg/openjpeg.js
-async function OpenJPEG(moduleArg = {}) {
-  var Module = moduleArg;
-  var ENVIRONMENT_IS_WEB = true;
-  var ENVIRONMENT_IS_WORKER = false;
-  var programArgs = [];
-  var thisProgram = "./this.program";
-  var quit_ = (status, toThrow) => {
-    throw toThrow;
-  };
-  var _scriptName = import.meta.url;
-  var scriptDirectory = "";
-  var readAsync, readBinary;
-  if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
-    try {
-      scriptDirectory = new URL(".", _scriptName).href;
-    } catch {}
-    readAsync = async url => {
-      var response = await fetch(url, {
-        credentials: "same-origin"
-      });
-      if (response.ok) {
-        return response.arrayBuffer();
-      }
-      throw new Error(response.status + " : " + response.url);
-    };
-  } else {}
-  var out = console.log.bind(console);
-  var err = console.error.bind(console);
-  var wasmBinary;
-  var ABORT = false;
-  var EXITSTATUS;
-  class EmscriptenEH {}
-  class EmscriptenSjLj extends EmscriptenEH {}
-  var runtimeInitialized = false;
-  function getMemoryBuffer() {
-    return wasmMemory.buffer;
-  }
-  function updateMemoryViews() {
-    if (HEAP8?.buffer?.resizable) return;
-    var b = getMemoryBuffer();
-    HEAP8 = new Int8Array(b);
-    HEAPU8 = new Uint8Array(b);
-    HEAP32 = new Int32Array(b);
-    HEAPU32 = new Uint32Array(b);
-  }
-  function preRun() {
-    var preRun = Module["preRun"];
-    if (preRun) {
-      if (typeof preRun == "function") preRun = [preRun];
-      onPreRuns.push(...preRun);
-    }
-    callRuntimeCallbacks(onPreRuns);
-  }
-  function initRuntime() {
-    runtimeInitialized = true;
-    wasmExports["s"]();
-  }
-  function postRun() {
-    var postRun = Module["postRun"];
-    if (postRun) {
-      if (typeof postRun == "function") postRun = [postRun];
-      onPostRuns.push(...postRun);
-    }
-    callRuntimeCallbacks(onPostRuns);
-  }
-  function abort(what) {
-    Module["onAbort"]?.(what);
-    what = `Aborted(${what})`;
-    err(what);
-    ABORT = true;
-    what += ". Build with -sASSERTIONS for more info.";
-    var e = new WebAssembly.RuntimeError(what);
-    throw e;
-  }
-  var wasmBinaryFile;
-  function getWasmImports() {
-    var imports = {
-      a: wasmImports
-    };
-    return imports;
-  }
-  async function createWasm() {
-    function receiveInstance(instance) {
-      wasmExports = instance.exports;
-      assignWasmExports(wasmExports);
-      updateMemoryViews();
-      return wasmExports;
-    }
-    var info = getWasmImports();
-    var instantiateWasm = Module["instantiateWasm"];
-    return new Promise(resolve => {
-      instantiateWasm(info, inst => resolve(receiveInstance(inst)));
-    });
-  }
-  class ExitStatus {
-    name = "ExitStatus";
-    constructor(status) {
-      this.message = `Program terminated with exit(${status})`;
-      this.status = status;
-    }
-  }
-  var HEAP8;
-  var callRuntimeCallbacks = callbacks => {
-    while (callbacks.length > 0) {
-      callbacks.shift()(Module);
-    }
-  };
-  var onPostRuns = [];
-  var onPreRuns = [];
-  var noExitRuntime = true;
-  var __abort_js = () => abort("");
-  var runtimeKeepaliveCounter = 0;
-  var __emscripten_runtime_keepalive_clear = () => {
-    noExitRuntime = false;
-    runtimeKeepaliveCounter = 0;
-  };
-  var timers = {};
-  var handleException = e => {
-    if (e instanceof ExitStatus || e == "unwind") {
-      return EXITSTATUS;
-    }
-    quit_(1, e);
-  };
-  var keepRuntimeAlive = () => noExitRuntime || runtimeKeepaliveCounter > 0;
-  var _proc_exit = code => {
-    EXITSTATUS = code;
-    if (!keepRuntimeAlive()) {
-      Module["onExit"]?.(code);
-      ABORT = true;
-    }
-    quit_(code, new ExitStatus(code));
-  };
-  var exitJS = (status, implicit) => {
-    EXITSTATUS = status;
-    _proc_exit(status);
-  };
-  var _exit = exitJS;
-  var maybeExit = () => {
-    if (!keepRuntimeAlive()) {
-      try {
-        _exit(EXITSTATUS);
-      } catch (e) {
-        handleException(e);
-      }
-    }
-  };
-  var callUserCallback = func => {
-    if (ABORT) {
-      return;
-    }
-    try {
-      return func();
-    } catch (e) {
-      handleException(e);
-    } finally {
-      maybeExit();
-    }
-  };
-  var _emscripten_get_now = () => performance.now();
-  var __setitimer_js = (which, timeout_ms) => {
-    if (timers[which]) {
-      clearTimeout(timers[which].id);
-      delete timers[which];
-    }
-    if (!timeout_ms) return 0;
-    var id = setTimeout(() => {
-      delete timers[which];
-      callUserCallback(() => __emscripten_timeout(which, _emscripten_get_now()));
-    }, timeout_ms);
-    timers[which] = {
-      id,
-      timeout_ms
-    };
-    return 0;
-  };
-  var HEAP32;
-  function _copy_pixels_1(compG_ptr, nb_pixels) {
-    compG_ptr >>= 2;
-    const imageData = Module.imageData = new Uint8ClampedArray(nb_pixels);
-    const compG = HEAP32.subarray(compG_ptr, compG_ptr + nb_pixels);
-    imageData.set(compG);
-  }
-  function _copy_pixels_3(compR_ptr, compG_ptr, compB_ptr, nb_pixels) {
-    compR_ptr >>= 2;
-    compG_ptr >>= 2;
-    compB_ptr >>= 2;
-    const imageData = Module.imageData = new Uint8ClampedArray(nb_pixels * 3);
-    const compR = HEAP32.subarray(compR_ptr, compR_ptr + nb_pixels);
-    const compG = HEAP32.subarray(compG_ptr, compG_ptr + nb_pixels);
-    const compB = HEAP32.subarray(compB_ptr, compB_ptr + nb_pixels);
-    for (let i = 0; i < nb_pixels; i++) {
-      imageData[3 * i] = compR[i];
-      imageData[3 * i + 1] = compG[i];
-      imageData[3 * i + 2] = compB[i];
-    }
-  }
-  function _copy_pixels_4(compR_ptr, compG_ptr, compB_ptr, compA_ptr, nb_pixels) {
-    compR_ptr >>= 2;
-    compG_ptr >>= 2;
-    compB_ptr >>= 2;
-    compA_ptr >>= 2;
-    const imageData = Module.imageData = new Uint8ClampedArray(nb_pixels * 4);
-    const compR = HEAP32.subarray(compR_ptr, compR_ptr + nb_pixels);
-    const compG = HEAP32.subarray(compG_ptr, compG_ptr + nb_pixels);
-    const compB = HEAP32.subarray(compB_ptr, compB_ptr + nb_pixels);
-    const compA = HEAP32.subarray(compA_ptr, compA_ptr + nb_pixels);
-    for (let i = 0; i < nb_pixels; i++) {
-      imageData[4 * i] = compR[i];
-      imageData[4 * i + 1] = compG[i];
-      imageData[4 * i + 2] = compB[i];
-      imageData[4 * i + 3] = compA[i];
-    }
-  }
-  var getHeapMax = () => 2147483648;
-  var alignMemory = (size, alignment) => Math.ceil(size / alignment) * alignment;
-  var growMemory = size => {
-    var oldHeapSize = wasmMemory.buffer.byteLength;
-    var pages = (size - oldHeapSize + 65535) / 65536 | 0;
-    try {
-      wasmMemory.grow(pages);
-      updateMemoryViews();
-      return 1;
-    } catch (e) {}
-  };
-  var HEAPU8;
-  var _emscripten_resize_heap = requestedSize => {
-    var oldSize = HEAPU8.length;
-    requestedSize >>>= 0;
-    var maxHeapSize = getHeapMax();
-    if (requestedSize > maxHeapSize) {
-      return false;
-    }
-    for (var cutDown = 1; cutDown <= 4; cutDown *= 2) {
-      var overGrownHeapSize = oldSize * (1 + .2 / cutDown);
-      overGrownHeapSize = Math.min(overGrownHeapSize, requestedSize + 100663296);
-      var newSize = Math.min(maxHeapSize, alignMemory(Math.max(requestedSize, overGrownHeapSize), 65536));
-      var replacement = growMemory(newSize);
-      if (replacement) {
-        return true;
-      }
-    }
-    return false;
-  };
-  var ENV = {};
-  var getExecutableName = () => thisProgram;
-  var getEnvStrings = () => {
-    if (!getEnvStrings.strings) {
-      var lang = (globalThis.navigator?.language ?? "C").replace("-", "_") + ".UTF-8";
-      var env = {
-        USER: "web_user",
-        LOGNAME: "web_user",
-        PATH: "/",
-        PWD: "/",
-        HOME: "/home/web_user",
-        LANG: lang,
-        _: getExecutableName()
-      };
-      for (var x in ENV) {
-        if (ENV[x] === undefined) delete env[x];else env[x] = ENV[x];
-      }
-      var strings = [];
-      for (var x in env) {
-        strings.push(`${x}=${env[x]}`);
-      }
-      getEnvStrings.strings = strings;
-    }
-    return getEnvStrings.strings;
-  };
-  var stringToUTF8Array = (str, heap, outIdx, maxBytesToWrite) => {
-    if (!(maxBytesToWrite > 0)) return 0;
-    var startIdx = outIdx;
-    var endIdx = outIdx + maxBytesToWrite - 1;
-    for (var i = 0; i < str.length; ++i) {
-      var u = str.codePointAt(i);
-      if (u <= 127) {
-        if (outIdx >= endIdx) break;
-        heap[outIdx++] = u;
-      } else if (u <= 2047) {
-        if (outIdx + 1 >= endIdx) break;
-        heap[outIdx++] = 192 | u >> 6;
-        heap[outIdx++] = 128 | u & 63;
-      } else if (u <= 65535) {
-        if (outIdx + 2 >= endIdx) break;
-        heap[outIdx++] = 224 | u >> 12;
-        heap[outIdx++] = 128 | u >> 6 & 63;
-        heap[outIdx++] = 128 | u & 63;
-      } else {
-        if (outIdx + 3 >= endIdx) break;
-        heap[outIdx++] = 240 | u >> 18;
-        heap[outIdx++] = 128 | u >> 12 & 63;
-        heap[outIdx++] = 128 | u >> 6 & 63;
-        heap[outIdx++] = 128 | u & 63;
-        i++;
-      }
-    }
-    heap[outIdx] = 0;
-    return outIdx - startIdx;
-  };
-  var stringToUTF8 = (str, outPtr, maxBytesToWrite) => stringToUTF8Array(str, HEAPU8, outPtr, maxBytesToWrite);
-  var HEAPU32;
-  var _environ_get = (__environ, environ_buf) => {
-    var bufSize = 0;
-    var envp = 0;
-    for (var string of getEnvStrings()) {
-      var ptr = environ_buf + bufSize;
-      HEAPU32[__environ + envp >> 2] = ptr;
-      bufSize += stringToUTF8(string, ptr, Infinity) + 1;
-      envp += 4;
-    }
-    return 0;
-  };
-  var lengthBytesUTF8 = str => {
-    var len = 0;
-    for (var i = 0; i < str.length; ++i) {
-      var c = str.charCodeAt(i);
-      if (c <= 127) {
-        len++;
-      } else if (c <= 2047) {
-        len += 2;
-      } else if (c >= 55296 && c <= 57343) {
-        len += 4;
-        ++i;
-      } else {
-        len += 3;
-      }
-    }
-    return len;
-  };
-  var _environ_sizes_get = (penviron_count, penviron_buf_size) => {
-    var strings = getEnvStrings();
-    HEAPU32[penviron_count >> 2] = strings.length;
-    var bufSize = 0;
-    for (var string of strings) {
-      bufSize += lengthBytesUTF8(string) + 1;
-    }
-    HEAPU32[penviron_buf_size >> 2] = bufSize;
-    return 0;
-  };
-  var INT53_MAX = 9007199254740992;
-  var INT53_MIN = -9007199254740992;
-  var bigintToI53Checked = num => num < INT53_MIN || num > INT53_MAX ? NaN : Number(num);
-  function _fd_seek(fd, offset, whence, newOffset) {
-    offset = bigintToI53Checked(offset);
-    return 70;
-  }
-  var printCharBuffers = [null, [], []];
-  var UTF8Decoder = globalThis.TextDecoder && new TextDecoder();
-  var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
-    var maxIdx = idx + maxBytesToRead;
-    if (ignoreNul) return maxIdx;
-    while (heapOrArray[idx] && !(idx >= maxIdx)) ++idx;
-    return idx;
-  };
-  var UTF8ArrayToString = (heapOrArray, idx = 0, maxBytesToRead, ignoreNul) => {
-    var endPtr = findStringEnd(heapOrArray, idx, maxBytesToRead, ignoreNul);
-    if (endPtr - idx > 16 && heapOrArray.buffer && UTF8Decoder) {
-      return UTF8Decoder.decode(heapOrArray.subarray(idx, endPtr));
-    }
-    var str = "";
-    while (idx < endPtr) {
-      var u0 = heapOrArray[idx++];
-      if (!(u0 & 128)) {
-        str += String.fromCharCode(u0);
-        continue;
-      }
-      var u1 = heapOrArray[idx++] & 63;
-      if ((u0 & 224) == 192) {
-        str += String.fromCharCode((u0 & 31) << 6 | u1);
-        continue;
-      }
-      var u2 = heapOrArray[idx++] & 63;
-      if ((u0 & 240) == 224) {
-        u0 = (u0 & 15) << 12 | u1 << 6 | u2;
-      } else {
-        u0 = (u0 & 7) << 18 | u1 << 12 | u2 << 6 | heapOrArray[idx++] & 63;
-      }
-      if (u0 < 65536) {
-        str += String.fromCharCode(u0);
-      } else {
-        var ch = u0 - 65536;
-        str += String.fromCharCode(55296 | ch >> 10, 56320 | ch & 1023);
-      }
-    }
-    return str;
-  };
-  var printChar = (stream, curr) => {
-    var buffer = printCharBuffers[stream];
-    if (!curr || curr === 10) {
-      (stream === 1 ? out : err)(UTF8ArrayToString(buffer));
-      buffer.length = 0;
-    } else {
-      buffer.push(curr);
-    }
-  };
-  var UTF8ToString = (ptr, maxBytesToRead, ignoreNul) => ptr ? UTF8ArrayToString(HEAPU8, ptr, maxBytesToRead, ignoreNul) : "";
-  var _fd_write = (fd, iov, iovcnt, pnum) => {
-    var num = 0;
-    for (var i = 0; i < iovcnt; i++) {
-      var ptr = HEAPU32[iov >> 2];
-      var len = HEAPU32[iov + 4 >> 2];
-      iov += 8;
-      for (var j = 0; j < len; j++) {
-        printChar(fd, HEAPU8[ptr + j]);
-      }
-      num += len;
-    }
-    HEAPU32[pnum >> 2] = num;
-    return 0;
-  };
-  function _gray_to_rgba(compG_ptr, nb_pixels) {
-    compG_ptr >>= 2;
-    const imageData = Module.imageData = new Uint8ClampedArray(nb_pixels * 4);
-    const compG = HEAP32.subarray(compG_ptr, compG_ptr + nb_pixels);
-    for (let i = 0; i < nb_pixels; i++) {
-      imageData[4 * i] = imageData[4 * i + 1] = imageData[4 * i + 2] = compG[i];
-      imageData[4 * i + 3] = 255;
-    }
-  }
-  function _graya_to_rgba(compG_ptr, compA_ptr, nb_pixels) {
-    compG_ptr >>= 2;
-    compA_ptr >>= 2;
-    const imageData = Module.imageData = new Uint8ClampedArray(nb_pixels * 4);
-    const compG = HEAP32.subarray(compG_ptr, compG_ptr + nb_pixels);
-    const compA = HEAP32.subarray(compA_ptr, compA_ptr + nb_pixels);
-    for (let i = 0; i < nb_pixels; i++) {
-      imageData[4 * i] = imageData[4 * i + 1] = imageData[4 * i + 2] = compG[i];
-      imageData[4 * i + 3] = compA[i];
-    }
-  }
-  function _jsPrintWarning(message_ptr) {
-    const message = UTF8ToString(message_ptr);
-    (Module.warn || console.warn)(`OpenJPEG: ${message}`);
-  }
-  function _rgb_to_rgba(compR_ptr, compG_ptr, compB_ptr, nb_pixels) {
-    compR_ptr >>= 2;
-    compG_ptr >>= 2;
-    compB_ptr >>= 2;
-    const imageData = Module.imageData = new Uint8ClampedArray(nb_pixels * 4);
-    const compR = HEAP32.subarray(compR_ptr, compR_ptr + nb_pixels);
-    const compG = HEAP32.subarray(compG_ptr, compG_ptr + nb_pixels);
-    const compB = HEAP32.subarray(compB_ptr, compB_ptr + nb_pixels);
-    for (let i = 0; i < nb_pixels; i++) {
-      imageData[4 * i] = compR[i];
-      imageData[4 * i + 1] = compG[i];
-      imageData[4 * i + 2] = compB[i];
-      imageData[4 * i + 3] = 255;
-    }
-  }
-  function _storeErrorMessage(message_ptr) {
-    const message = UTF8ToString(message_ptr);
-    if (!Module.errorMessages) {
-      Module.errorMessages = message;
-    } else {
-      Module.errorMessages += "\n" + message;
-    }
-  }
-  var writeArrayToMemory = (array, buffer) => {
-    HEAP8.set(array, buffer);
-  };
-  if (Module["noExitRuntime"]) noExitRuntime = Module["noExitRuntime"];
-  if (Module["print"]) out = Module["print"];
-  if (Module["printErr"]) err = Module["printErr"];
-  if (Module["arguments"]) programArgs = Module["arguments"];
-  if (Module["thisProgram"]) thisProgram = Module["thisProgram"];
-  var preInit = Module["preInit"];
-  if (preInit) {
-    if (typeof preInit == "function") Module["preInit"] = preInit = [preInit];
-    while (preInit.length > 0) {
-      preInit.shift()();
-    }
-  }
-  Module["writeArrayToMemory"] = writeArrayToMemory;
-  var _malloc, _free, _jp2_decode, __emscripten_timeout, memory, __indirect_function_table, wasmMemory;
-  function assignWasmExports(wasmExports) {
-    _malloc = Module["_malloc"] = wasmExports["t"];
-    _free = Module["_free"] = wasmExports["u"];
-    _jp2_decode = Module["_jp2_decode"] = wasmExports["v"];
-    __emscripten_timeout = wasmExports["w"];
-    memory = wasmMemory = wasmExports["r"];
-    __indirect_function_table = wasmExports["__indirect_function_table"];
-  }
-  var wasmImports = {
-    m: __abort_js,
-    l: __emscripten_runtime_keepalive_clear,
-    i: __setitimer_js,
-    f: _copy_pixels_1,
-    e: _copy_pixels_3,
-    d: _copy_pixels_4,
-    j: _emscripten_resize_heap,
-    o: _environ_get,
-    p: _environ_sizes_get,
-    n: _fd_seek,
-    b: _fd_write,
-    q: _gray_to_rgba,
-    h: _graya_to_rgba,
-    c: _jsPrintWarning,
-    k: _proc_exit,
-    g: _rgb_to_rgba,
-    a: _storeErrorMessage
-  };
-  async function run() {
-    preRun();
-    var setStatus = Module["setStatus"];
-    if (setStatus) {
-      setStatus("Running...");
-      await new Promise(resolve => setTimeout(resolve, 1));
-      setTimeout(setStatus, 1, "");
-    }
-    if (ABORT) return;
-    initRuntime();
-    Module["onRuntimeInitialized"]?.();
-    postRun();
-  }
-  var wasmExports;
-  wasmExports = await createWasm();
-  await run();
-  return Module;
-}
-/* harmony default export */ const openjpeg = (OpenJPEG);
-;// ./src/core/jpx.js
-
-
-
-
-class JpxError extends BaseException {
-  constructor(msg) {
-    super(msg, "JpxError");
-  }
-}
-class JpxImage extends WasmImage {
-  _filename = "openjpeg.wasm";
-  _noWasmFilename = "openjpeg_nowasm_fallback.js";
-  static get instance() {
-    return shadow(this, "instance", new JpxImage(true));
-  }
-  async decode(bytes, {
-    numComponents = 4,
-    isIndexedColormap = false,
-    smaskInData = false,
-    reducePower = 0
-  } = {}) {
-    const module = await this._getModule(openjpeg);
-    if (!module) {
-      throw new JpxError("OpenJPEG failed to initialize");
-    }
-    let ptr;
-    try {
-      const size = bytes.length;
-      ptr = module._malloc(size);
-      module.writeArrayToMemory(bytes, ptr);
-      const ret = module._jp2_decode(ptr, size, numComponents > 0 ? numComponents : 0, !!isIndexedColormap, !!smaskInData, reducePower);
-      if (ret) {
-        const {
-          errorMessages
-        } = module;
-        if (errorMessages) {
-          delete module.errorMessages;
-          throw new JpxError(errorMessages);
-        }
-        throw new JpxError("Unknown error");
-      }
-      const {
-        imageData
-      } = module;
-      module.imageData = null;
-      return imageData;
-    } finally {
-      if (ptr) {
-        module._free(ptr);
-      }
-    }
-  }
-  static parseImageProperties(stream) {
-    let newByte = stream.getByte();
-    while (newByte >= 0) {
-      const oldByte = newByte;
-      newByte = stream.getByte();
-      const code = oldByte << 8 | newByte;
-      if (code === 0xff51) {
-        stream.skip(4);
-        const Xsiz = stream.getInt32() >>> 0;
-        const Ysiz = stream.getInt32() >>> 0;
-        const XOsiz = stream.getInt32() >>> 0;
-        const YOsiz = stream.getInt32() >>> 0;
-        stream.skip(16);
-        const Csiz = stream.getUint16();
-        return {
-          width: Xsiz - XOsiz,
-          height: Ysiz - YOsiz,
-          bitsPerComponent: 8,
-          componentsCount: Csiz
-        };
-      }
-    }
-    throw new JpxError("No size marker found in JPX stream");
-  }
-}
-
 ;// ./src/core/jpx_stream.js
 
 
 
 class JpxStream extends DecodeStream {
-  constructor(stream, maybeLength) {
+  constructor(stream, maybeLength, params) {
     super(maybeLength);
     this.stream = stream;
     this.dict = stream.dict;
     this.maybeLength = maybeLength;
+    this.params = params;
   }
   get bytes() {
     return shadow(this, "bytes", this.stream.getBytes(this.maybeLength));
   }
   ensureBuffer(requested) {}
+  readBlock(decoderOptions) {
+    unreachable("JpxStream.readBlock");
+  }
   get isAsyncDecoder() {
     return true;
   }
@@ -10730,7 +10941,7 @@ class JpxStream extends DecodeStream {
       return this.buffer;
     }
     bytes ||= this.bytes;
-    this.buffer = await JpxImage.instance.decode(bytes, decoderOptions);
+    this.buffer = await JpxImage.decode(bytes, decoderOptions);
     this.bufferLength = this.buffer.length;
     this.eof = true;
     return this.buffer;
@@ -10758,13 +10969,14 @@ class LZWStream extends DecodeStream {
       codeLength: 9,
       nextCode: 258,
       dictionaryValues: new Uint8Array(maxLzwDictionarySize),
-      dictionaryLengths: new Uint16Array(maxLzwDictionarySize).fill(1, 0, 256),
+      dictionaryLengths: new Uint16Array(maxLzwDictionarySize),
       dictionaryPrevCodes: new Uint16Array(maxLzwDictionarySize),
       currentSequence: new Uint8Array(maxLzwDictionarySize),
       currentSequenceLength: 0
     };
     for (let i = 0; i < 256; ++i) {
       lzwState.dictionaryValues[i] = i;
+      lzwState.dictionaryLengths[i] = 1;
     }
     this.lzwState = lzwState;
   }
@@ -10789,9 +11001,10 @@ class LZWStream extends DecodeStream {
       decodedSizeDelta = blockSize;
     let estimatedDecodedSize = blockSize * 2;
     let i, j, q;
-    const {
-      lzwState
-    } = this;
+    const lzwState = this.lzwState;
+    if (!lzwState) {
+      return;
+    }
     const earlyChange = lzwState.earlyChange;
     let nextCode = lzwState.nextCode;
     const dictionaryValues = lzwState.dictionaryValues;
@@ -11054,7 +11267,7 @@ class RunLengthStream extends DecodeStream {
   }
   readBlock() {
     const repeatHeader = this.stream.getBytes(2);
-    if (repeatHeader.length < 2 || repeatHeader[0] === 128) {
+    if (!repeatHeader || repeatHeader.length < 2 || repeatHeader[0] === 128) {
       this.eof = true;
       return;
     }
@@ -11109,8 +11322,6 @@ function getInlineImageCacheKey(bytes) {
   return ii + "_" + String.fromCharCode.apply(null, strBuf);
 }
 class Parser {
-  #imageCache = null;
-  #imageId = 0;
   constructor({
     lexer,
     xref,
@@ -11121,6 +11332,8 @@ class Parser {
     this.xref = xref;
     this.allowStreams = allowStreams;
     this.recoveryMode = recoveryMode;
+    this.imageCache = Object.create(null);
+    this._imageId = 0;
     this.refill();
   }
   refill() {
@@ -11207,7 +11420,10 @@ class Parser {
       return buf1;
     }
     if (typeof buf1 === "string") {
-      return cipherTransform ? cipherTransform.decryptString(buf1) : buf1;
+      if (cipherTransform) {
+        return cipherTransform.decryptString(buf1);
+      }
+      return buf1;
     }
     return buf1;
   }
@@ -11449,7 +11665,7 @@ class Parser {
   makeInlineImage(cipherTransform) {
     const lexer = this.lexer;
     const stream = lexer.stream;
-    const dict = new Dict(this.xref);
+    const dictMap = Object.create(null);
     let dictLength;
     while (!isCmd(this.buf1, "ID") && this.buf1 !== EOF) {
       if (!(this.buf1 instanceof Name)) {
@@ -11460,17 +11676,17 @@ class Parser {
       if (this.buf1 === EOF) {
         break;
       }
-      dict.set(key, this.getObj(cipherTransform));
+      dictMap[key] = this.getObj(cipherTransform);
     }
     if (lexer.beginInlineImagePos !== -1) {
       dictLength = stream.pos - lexer.beginInlineImagePos;
     }
-    const filter = dict.get("F", "Filter");
+    const filter = this.xref.fetchIfRef(dictMap.F || dictMap.Filter);
     let filterName;
     if (filter instanceof Name) {
       filterName = filter.name;
     } else if (Array.isArray(filter)) {
-      const filterZero = this.#fetchIfRef(filter[0]);
+      const filterZero = this.xref.fetchIfRef(filter[0]);
       if (filterZero instanceof Name) {
         filterName = filterZero.name;
       }
@@ -11499,33 +11715,31 @@ class Parser {
       stream.pos = lexer.beginInlineImagePos;
       cacheKey = getInlineImageCacheKey(stream.getBytes(dictLength + length));
       stream.pos = initialStreamPos;
-      const cacheEntry = this.#imageCache?.get(cacheKey);
-      if (cacheEntry) {
+      const cacheEntry = this.imageCache[cacheKey];
+      if (cacheEntry !== undefined) {
         this.buf2 = Cmd.get("EI");
         this.shift();
         cacheEntry.reset();
         return cacheEntry;
       }
     }
+    const dict = new Dict(this.xref);
+    for (const key in dictMap) {
+      dict.set(key, dictMap[key]);
+    }
     let imageStream = stream.makeSubStream(startPos, length, dict);
-    if (cipherTransform && !this.#hasCryptFilter(filter)) {
+    if (cipherTransform) {
       imageStream = cipherTransform.createStream(imageStream, length);
     }
-    imageStream = this.filter(imageStream, dict, length, cipherTransform);
+    imageStream = this.filter(imageStream, dict, length);
     imageStream.dict = dict;
-    if (cacheKey) {
-      imageStream.cacheKey = `inline_img_${++this.#imageId}`;
-      (this.#imageCache ??= new Map()).set(cacheKey, imageStream);
+    if (cacheKey !== undefined) {
+      imageStream.cacheKey = `inline_img_${++this._imageId}`;
+      this.imageCache[cacheKey] = imageStream;
     }
     this.buf2 = Cmd.get("EI");
     this.shift();
     return imageStream;
-  }
-  #fetchIfRef(obj) {
-    return this.xref ? this.xref.fetchIfRef(obj) : obj;
-  }
-  #hasCryptFilter(filter) {
-    return Array.isArray(filter) ? filter.some(f => isName(this.#fetchIfRef(f), "Crypt")) : isName(filter, "Crypt");
   }
   #findStreamLength(startPos) {
     const {
@@ -11607,43 +11821,42 @@ class Parser {
     }
     this.shift();
     stream = stream.makeSubStream(startPos, length, dict);
-    const filter = dict.get("F", "Filter");
-    if (cipherTransform && !this.#hasCryptFilter(filter)) {
+    if (cipherTransform) {
       stream = cipherTransform.createStream(stream, length);
     }
-    stream = this.filter(stream, dict, length, cipherTransform);
+    stream = this.filter(stream, dict, length);
     stream.dict = dict;
     return stream;
   }
-  filter(stream, dict, length, cipherTransform = null) {
+  filter(stream, dict, length) {
     let filter = dict.get("F", "Filter");
     let params = dict.get("DP", "DecodeParms");
     if (filter instanceof Name) {
       if (Array.isArray(params)) {
         warn("/DecodeParms should not be an Array, when /Filter is a Name.");
       }
-      return this.makeFilter(stream, filter.name, length, params, cipherTransform);
+      return this.makeFilter(stream, filter.name, length, params);
     }
     let maybeLength = length;
     if (Array.isArray(filter)) {
       const filterArray = filter;
       const paramsArray = params;
       for (let i = 0, ii = filterArray.length; i < ii; ++i) {
-        filter = this.#fetchIfRef(filterArray[i]);
+        filter = this.xref.fetchIfRef(filterArray[i]);
         if (!(filter instanceof Name)) {
           throw new FormatError(`Bad filter name "${filter}"`);
         }
         params = null;
         if (Array.isArray(paramsArray) && i in paramsArray) {
-          params = this.#fetchIfRef(paramsArray[i]);
+          params = this.xref.fetchIfRef(paramsArray[i]);
         }
-        stream = this.makeFilter(stream, filter.name, maybeLength, params, cipherTransform);
+        stream = this.makeFilter(stream, filter.name, maybeLength, params);
         maybeLength = null;
       }
     }
     return stream;
   }
-  makeFilter(stream, name, maybeLength, params, cipherTransform = null) {
+  makeFilter(stream, name, maybeLength, params) {
     if (maybeLength === 0) {
       warn(`Empty "${name}" stream.`);
       return new NullStream();
@@ -11671,7 +11884,7 @@ class Parser {
           return new JpegStream(stream, maybeLength, params);
         case "JPX":
         case "JPXDecode":
-          return new JpxStream(stream, maybeLength);
+          return new JpxStream(stream, maybeLength, params);
         case "A85":
         case "ASCII85Decode":
           return new Ascii85Stream(stream, maybeLength);
@@ -11688,16 +11901,6 @@ class Parser {
           return new Jbig2Stream(stream, maybeLength, params);
         case "BrotliDecode":
           return new BrotliStream(stream, maybeLength);
-        case "Crypt":
-          {
-            if (!cipherTransform) {
-              warn('Filter "Crypt" is missing a cipher transform.');
-              return stream;
-            }
-            const param = params instanceof Dict ? params.get("Name") : null;
-            const cryptName = param instanceof Name ? param : Name.get("Identity");
-            return cipherTransform.createStream(stream, maybeLength, cryptName);
-          }
       }
       warn(`Filter "${name}" is not supported.`);
       return stream;
@@ -12149,14 +12352,13 @@ class Linearization {
 
 
 
-const BUILT_IN_CMAPS = new Set(["Adobe-GB1-UCS2", "Adobe-CNS1-UCS2", "Adobe-Japan1-UCS2", "Adobe-Korea1-UCS2", "78-EUC-H", "78-EUC-V", "78-H", "78-RKSJ-H", "78-RKSJ-V", "78-V", "78ms-RKSJ-H", "78ms-RKSJ-V", "83pv-RKSJ-H", "90ms-RKSJ-H", "90ms-RKSJ-V", "90msp-RKSJ-H", "90msp-RKSJ-V", "90pv-RKSJ-H", "90pv-RKSJ-V", "Add-H", "Add-RKSJ-H", "Add-RKSJ-V", "Add-V", "Adobe-CNS1-0", "Adobe-CNS1-1", "Adobe-CNS1-2", "Adobe-CNS1-3", "Adobe-CNS1-4", "Adobe-CNS1-5", "Adobe-CNS1-6", "Adobe-GB1-0", "Adobe-GB1-1", "Adobe-GB1-2", "Adobe-GB1-3", "Adobe-GB1-4", "Adobe-GB1-5", "Adobe-Japan1-0", "Adobe-Japan1-1", "Adobe-Japan1-2", "Adobe-Japan1-3", "Adobe-Japan1-4", "Adobe-Japan1-5", "Adobe-Japan1-6", "Adobe-Korea1-0", "Adobe-Korea1-1", "Adobe-Korea1-2", "B5-H", "B5-V", "B5pc-H", "B5pc-V", "CNS-EUC-H", "CNS-EUC-V", "CNS1-H", "CNS1-V", "CNS2-H", "CNS2-V", "ETHK-B5-H", "ETHK-B5-V", "ETen-B5-H", "ETen-B5-V", "ETenms-B5-H", "ETenms-B5-V", "EUC-H", "EUC-V", "Ext-H", "Ext-RKSJ-H", "Ext-RKSJ-V", "Ext-V", "GB-EUC-H", "GB-EUC-V", "GB-H", "GB-V", "GBK-EUC-H", "GBK-EUC-V", "GBK2K-H", "GBK2K-V", "GBKp-EUC-H", "GBKp-EUC-V", "GBT-EUC-H", "GBT-EUC-V", "GBT-H", "GBT-V", "GBTpc-EUC-H", "GBTpc-EUC-V", "GBpc-EUC-H", "GBpc-EUC-V", "H", "HKdla-B5-H", "HKdla-B5-V", "HKdlb-B5-H", "HKdlb-B5-V", "HKgccs-B5-H", "HKgccs-B5-V", "HKm314-B5-H", "HKm314-B5-V", "HKm471-B5-H", "HKm471-B5-V", "HKscs-B5-H", "HKscs-B5-V", "Hankaku", "Hiragana", "KSC-EUC-H", "KSC-EUC-V", "KSC-H", "KSC-Johab-H", "KSC-Johab-V", "KSC-V", "KSCms-UHC-H", "KSCms-UHC-HW-H", "KSCms-UHC-HW-V", "KSCms-UHC-V", "KSCpc-EUC-H", "KSCpc-EUC-V", "Katakana", "NWP-H", "NWP-V", "RKSJ-H", "RKSJ-V", "Roman", "UniCNS-UCS2-H", "UniCNS-UCS2-V", "UniCNS-UTF16-H", "UniCNS-UTF16-V", "UniCNS-UTF32-H", "UniCNS-UTF32-V", "UniCNS-UTF8-H", "UniCNS-UTF8-V", "UniGB-UCS2-H", "UniGB-UCS2-V", "UniGB-UTF16-H", "UniGB-UTF16-V", "UniGB-UTF32-H", "UniGB-UTF32-V", "UniGB-UTF8-H", "UniGB-UTF8-V", "UniJIS-UCS2-H", "UniJIS-UCS2-HW-H", "UniJIS-UCS2-HW-V", "UniJIS-UCS2-V", "UniJIS-UTF16-H", "UniJIS-UTF16-V", "UniJIS-UTF32-H", "UniJIS-UTF32-V", "UniJIS-UTF8-H", "UniJIS-UTF8-V", "UniJIS2004-UTF16-H", "UniJIS2004-UTF16-V", "UniJIS2004-UTF32-H", "UniJIS2004-UTF32-V", "UniJIS2004-UTF8-H", "UniJIS2004-UTF8-V", "UniJISPro-UCS2-HW-V", "UniJISPro-UCS2-V", "UniJISPro-UTF8-V", "UniJISX0213-UTF32-H", "UniJISX0213-UTF32-V", "UniJISX02132004-UTF32-H", "UniJISX02132004-UTF32-V", "UniKS-UCS2-H", "UniKS-UCS2-V", "UniKS-UTF16-H", "UniKS-UTF16-V", "UniKS-UTF32-H", "UniKS-UTF32-V", "UniKS-UTF8-H", "UniKS-UTF8-V", "V", "WP-Symbol"]);
+const BUILT_IN_CMAPS = ["Adobe-GB1-UCS2", "Adobe-CNS1-UCS2", "Adobe-Japan1-UCS2", "Adobe-Korea1-UCS2", "78-EUC-H", "78-EUC-V", "78-H", "78-RKSJ-H", "78-RKSJ-V", "78-V", "78ms-RKSJ-H", "78ms-RKSJ-V", "83pv-RKSJ-H", "90ms-RKSJ-H", "90ms-RKSJ-V", "90msp-RKSJ-H", "90msp-RKSJ-V", "90pv-RKSJ-H", "90pv-RKSJ-V", "Add-H", "Add-RKSJ-H", "Add-RKSJ-V", "Add-V", "Adobe-CNS1-0", "Adobe-CNS1-1", "Adobe-CNS1-2", "Adobe-CNS1-3", "Adobe-CNS1-4", "Adobe-CNS1-5", "Adobe-CNS1-6", "Adobe-GB1-0", "Adobe-GB1-1", "Adobe-GB1-2", "Adobe-GB1-3", "Adobe-GB1-4", "Adobe-GB1-5", "Adobe-Japan1-0", "Adobe-Japan1-1", "Adobe-Japan1-2", "Adobe-Japan1-3", "Adobe-Japan1-4", "Adobe-Japan1-5", "Adobe-Japan1-6", "Adobe-Korea1-0", "Adobe-Korea1-1", "Adobe-Korea1-2", "B5-H", "B5-V", "B5pc-H", "B5pc-V", "CNS-EUC-H", "CNS-EUC-V", "CNS1-H", "CNS1-V", "CNS2-H", "CNS2-V", "ETHK-B5-H", "ETHK-B5-V", "ETen-B5-H", "ETen-B5-V", "ETenms-B5-H", "ETenms-B5-V", "EUC-H", "EUC-V", "Ext-H", "Ext-RKSJ-H", "Ext-RKSJ-V", "Ext-V", "GB-EUC-H", "GB-EUC-V", "GB-H", "GB-V", "GBK-EUC-H", "GBK-EUC-V", "GBK2K-H", "GBK2K-V", "GBKp-EUC-H", "GBKp-EUC-V", "GBT-EUC-H", "GBT-EUC-V", "GBT-H", "GBT-V", "GBTpc-EUC-H", "GBTpc-EUC-V", "GBpc-EUC-H", "GBpc-EUC-V", "H", "HKdla-B5-H", "HKdla-B5-V", "HKdlb-B5-H", "HKdlb-B5-V", "HKgccs-B5-H", "HKgccs-B5-V", "HKm314-B5-H", "HKm314-B5-V", "HKm471-B5-H", "HKm471-B5-V", "HKscs-B5-H", "HKscs-B5-V", "Hankaku", "Hiragana", "KSC-EUC-H", "KSC-EUC-V", "KSC-H", "KSC-Johab-H", "KSC-Johab-V", "KSC-V", "KSCms-UHC-H", "KSCms-UHC-HW-H", "KSCms-UHC-HW-V", "KSCms-UHC-V", "KSCpc-EUC-H", "KSCpc-EUC-V", "Katakana", "NWP-H", "NWP-V", "RKSJ-H", "RKSJ-V", "Roman", "UniCNS-UCS2-H", "UniCNS-UCS2-V", "UniCNS-UTF16-H", "UniCNS-UTF16-V", "UniCNS-UTF32-H", "UniCNS-UTF32-V", "UniCNS-UTF8-H", "UniCNS-UTF8-V", "UniGB-UCS2-H", "UniGB-UCS2-V", "UniGB-UTF16-H", "UniGB-UTF16-V", "UniGB-UTF32-H", "UniGB-UTF32-V", "UniGB-UTF8-H", "UniGB-UTF8-V", "UniJIS-UCS2-H", "UniJIS-UCS2-HW-H", "UniJIS-UCS2-HW-V", "UniJIS-UCS2-V", "UniJIS-UTF16-H", "UniJIS-UTF16-V", "UniJIS-UTF32-H", "UniJIS-UTF32-V", "UniJIS-UTF8-H", "UniJIS-UTF8-V", "UniJIS2004-UTF16-H", "UniJIS2004-UTF16-V", "UniJIS2004-UTF32-H", "UniJIS2004-UTF32-V", "UniJIS2004-UTF8-H", "UniJIS2004-UTF8-V", "UniJISPro-UCS2-HW-V", "UniJISPro-UCS2-V", "UniJISPro-UTF8-V", "UniJISX0213-UTF32-H", "UniJISX0213-UTF32-V", "UniJISX02132004-UTF32-H", "UniJISX02132004-UTF32-V", "UniKS-UCS2-H", "UniKS-UCS2-V", "UniKS-UTF16-H", "UniKS-UTF16-V", "UniKS-UTF32-H", "UniKS-UTF32-V", "UniKS-UTF8-H", "UniKS-UTF8-V", "V", "WP-Symbol"];
 const MAX_MAP_RANGE = 2 ** 24 - 1;
 class CMap {
-  #map = new Map();
-  #mappedEntries = 0;
   constructor(builtInCMap = false) {
     this.codespaceRanges = [[], [], [], []];
     this.numCodespaceRanges = 0;
+    this._map = [];
     this.name = "";
     this.vertical = false;
     this.useCMap = null;
@@ -12166,26 +12368,21 @@ class CMap {
     this.codespaceRanges[n - 1].push(low, high);
     this.numCodespaceRanges++;
   }
-  #consumeBudget(count, name) {
-    if (count <= 0) {
-      return;
-    }
-    if (this.#mappedEntries + count > MAX_MAP_RANGE) {
-      throw new Error(`${name} - ignoring data above MAX_MAP_RANGE.`);
-    }
-    this.#mappedEntries += count;
-  }
   mapCidRange(low, high, dstLow) {
-    this.#consumeBudget(high - low + 1, "mapCidRange");
+    if (high - low > MAX_MAP_RANGE) {
+      throw new Error("mapCidRange - ignoring data above MAX_MAP_RANGE.");
+    }
     while (low <= high) {
-      this.#map.set(low++, dstLow++);
+      this._map[low++] = dstLow++;
     }
   }
   mapBfRange(low, high, dstLow) {
-    this.#consumeBudget(high - low + 1, "mapBfRange");
+    if (high - low > MAX_MAP_RANGE) {
+      throw new Error("mapBfRange - ignoring data above MAX_MAP_RANGE.");
+    }
     const lastByte = dstLow.length - 1;
     while (low <= high) {
-      this.#map.set(low++, dstLow);
+      this._map[low++] = dstLow;
       const nextCharCode = dstLow.charCodeAt(lastByte) + 1;
       if (nextCharCode > 0xff) {
         dstLow = dstLow.substring(0, lastByte - 1) + String.fromCharCode(dstLow.charCodeAt(lastByte - 1) + 1) + "\x00";
@@ -12195,37 +12392,54 @@ class CMap {
     }
   }
   mapBfRangeToArray(low, high, array) {
+    if (high - low > MAX_MAP_RANGE) {
+      throw new Error("mapBfRangeToArray - ignoring data above MAX_MAP_RANGE.");
+    }
     const ii = array.length;
-    this.#consumeBudget(Math.min(high - low + 1, ii), "mapBfRangeToArray");
     let i = 0;
     while (low <= high && i < ii) {
-      this.#map.set(low++, array[i++]);
+      this._map[low] = array[i++];
+      ++low;
     }
   }
   mapOne(src, dst) {
-    this.#map.set(src, dst);
+    this._map[src] = dst;
   }
   lookup(code) {
-    return this.#map.get(code);
+    return this._map[code];
   }
   contains(code) {
-    return this.#map.has(code);
+    return this._map[code] !== undefined;
   }
   forEach(callback) {
-    for (const [charCode, entry] of this.#map) {
-      callback(charCode, entry);
+    const map = this._map;
+    const length = map.length;
+    if (length <= 0x10000) {
+      for (let i = 0; i < length; i++) {
+        if (map[i] !== undefined) {
+          callback(i, map[i]);
+        }
+      }
+    } else {
+      for (const i in map) {
+        callback(i, map[i]);
+      }
     }
   }
   charCodeOf(value) {
-    for (const [charCode, entry] of this.#map) {
-      if (entry === value) {
-        return charCode;
+    const map = this._map;
+    if (map.length <= 0x10000) {
+      return map.indexOf(value);
+    }
+    for (const charCode in map) {
+      if (map[charCode] === value) {
+        return charCode | 0;
       }
     }
     return -1;
   }
   getMap() {
-    return new Map(this.#map);
+    return this._map;
   }
   readCharCode(str, offset, out) {
     let c = 0;
@@ -12260,18 +12474,18 @@ class CMap {
     }
     return 1;
   }
-  get size() {
-    return this.#map.size;
+  get length() {
+    return this._map.length;
   }
   get isIdentityCMap() {
     if (!(this.name === "Identity-H" || this.name === "Identity-V")) {
       return false;
     }
-    if (this.#map.size !== 0x10000) {
+    if (this._map.length !== 0x10000) {
       return false;
     }
     for (let i = 0; i < 0x10000; i++) {
-      if (this.#map.get(i) !== i) {
+      if (this._map[i] !== i) {
         return false;
       }
     }
@@ -12311,9 +12525,13 @@ class IdentityCMap extends CMap {
     return Number.isInteger(value) && value <= 0xffff ? value : -1;
   }
   getMap() {
-    unreachable("should not call getMap");
+    const map = new Array(0x10000);
+    for (let i = 0; i <= 0xffff; i++) {
+      map[i] = i;
+    }
+    return map;
   }
-  get size() {
+  get length() {
     return 0x10000;
   }
   get isIdentityCMap() {
@@ -12508,7 +12726,10 @@ async function parseCMap(cMap, lexer, fetchBuiltInCMap, useCMap) {
   if (!useCMap && embeddedUseCMap) {
     useCMap = embeddedUseCMap;
   }
-  return useCMap ? extendCMap(cMap, fetchBuiltInCMap, useCMap) : cMap;
+  if (useCMap) {
+    return extendCMap(cMap, fetchBuiltInCMap, useCMap);
+  }
+  return cMap;
 }
 async function extendCMap(cMap, fetchBuiltInCMap, useCMap) {
   cMap.useCMap = await createBuiltInCMap(useCMap, fetchBuiltInCMap);
@@ -12519,7 +12740,7 @@ async function extendCMap(cMap, fetchBuiltInCMap, useCMap) {
     }
     cMap.numCodespaceRanges = cMap.useCMap.numCodespaceRanges;
   }
-  cMap.useCMap.forEach((key, value) => {
+  cMap.useCMap.forEach(function (key, value) {
     if (!cMap.contains(key)) {
       cMap.mapOne(key, value);
     }
@@ -12532,7 +12753,7 @@ async function createBuiltInCMap(name, fetchBuiltInCMap) {
   } else if (name === "Identity-V") {
     return new IdentityCMap(true, 2);
   }
-  if (!BUILT_IN_CMAPS.has(name)) {
+  if (!BUILT_IN_CMAPS.includes(name)) {
     throw new Error("Unknown CMap name: " + name);
   }
   if (!fetchBuiltInCMap) {
@@ -12565,10 +12786,294 @@ class CMapFactory {
         }
       }
       const parsedCMap = await parseCMap(new CMap(), new Lexer(encoding), fetchBuiltInCMap, useCMap);
-      return parsedCMap.isIdentityCMap ? createBuiltInCMap(parsedCMap.name, fetchBuiltInCMap) : parsedCMap;
+      if (parsedCMap.isIdentityCMap) {
+        return createBuiltInCMap(parsedCMap.name, fetchBuiltInCMap);
+      }
+      return parsedCMap;
     }
     throw new Error("Encoding required.");
   }
+}
+
+;// ./src/shared/obj_bin_transform_utils.js
+class CSS_FONT_INFO {
+  static strings = ["fontFamily", "fontWeight", "italicAngle"];
+}
+class SYSTEM_FONT_INFO {
+  static strings = ["css", "loadedName", "baseFontName", "src"];
+}
+class FONT_INFO {
+  static bools = ["black", "bold", "disableFontFace", "fontExtraProperties", "isInvalidPDFjsFont", "isType3Font", "italic", "missingFile", "remeasure", "vertical"];
+  static numbers = ["ascent", "defaultWidth", "descent"];
+  static strings = ["fallbackName", "loadedName", "mimetype", "name"];
+  static OFFSET_NUMBERS = Math.ceil(this.bools.length * 2 / 8);
+  static OFFSET_BBOX = this.OFFSET_NUMBERS + this.numbers.length * 8;
+  static OFFSET_FONT_MATRIX = this.OFFSET_BBOX + 1 + 2 * 4;
+  static OFFSET_DEFAULT_VMETRICS = this.OFFSET_FONT_MATRIX + 1 + 8 * 6;
+  static OFFSET_STRINGS = this.OFFSET_DEFAULT_VMETRICS + 1 + 2 * 3;
+}
+class PATTERN_INFO {
+  static KIND = 0;
+  static HAS_BBOX = 1;
+  static HAS_BACKGROUND = 2;
+  static SHADING_TYPE = 3;
+  static N_COORD = 4;
+  static N_COLOR = 8;
+  static N_STOP = 12;
+  static N_FIGURES = 16;
+}
+
+;// ./src/core/obj_bin_transform_core.js
+
+
+function compileCssFontInfo(info) {
+  const encoder = new TextEncoder();
+  const encodedStrings = {};
+  let stringsLength = 0;
+  for (const prop of CSS_FONT_INFO.strings) {
+    const encoded = encoder.encode(info[prop]);
+    encodedStrings[prop] = encoded;
+    stringsLength += 4 + encoded.length;
+  }
+  const buffer = new ArrayBuffer(stringsLength);
+  const data = new Uint8Array(buffer);
+  const view = new DataView(buffer);
+  let offset = 0;
+  for (const prop of CSS_FONT_INFO.strings) {
+    const encoded = encodedStrings[prop];
+    const length = encoded.length;
+    view.setUint32(offset, length);
+    data.set(encoded, offset + 4);
+    offset += 4 + length;
+  }
+  assert(offset === buffer.byteLength, "compileCssFontInfo: Buffer overflow");
+  return buffer;
+}
+function compileSystemFontInfo(info) {
+  const encoder = new TextEncoder();
+  const encodedStrings = {};
+  let stringsLength = 0;
+  for (const prop of SYSTEM_FONT_INFO.strings) {
+    const encoded = encoder.encode(info[prop]);
+    encodedStrings[prop] = encoded;
+    stringsLength += 4 + encoded.length;
+  }
+  stringsLength += 4;
+  let encodedStyleStyle,
+    encodedStyleWeight,
+    lengthEstimate = 1 + stringsLength;
+  if (info.style) {
+    encodedStyleStyle = encoder.encode(info.style.style);
+    encodedStyleWeight = encoder.encode(info.style.weight);
+    lengthEstimate += 4 + encodedStyleStyle.length + 4 + encodedStyleWeight.length;
+  }
+  const buffer = new ArrayBuffer(lengthEstimate);
+  const data = new Uint8Array(buffer);
+  const view = new DataView(buffer);
+  let offset = 0;
+  view.setUint8(offset++, info.guessFallback ? 1 : 0);
+  view.setUint32(offset, 0);
+  offset += 4;
+  stringsLength = 0;
+  for (const prop of SYSTEM_FONT_INFO.strings) {
+    const encoded = encodedStrings[prop];
+    const length = encoded.length;
+    stringsLength += 4 + length;
+    view.setUint32(offset, length);
+    data.set(encoded, offset + 4);
+    offset += 4 + length;
+  }
+  view.setUint32(offset - stringsLength - 4, stringsLength);
+  if (info.style) {
+    view.setUint32(offset, encodedStyleStyle.length);
+    data.set(encodedStyleStyle, offset + 4);
+    offset += 4 + encodedStyleStyle.length;
+    view.setUint32(offset, encodedStyleWeight.length);
+    data.set(encodedStyleWeight, offset + 4);
+    offset += 4 + encodedStyleWeight.length;
+  }
+  assert(offset <= buffer.byteLength, "compileSystemFontInfo: Buffer overflow");
+  return buffer.transferToFixedLength(offset);
+}
+function compileFontInfo(font) {
+  const systemFontInfoBuffer = font.systemFontInfo ? compileSystemFontInfo(font.systemFontInfo) : null;
+  const cssFontInfoBuffer = font.cssFontInfo ? compileCssFontInfo(font.cssFontInfo) : null;
+  const encoder = new TextEncoder();
+  const encodedStrings = {};
+  let stringsLength = 0;
+  for (const prop of FONT_INFO.strings) {
+    encodedStrings[prop] = encoder.encode(font[prop]);
+    stringsLength += 4 + encodedStrings[prop].length;
+  }
+  const lengthEstimate = FONT_INFO.OFFSET_STRINGS + 4 + stringsLength + 4 + (systemFontInfoBuffer?.byteLength ?? 0) + 4 + (cssFontInfoBuffer?.byteLength ?? 0) + 4 + (font.data?.length ?? 0);
+  const buffer = new ArrayBuffer(lengthEstimate);
+  const data = new Uint8Array(buffer);
+  const view = new DataView(buffer);
+  let offset = 0;
+  const numBools = FONT_INFO.bools.length;
+  let boolByte = 0,
+    boolBit = 0;
+  for (let i = 0; i < numBools; i++) {
+    const value = font[FONT_INFO.bools[i]];
+    const bits = value === undefined ? 0x00 : value ? 0x02 : 0x01;
+    boolByte |= bits << boolBit;
+    boolBit += 2;
+    if (boolBit === 8 || i === numBools - 1) {
+      view.setUint8(offset++, boolByte);
+      boolByte = 0;
+      boolBit = 0;
+    }
+  }
+  assert(offset === FONT_INFO.OFFSET_NUMBERS, "compileFontInfo: Boolean properties offset mismatch");
+  for (const prop of FONT_INFO.numbers) {
+    view.setFloat64(offset, font[prop]);
+    offset += 8;
+  }
+  assert(offset === FONT_INFO.OFFSET_BBOX, "compileFontInfo: Number properties offset mismatch");
+  if (font.bbox) {
+    view.setUint8(offset++, 4);
+    for (const coord of font.bbox) {
+      view.setInt16(offset, coord, true);
+      offset += 2;
+    }
+  } else {
+    view.setUint8(offset++, 0);
+    offset += 2 * 4;
+  }
+  assert(offset === FONT_INFO.OFFSET_FONT_MATRIX, "compileFontInfo: BBox properties offset mismatch");
+  if (font.fontMatrix) {
+    view.setUint8(offset++, 6);
+    for (const point of font.fontMatrix) {
+      view.setFloat64(offset, point, true);
+      offset += 8;
+    }
+  } else {
+    view.setUint8(offset++, 0);
+    offset += 8 * 6;
+  }
+  assert(offset === FONT_INFO.OFFSET_DEFAULT_VMETRICS, "compileFontInfo: FontMatrix properties offset mismatch");
+  if (font.defaultVMetrics) {
+    view.setUint8(offset++, 3);
+    for (const metric of font.defaultVMetrics) {
+      view.setInt16(offset, metric, true);
+      offset += 2;
+    }
+  } else {
+    view.setUint8(offset++, 0);
+    offset += 3 * 2;
+  }
+  assert(offset === FONT_INFO.OFFSET_STRINGS, "compileFontInfo: DefaultVMetrics properties offset mismatch");
+  view.setUint32(FONT_INFO.OFFSET_STRINGS, 0);
+  offset += 4;
+  for (const prop of FONT_INFO.strings) {
+    const encoded = encodedStrings[prop];
+    const length = encoded.length;
+    view.setUint32(offset, length);
+    data.set(encoded, offset + 4);
+    offset += 4 + length;
+  }
+  view.setUint32(FONT_INFO.OFFSET_STRINGS, offset - FONT_INFO.OFFSET_STRINGS - 4);
+  if (!systemFontInfoBuffer) {
+    view.setUint32(offset, 0);
+    offset += 4;
+  } else {
+    const length = systemFontInfoBuffer.byteLength;
+    view.setUint32(offset, length);
+    assert(offset + 4 + length <= buffer.byteLength, "compileFontInfo: Buffer overflow at systemFontInfo");
+    data.set(new Uint8Array(systemFontInfoBuffer), offset + 4);
+    offset += 4 + length;
+  }
+  if (!cssFontInfoBuffer) {
+    view.setUint32(offset, 0);
+    offset += 4;
+  } else {
+    const length = cssFontInfoBuffer.byteLength;
+    view.setUint32(offset, length);
+    assert(offset + 4 + length <= buffer.byteLength, "compileFontInfo: Buffer overflow at cssFontInfo");
+    data.set(new Uint8Array(cssFontInfoBuffer), offset + 4);
+    offset += 4 + length;
+  }
+  if (font.data === undefined) {
+    view.setUint32(offset, 0);
+    offset += 4;
+  } else {
+    view.setUint32(offset, font.data.length);
+    data.set(font.data, offset + 4);
+    offset += 4 + font.data.length;
+  }
+  assert(offset <= buffer.byteLength, "compileFontInfo: Buffer overflow");
+  return buffer.transferToFixedLength(offset);
+}
+function compilePatternInfo(ir) {
+  let kind,
+    bbox = null,
+    coords = [],
+    colors = [],
+    colorStops = [],
+    shadingType = null,
+    background = null;
+  switch (ir[0]) {
+    case "RadialAxial":
+      kind = ir[1] === "axial" ? 1 : 2;
+      bbox = ir[2];
+      colorStops = ir[3];
+      if (kind === 1) {
+        coords.push(...ir[4], ...ir[5]);
+      } else {
+        coords.push(ir[4][0], ir[4][1], ir[6], ir[5][0], ir[5][1], ir[7]);
+      }
+      break;
+    case "Mesh":
+      kind = 3;
+      shadingType = ir[1];
+      coords = ir[2];
+      colors = ir[3];
+      bbox = ir[6];
+      background = ir[7];
+      break;
+    default:
+      throw new Error(`Unsupported pattern type: ${ir[0]}`);
+  }
+  const nCoord = Math.floor(coords.length / 2);
+  const nColor = Math.floor(colors.length / 4);
+  const nStop = colorStops.length;
+  const byteLen = 20 + nCoord * 8 + nColor * 4 + nStop * 8 + (bbox ? 16 : 0) + (background ? 3 : 0);
+  const buffer = new ArrayBuffer(byteLen);
+  const dataView = new DataView(buffer);
+  const u8data = new Uint8Array(buffer);
+  dataView.setUint8(PATTERN_INFO.KIND, kind);
+  dataView.setUint8(PATTERN_INFO.HAS_BBOX, bbox ? 1 : 0);
+  dataView.setUint8(PATTERN_INFO.HAS_BACKGROUND, background ? 1 : 0);
+  dataView.setUint8(PATTERN_INFO.SHADING_TYPE, shadingType);
+  dataView.setUint32(PATTERN_INFO.N_COORD, nCoord, true);
+  dataView.setUint32(PATTERN_INFO.N_COLOR, nColor, true);
+  dataView.setUint32(PATTERN_INFO.N_STOP, nStop, true);
+  dataView.setUint32(PATTERN_INFO.N_FIGURES, 0, true);
+  let offset = 20;
+  const coordsView = new Float32Array(buffer, offset, nCoord * 2);
+  coordsView.set(coords);
+  offset += nCoord * 8;
+  u8data.set(colors, offset);
+  offset += nColor * 4;
+  for (const [pos, hex] of colorStops) {
+    dataView.setFloat32(offset, pos, true);
+    offset += 4;
+    dataView.setUint32(offset, parseInt(hex.slice(1), 16), true);
+    offset += 4;
+  }
+  if (bbox) {
+    for (const v of bbox) {
+      dataView.setFloat32(offset, v, true);
+      offset += 4;
+    }
+  }
+  if (background) {
+    u8data.set(background, offset);
+  }
+  return buffer;
+}
+function compileFontPathInfo(path) {
+  return path.slice().buffer;
 }
 
 ;// ./src/core/encodings.js
@@ -17147,9 +17652,6 @@ const getSpecialPUASymbols = getLookupTableFactory(function (t) {
   t[63194] = 0x00ae;
   t[63722] = 0x2122;
   t[63195] = 0x2122;
-  t[63718] = 0x23d0;
-  t[63719] = 0x23af;
-  t[63733] = 0x23ae;
   t[63729] = 0x23a7;
   t[63730] = 0x23a8;
   t[63731] = 0x23a9;
@@ -17226,7 +17728,7 @@ function getUnicodeRangeFor(value, lastPosition = -1) {
   }
   return -1;
 }
-const SpecialCharRegExp = /^(\s)|(\p{Mn})|(\p{Cf})$/u;
+const SpecialCharRegExp = new RegExp("^(\\s)|(\\p{Mn})|(\\p{Cf})$", "u");
 const CategoryCache = new Map();
 function getCharUnicodeCategory(char) {
   const cachedCategory = CategoryCache.get(char);
@@ -17281,44 +17783,48 @@ function recoverGlyphName(name, glyphsUnicodeMap) {
   return name;
 }
 function type1FontGlyphMapping(properties, builtInEncoding, glyphNames) {
-  const charCodeToGlyphId = new Map();
-  let glyphId, baseEncoding;
+  const charCodeToGlyphId = Object.create(null);
+  let glyphId, charCode, baseEncoding;
   const isSymbolicFont = !!(properties.flags & FontFlags.Symbolic);
   if (properties.isInternalFont) {
     baseEncoding = builtInEncoding;
-    for (let charCode = 0; charCode < baseEncoding.length; charCode++) {
+    for (charCode = 0; charCode < baseEncoding.length; charCode++) {
       glyphId = glyphNames.indexOf(baseEncoding[charCode]);
-      charCodeToGlyphId.set(charCode, glyphId >= 0 ? glyphId : 0);
+      charCodeToGlyphId[charCode] = glyphId >= 0 ? glyphId : 0;
     }
   } else if (properties.baseEncodingName) {
     baseEncoding = getEncoding(properties.baseEncodingName);
-    for (let charCode = 0; charCode < baseEncoding.length; charCode++) {
+    for (charCode = 0; charCode < baseEncoding.length; charCode++) {
       glyphId = glyphNames.indexOf(baseEncoding[charCode]);
-      charCodeToGlyphId.set(charCode, glyphId >= 0 ? glyphId : 0);
+      charCodeToGlyphId[charCode] = glyphId >= 0 ? glyphId : 0;
     }
   } else if (isSymbolicFont) {
-    for (const charCode in builtInEncoding) {
-      charCodeToGlyphId.set(+charCode, builtInEncoding[charCode]);
+    for (charCode in builtInEncoding) {
+      charCodeToGlyphId[charCode] = builtInEncoding[charCode];
     }
   } else {
     baseEncoding = StandardEncoding;
-    for (let charCode = 0; charCode < baseEncoding.length; charCode++) {
+    for (charCode = 0; charCode < baseEncoding.length; charCode++) {
       glyphId = glyphNames.indexOf(baseEncoding[charCode]);
-      charCodeToGlyphId.set(charCode, glyphId >= 0 ? glyphId : 0);
+      charCodeToGlyphId[charCode] = glyphId >= 0 ? glyphId : 0;
     }
   }
+  const differences = properties.differences;
   let glyphsUnicodeMap;
-  if (properties.differences) {
-    for (const [charCode, glyphName] of properties.differences) {
+  if (differences) {
+    for (charCode in differences) {
+      const glyphName = differences[charCode];
       glyphId = glyphNames.indexOf(glyphName);
       if (glyphId === -1) {
-        glyphsUnicodeMap ??= getGlyphsUnicode();
+        if (!glyphsUnicodeMap) {
+          glyphsUnicodeMap = getGlyphsUnicode();
+        }
         const standardGlyphName = recoverGlyphName(glyphName, glyphsUnicodeMap);
         if (standardGlyphName !== glyphName) {
           glyphId = glyphNames.indexOf(standardGlyphName);
         }
       }
-      charCodeToGlyphId.set(charCode, glyphId >= 0 ? glyphId : 0);
+      charCodeToGlyphId[charCode] = glyphId >= 0 ? glyphId : 0;
     }
   }
   return charCodeToGlyphId;
@@ -17500,100 +18006,13 @@ const ISOAdobeCharset = [".notdef", "space", "exclam", "quotedbl", "numbersign",
 const ExpertCharset = [".notdef", "space", "exclamsmall", "Hungarumlautsmall", "dollaroldstyle", "dollarsuperior", "ampersandsmall", "Acutesmall", "parenleftsuperior", "parenrightsuperior", "twodotenleader", "onedotenleader", "comma", "hyphen", "period", "fraction", "zerooldstyle", "oneoldstyle", "twooldstyle", "threeoldstyle", "fouroldstyle", "fiveoldstyle", "sixoldstyle", "sevenoldstyle", "eightoldstyle", "nineoldstyle", "colon", "semicolon", "commasuperior", "threequartersemdash", "periodsuperior", "questionsmall", "asuperior", "bsuperior", "centsuperior", "dsuperior", "esuperior", "isuperior", "lsuperior", "msuperior", "nsuperior", "osuperior", "rsuperior", "ssuperior", "tsuperior", "ff", "fi", "fl", "ffi", "ffl", "parenleftinferior", "parenrightinferior", "Circumflexsmall", "hyphensuperior", "Gravesmall", "Asmall", "Bsmall", "Csmall", "Dsmall", "Esmall", "Fsmall", "Gsmall", "Hsmall", "Ismall", "Jsmall", "Ksmall", "Lsmall", "Msmall", "Nsmall", "Osmall", "Psmall", "Qsmall", "Rsmall", "Ssmall", "Tsmall", "Usmall", "Vsmall", "Wsmall", "Xsmall", "Ysmall", "Zsmall", "colonmonetary", "onefitted", "rupiah", "Tildesmall", "exclamdownsmall", "centoldstyle", "Lslashsmall", "Scaronsmall", "Zcaronsmall", "Dieresissmall", "Brevesmall", "Caronsmall", "Dotaccentsmall", "Macronsmall", "figuredash", "hypheninferior", "Ogoneksmall", "Ringsmall", "Cedillasmall", "onequarter", "onehalf", "threequarters", "questiondownsmall", "oneeighth", "threeeighths", "fiveeighths", "seveneighths", "onethird", "twothirds", "zerosuperior", "onesuperior", "twosuperior", "threesuperior", "foursuperior", "fivesuperior", "sixsuperior", "sevensuperior", "eightsuperior", "ninesuperior", "zeroinferior", "oneinferior", "twoinferior", "threeinferior", "fourinferior", "fiveinferior", "sixinferior", "seveninferior", "eightinferior", "nineinferior", "centinferior", "dollarinferior", "periodinferior", "commainferior", "Agravesmall", "Aacutesmall", "Acircumflexsmall", "Atildesmall", "Adieresissmall", "Aringsmall", "AEsmall", "Ccedillasmall", "Egravesmall", "Eacutesmall", "Ecircumflexsmall", "Edieresissmall", "Igravesmall", "Iacutesmall", "Icircumflexsmall", "Idieresissmall", "Ethsmall", "Ntildesmall", "Ogravesmall", "Oacutesmall", "Ocircumflexsmall", "Otildesmall", "Odieresissmall", "OEsmall", "Oslashsmall", "Ugravesmall", "Uacutesmall", "Ucircumflexsmall", "Udieresissmall", "Yacutesmall", "Thornsmall", "Ydieresissmall"];
 const ExpertSubsetCharset = [".notdef", "space", "dollaroldstyle", "dollarsuperior", "parenleftsuperior", "parenrightsuperior", "twodotenleader", "onedotenleader", "comma", "hyphen", "period", "fraction", "zerooldstyle", "oneoldstyle", "twooldstyle", "threeoldstyle", "fouroldstyle", "fiveoldstyle", "sixoldstyle", "sevenoldstyle", "eightoldstyle", "nineoldstyle", "colon", "semicolon", "commasuperior", "threequartersemdash", "periodsuperior", "asuperior", "bsuperior", "centsuperior", "dsuperior", "esuperior", "isuperior", "lsuperior", "msuperior", "nsuperior", "osuperior", "rsuperior", "ssuperior", "tsuperior", "ff", "fi", "fl", "ffi", "ffl", "parenleftinferior", "parenrightinferior", "hyphensuperior", "colonmonetary", "onefitted", "rupiah", "centoldstyle", "figuredash", "hypheninferior", "onequarter", "onehalf", "threequarters", "oneeighth", "threeeighths", "fiveeighths", "seveneighths", "onethird", "twothirds", "zerosuperior", "onesuperior", "twosuperior", "threesuperior", "foursuperior", "fivesuperior", "sixsuperior", "sevensuperior", "eightsuperior", "ninesuperior", "zeroinferior", "oneinferior", "twoinferior", "threeinferior", "fourinferior", "fiveinferior", "sixinferior", "seveninferior", "eightinferior", "nineinferior", "centinferior", "dollarinferior", "periodinferior", "commainferior"];
 
-;// ./src/core/data_builder.js
-
-
-class DataBuilder {
-  #buf;
-  #bufLength = 1024;
-  #hasExactLength = false;
-  #pos = 0;
-  #view;
-  constructor({
-    exactLength = 0,
-    minLength = 0
-  }) {
-    this.#hasExactLength = !!exactLength;
-    this.#initBuf(exactLength || minLength);
-  }
-  #initBuf(minLength) {
-    if (this.#hasExactLength) {
-      this.#bufLength = minLength;
-    } else {
-      while (this.#bufLength < minLength) {
-        this.#bufLength *= 2;
-      }
-    }
-    const newBuf = new Uint8Array(this.#bufLength);
-    if (this.#buf) {
-      newBuf.set(this.#buf, 0);
-    }
-    this.#buf = newBuf;
-    this.#view = new DataView(newBuf.buffer);
-  }
-  get data() {
-    return this.#buf.subarray(0, this.#pos);
-  }
-  get length() {
-    return this.#pos;
-  }
-  skip(n) {
-    this.#pos += n;
-  }
-  setArray(arr) {
-    const newPos = this.#pos + arr.length;
-    if (!this.#hasExactLength && newPos > this.#bufLength) {
-      this.#initBuf(newPos);
-    }
-    this.#buf.set(arr, this.#pos);
-    this.#pos = newPos;
-  }
-  setInt16(val) {
-    const newPos = this.#pos + 2;
-    if (!this.#hasExactLength && newPos > this.#bufLength) {
-      this.#initBuf(newPos);
-    }
-    this.#view.setInt16(this.#pos, val);
-    this.#pos = newPos;
-  }
-  setSafeInt16(val) {
-    const newPos = this.#pos + 2;
-    if (!this.#hasExactLength && newPos > this.#bufLength) {
-      this.#initBuf(newPos);
-    }
-    this.#view.setInt16(this.#pos, MathClamp(val, -0x8000, 0x7fff));
-    this.#pos = newPos;
-  }
-  setInt32(val) {
-    const newPos = this.#pos + 4;
-    if (!this.#hasExactLength && newPos > this.#bufLength) {
-      this.#initBuf(newPos);
-    }
-    this.#view.setInt32(this.#pos, val);
-    this.#pos = newPos;
-  }
-}
-
 ;// ./src/core/cff_parser.js
 
 
 
-
-
 const MAX_SUBR_NESTING = 10;
-const MAX_FD_ARRAY_COUNT = 256;
-function looksLikeUnsigned16BitNegative(coord) {
-  return coord > 0x7fff && coord <= 0xffff;
-}
-function recoverSigned16BitBBox(bbox, onlyLowerLeft = false) {
-  return Util.normalizeRect(bbox.map((coord, i) => (!onlyLowerLeft || i < 2) && looksLikeUnsigned16BitNegative(coord) ? coord - 0x10000 : coord));
-}
 const CFFStandardStrings = [".notdef", "space", "exclam", "quotedbl", "numbersign", "dollar", "percent", "ampersand", "quoteright", "parenleft", "parenright", "asterisk", "plus", "comma", "hyphen", "period", "slash", "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "colon", "semicolon", "less", "equal", "greater", "question", "at", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "bracketleft", "backslash", "bracketright", "asciicircum", "underscore", "quoteleft", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "braceleft", "bar", "braceright", "asciitilde", "exclamdown", "cent", "sterling", "fraction", "yen", "florin", "section", "currency", "quotesingle", "quotedblleft", "guillemotleft", "guilsinglleft", "guilsinglright", "fi", "fl", "endash", "dagger", "daggerdbl", "periodcentered", "paragraph", "bullet", "quotesinglbase", "quotedblbase", "quotedblright", "guillemotright", "ellipsis", "perthousand", "questiondown", "grave", "acute", "circumflex", "tilde", "macron", "breve", "dotaccent", "dieresis", "ring", "cedilla", "hungarumlaut", "ogonek", "caron", "emdash", "AE", "ordfeminine", "Lslash", "Oslash", "OE", "ordmasculine", "ae", "dotlessi", "lslash", "oslash", "oe", "germandbls", "onesuperior", "logicalnot", "mu", "trademark", "Eth", "onehalf", "plusminus", "Thorn", "onequarter", "divide", "brokenbar", "degree", "thorn", "threequarters", "twosuperior", "registered", "minus", "eth", "multiply", "threesuperior", "copyright", "Aacute", "Acircumflex", "Adieresis", "Agrave", "Aring", "Atilde", "Ccedilla", "Eacute", "Ecircumflex", "Edieresis", "Egrave", "Iacute", "Icircumflex", "Idieresis", "Igrave", "Ntilde", "Oacute", "Ocircumflex", "Odieresis", "Ograve", "Otilde", "Scaron", "Uacute", "Ucircumflex", "Udieresis", "Ugrave", "Yacute", "Ydieresis", "Zcaron", "aacute", "acircumflex", "adieresis", "agrave", "aring", "atilde", "ccedilla", "eacute", "ecircumflex", "edieresis", "egrave", "iacute", "icircumflex", "idieresis", "igrave", "ntilde", "oacute", "ocircumflex", "odieresis", "ograve", "otilde", "scaron", "uacute", "ucircumflex", "udieresis", "ugrave", "yacute", "ydieresis", "zcaron", "exclamsmall", "Hungarumlautsmall", "dollaroldstyle", "dollarsuperior", "ampersandsmall", "Acutesmall", "parenleftsuperior", "parenrightsuperior", "twodotenleader", "onedotenleader", "zerooldstyle", "oneoldstyle", "twooldstyle", "threeoldstyle", "fouroldstyle", "fiveoldstyle", "sixoldstyle", "sevenoldstyle", "eightoldstyle", "nineoldstyle", "commasuperior", "threequartersemdash", "periodsuperior", "questionsmall", "asuperior", "bsuperior", "centsuperior", "dsuperior", "esuperior", "isuperior", "lsuperior", "msuperior", "nsuperior", "osuperior", "rsuperior", "ssuperior", "tsuperior", "ff", "ffi", "ffl", "parenleftinferior", "parenrightinferior", "Circumflexsmall", "hyphensuperior", "Gravesmall", "Asmall", "Bsmall", "Csmall", "Dsmall", "Esmall", "Fsmall", "Gsmall", "Hsmall", "Ismall", "Jsmall", "Ksmall", "Lsmall", "Msmall", "Nsmall", "Osmall", "Psmall", "Qsmall", "Rsmall", "Ssmall", "Tsmall", "Usmall", "Vsmall", "Wsmall", "Xsmall", "Ysmall", "Zsmall", "colonmonetary", "onefitted", "rupiah", "Tildesmall", "exclamdownsmall", "centoldstyle", "Lslashsmall", "Scaronsmall", "Zcaronsmall", "Dieresissmall", "Brevesmall", "Caronsmall", "Dotaccentsmall", "Macronsmall", "figuredash", "hypheninferior", "Ogoneksmall", "Ringsmall", "Cedillasmall", "questiondownsmall", "oneeighth", "threeeighths", "fiveeighths", "seveneighths", "onethird", "twothirds", "zerosuperior", "foursuperior", "fivesuperior", "sixsuperior", "sevensuperior", "eightsuperior", "ninesuperior", "zeroinferior", "oneinferior", "twoinferior", "threeinferior", "fourinferior", "fiveinferior", "sixinferior", "seveninferior", "eightinferior", "nineinferior", "centinferior", "dollarinferior", "periodinferior", "commainferior", "Agravesmall", "Aacutesmall", "Acircumflexsmall", "Atildesmall", "Adieresissmall", "Aringsmall", "AEsmall", "Ccedillasmall", "Egravesmall", "Eacutesmall", "Ecircumflexsmall", "Edieresissmall", "Igravesmall", "Iacutesmall", "Icircumflexsmall", "Idieresissmall", "Ethsmall", "Ntildesmall", "Ogravesmall", "Oacutesmall", "Ocircumflexsmall", "Otildesmall", "Odieresissmall", "OEsmall", "Oslashsmall", "Ugravesmall", "Uacutesmall", "Ucircumflexsmall", "Udieresissmall", "Yacutesmall", "Thornsmall", "Ydieresissmall", "001.000", "001.001", "001.002", "001.003", "Black", "Bold", "Book", "Light", "Medium", "Regular", "Roman", "Semibold"];
 const NUM_STANDARD_CFF_STRINGS = 391;
-const DEFAULT_BLUE_SCALE = 0.039625;
-const DEFAULT_BLUE_SHIFT = 7;
-const DEFAULT_BLUE_FUZZ = 1;
-const DEFAULT_EXPANSION_FACTOR = 0.06;
 const CharstringValidationData = [null, {
   id: "hstem",
   min: 2,
@@ -17831,22 +18250,8 @@ class CFFParser {
     if (fontMatrix) {
       properties.fontMatrix = fontMatrix;
     }
-    let fontBBox = topDict.getByName("FontBBox");
-    const descriptorBBox = properties.bbox?.some(coord => coord !== 0) ? recoverSigned16BitBBox(properties.bbox) : null;
-    const cffBBoxHasUnsignedLowerLeft = fontBBox?.slice(0, 2).some(looksLikeUnsigned16BitNegative);
-    const cffBBoxHasUnsignedCoords = fontBBox?.some(looksLikeUnsigned16BitNegative);
-    if (fontBBox?.every(coord => coord === 0) && descriptorBBox) {
-      fontBBox = descriptorBBox;
-      topDict.setByName("FontBBox", fontBBox);
-    } else if (cffBBoxHasUnsignedCoords) {
-      const recoveredFontBBox = recoverSigned16BitBBox(fontBBox);
-      const descriptorCorroborates = descriptorBBox && properties.bbox.some(coord => coord < 0) && !properties.bbox.some(looksLikeUnsigned16BitNegative) && isArrayEqual(recoveredFontBBox, descriptorBBox);
-      if (descriptorCorroborates || cffBBoxHasUnsignedLowerLeft) {
-        fontBBox = descriptorCorroborates ? recoveredFontBBox : recoverSigned16BitBBox(fontBBox, true);
-        topDict.setByName("FontBBox", fontBBox);
-      }
-    }
-    if (fontBBox?.some(coord => coord !== 0)) {
+    const fontBBox = topDict.getByName("FontBBox");
+    if (fontBBox) {
       properties.ascent = Math.max(fontBBox[3], fontBBox[1]);
       properties.descent = Math.min(fontBBox[1], fontBBox[3]);
       properties.ascentScaled = true;
@@ -17854,12 +18259,7 @@ class CFFParser {
     let charset, encoding;
     if (cff.isCIDFont) {
       const fdArrayIndex = this.parseIndex(topDict.getByName("FDArray")).obj;
-      let fdArrayCount = fdArrayIndex.count;
-      if (fdArrayCount > MAX_FD_ARRAY_COUNT) {
-        warn(`CFFParser.parse: too many FDArray entries (${fdArrayCount}).`);
-        fdArrayCount = MAX_FD_ARRAY_COUNT;
-      }
-      for (let i = 0; i < fdArrayCount; ++i) {
+      for (let i = 0, ii = fdArrayIndex.count; i < ii; ++i) {
         const dictRaw = fdArrayIndex.get(i);
         const fontDict = this.createDict(CFFTopDict, this.parseDict(dictRaw), cff.strings);
         this.parsePrivateDict(fontDict);
@@ -17985,19 +18385,14 @@ class CFFParser {
     let i, ii;
     if (count !== 0) {
       const offsetSize = bytes[pos++];
-      if (offsetSize < 1 || offsetSize > 4) {
-        throw new FormatError(`Invalid CFF INDEX offset size: ${offsetSize}`);
-      }
       const startPos = pos + (count + 1) * offsetSize - 1;
-      const bytesLength = bytes.length;
-      let prevOffset = startPos;
       for (i = 0, ii = count + 1; i < ii; ++i) {
         let offset = 0;
         for (let j = 0; j < offsetSize; ++j) {
-          offset = offset << 8 | bytes[pos++];
+          offset <<= 8;
+          offset += bytes[pos++];
         }
-        prevOffset = MathClamp(startPos + offset, prevOffset, bytesLength);
-        offsets.push(prevOffset);
+        offsets.push(startPos + offset);
       }
       end = offsets[count];
     }
@@ -18185,7 +18580,7 @@ class CFFParser {
     fdArray,
     privateDict
   }) {
-    const seacs = new Map();
+    const seacs = [];
     const widths = [];
     const count = charStrings.count;
     for (let i = 0; i < count; i++) {
@@ -18220,7 +18615,9 @@ class CFFParser {
       } else if (localSubrIndex) {
         localSubrToUse = localSubrIndex;
       }
-      valid &&= this.parseCharString(state, charstring, localSubrToUse, globalSubrIndex);
+      if (valid) {
+        valid = this.parseCharString(state, charstring, localSubrToUse, globalSubrIndex);
+      }
       if (state.width !== null) {
         const nominalWidth = privateDictToUse.getByName("nominalWidthX");
         widths[i] = nominalWidth + state.width;
@@ -18229,7 +18626,7 @@ class CFFParser {
         widths[i] = defaultWidth;
       }
       if (state.seac !== null) {
-        seacs.set(i, state.seac);
+        seacs[i] = state.seac;
       }
       if (!valid) {
         charStrings.set(i, new Uint8Array([14]));
@@ -18262,48 +18659,13 @@ class CFFParser {
       this.emptyPrivateDictionary(parentDict);
       return;
     }
-    if (offset + size > this.bytes.length) {
-      throw new FormatError("CFF Private DICT extends past end of font");
-    }
     const privateDictEnd = offset + size;
     const dictData = this.bytes.subarray(offset, privateDictEnd);
     const dict = this.parseDict(dictData);
     const privateDict = this.createDict(CFFPrivateDict, dict, parentDict.strings);
     parentDict.privateDict = privateDict;
-    const blueScale = privateDict.getByName("BlueScale");
-    const blueShift = privateDict.getByName("BlueShift");
-    const blueFuzz = privateDict.getByName("BlueFuzz");
-    const expansionFactor = privateDict.getByName("ExpansionFactor");
-    if (blueScale === 0 && blueShift === 0 && blueFuzz === 0 && expansionFactor === 0) {
-      privateDict.setByName("BlueScale", DEFAULT_BLUE_SCALE);
-      privateDict.setByName("BlueShift", DEFAULT_BLUE_SHIFT);
-      privateDict.setByName("BlueFuzz", DEFAULT_BLUE_FUZZ);
-    }
-    if (expansionFactor === 0) {
-      privateDict.setByName("ExpansionFactor", DEFAULT_EXPANSION_FACTOR);
-    }
-    if (blueScale > 0) {
-      let maxZoneHeight = 0;
-      for (const zones of [privateDict.getByName("BlueValues"), privateDict.getByName("OtherBlues")]) {
-        if (!zones) {
-          continue;
-        }
-        for (let i = 1; i < zones.length; i += 2) {
-          if (zones[i] > maxZoneHeight) {
-            maxZoneHeight = zones[i];
-          }
-        }
-      }
-      if (maxZoneHeight > 0) {
-        const PRECISION = 1e5;
-        const lowerBound = 0.5 / maxZoneHeight;
-        const minBlueScale = lowerBound <= DEFAULT_BLUE_SCALE ? Math.ceil(lowerBound * PRECISION) / PRECISION : -Infinity;
-        const maxBlueScale = Math.floor(PRECISION / maxZoneHeight) / PRECISION;
-        const clamped = MathClamp(blueScale, minBlueScale, maxBlueScale);
-        if (clamped !== blueScale) {
-          privateDict.setByName("BlueScale", clamped);
-        }
-      }
+    if (privateDict.getByName("ExpansionFactor") === 0) {
+      privateDict.setByName("ExpansionFactor", 0.06);
     }
     if (!privateDict.getByName("Subrs")) {
       return;
@@ -18325,9 +18687,8 @@ class CFFParser {
     } else if (pos === 2) {
       return new CFFCharset(true, CFFCharsetPredefinedTypes.EXPERT_SUBSET, ExpertSubsetCharset);
     }
-    const {
-      bytes
-    } = this;
+    const bytes = this.bytes;
+    const start = pos;
     const format = bytes[pos++];
     const charset = [cid ? 0 : ".notdef"];
     let id, count, i;
@@ -18360,7 +18721,9 @@ class CFFParser {
       default:
         throw new FormatError("Unknown charset format");
     }
-    return new CFFCharset(false, format, charset);
+    const end = pos;
+    const raw = bytes.subarray(start, end);
+    return new CFFCharset(false, format, charset, raw);
   }
   parseEncoding(pos, properties, strings, charset) {
     const encoding = Object.create(null);
@@ -18442,9 +18805,6 @@ class CFFParser {
           }
           const fdIndex = bytes[pos++];
           const next = bytes[pos] << 8 | bytes[pos + 1];
-          if (next - first > length - fdSelect.length) {
-            throw new FormatError("parseFDSelect: Invalid font data.");
-          }
           for (let j = first; j < next; ++j) {
             fdSelect.push(fdIndex);
           }
@@ -18509,7 +18869,10 @@ class CFFStrings {
     if (index >= 0 && index <= NUM_STANDARD_CFF_STRINGS - 1) {
       return CFFStandardStrings[index];
     }
-    return index - NUM_STANDARD_CFF_STRINGS <= this.strings.length ? this.strings[index - NUM_STANDARD_CFF_STRINGS] : CFFStandardStrings[0];
+    if (index - NUM_STANDARD_CFF_STRINGS <= this.strings.length) {
+      return this.strings[index - NUM_STANDARD_CFF_STRINGS];
+    }
+    return CFFStandardStrings[0];
   }
   getSID(str) {
     let index = CFFStandardStrings.indexOf(str);
@@ -18517,7 +18880,10 @@ class CFFStrings {
       return index;
     }
     index = this.strings.indexOf(str);
-    return index !== -1 ? index + NUM_STANDARD_CFF_STRINGS : -1;
+    if (index !== -1) {
+      return index + NUM_STANDARD_CFF_STRINGS;
+    }
+    return -1;
   }
   add(value) {
     this.strings.push(value);
@@ -18545,7 +18911,6 @@ class CFFIndex {
   }
 }
 class CFFDict {
-  values = new Map();
   constructor(tables, strings) {
     this.keyToNameMap = tables.keyToNameMap;
     this.nameToKeyMap = tables.nameToKeyMap;
@@ -18554,9 +18919,10 @@ class CFFDict {
     this.opcodes = tables.opcodes;
     this.order = tables.order;
     this.strings = strings;
+    this.values = Object.create(null);
   }
   setByKey(key, value) {
-    if (!this.keyToNameMap.has(key)) {
+    if (!(key in this.keyToNameMap)) {
       return false;
     }
     if (value.length === 0) {
@@ -18568,51 +18934,51 @@ class CFFDict {
         return true;
       }
     }
-    const type = this.types.get(key);
+    const type = this.types[key];
     if (type === "num" || type === "sid" || type === "offset") {
       value = value[0];
     }
-    this.values.set(key, value);
+    this.values[key] = value;
     return true;
   }
   setByName(name, value) {
-    if (!this.nameToKeyMap.has(name)) {
+    if (!(name in this.nameToKeyMap)) {
       throw new FormatError(`Invalid dictionary name "${name}"`);
     }
-    const key = this.nameToKeyMap.get(name);
-    this.values.set(key, value);
+    this.values[this.nameToKeyMap[name]] = value;
   }
   hasName(name) {
-    const key = this.nameToKeyMap.get(name);
-    return this.values.has(key);
+    return this.nameToKeyMap[name] in this.values;
   }
   getByName(name) {
-    if (!this.nameToKeyMap.has(name)) {
+    if (!(name in this.nameToKeyMap)) {
       throw new FormatError(`Invalid dictionary name ${name}"`);
     }
-    const key = this.nameToKeyMap.get(name);
-    return this.values.has(key) ? this.values.get(key) : this.defaults.get(key);
+    const key = this.nameToKeyMap[name];
+    if (!(key in this.values)) {
+      return this.defaults[key];
+    }
+    return this.values[key];
   }
   removeByName(name) {
-    const key = this.nameToKeyMap.get(name);
-    this.values.delete(key);
+    delete this.values[this.nameToKeyMap[name]];
   }
   static createTables(layout) {
     const tables = {
-      keyToNameMap: new Map(),
-      nameToKeyMap: new Map(),
-      defaults: new Map(),
-      types: new Map(),
-      opcodes: new Map(),
+      keyToNameMap: {},
+      nameToKeyMap: {},
+      defaults: {},
+      types: {},
+      opcodes: {},
       order: []
     };
     for (const entry of layout) {
       const key = Array.isArray(entry[0]) ? (entry[0][0] << 8) + entry[0][1] : entry[0];
-      tables.keyToNameMap.set(key, entry[1]);
-      tables.nameToKeyMap.set(entry[1], key);
-      tables.types.set(key, entry[2]);
-      tables.defaults.set(key, entry[3]);
-      tables.opcodes.set(key, Array.isArray(entry[0]) ? entry[0] : [entry[0]]);
+      tables.keyToNameMap[key] = entry[1];
+      tables.nameToKeyMap[entry[1]] = key;
+      tables.types[key] = entry[2];
+      tables.defaults[key] = entry[3];
+      tables.opcodes[key] = Array.isArray(entry[0]) ? entry[0] : [entry[0]];
       tables.order.push(key);
     }
     return tables;
@@ -18623,19 +18989,19 @@ class CFFTopDict extends CFFDict {
   static get tables() {
     return shadow(this, "tables", this.createTables(CFFTopDictLayout));
   }
-  privateDict = null;
   constructor(strings) {
     super(CFFTopDict.tables, strings);
+    this.privateDict = null;
   }
 }
-const CFFPrivateDictLayout = [[6, "BlueValues", "delta", null], [7, "OtherBlues", "delta", null], [8, "FamilyBlues", "delta", null], [9, "FamilyOtherBlues", "delta", null], [[12, 9], "BlueScale", "num", DEFAULT_BLUE_SCALE], [[12, 10], "BlueShift", "num", DEFAULT_BLUE_SHIFT], [[12, 11], "BlueFuzz", "num", DEFAULT_BLUE_FUZZ], [10, "StdHW", "num", null], [11, "StdVW", "num", null], [[12, 12], "StemSnapH", "delta", null], [[12, 13], "StemSnapV", "delta", null], [[12, 14], "ForceBold", "num", 0], [[12, 17], "LanguageGroup", "num", 0], [[12, 18], "ExpansionFactor", "num", DEFAULT_EXPANSION_FACTOR], [[12, 19], "initialRandomSeed", "num", 0], [20, "defaultWidthX", "num", 0], [21, "nominalWidthX", "num", 0], [19, "Subrs", "offset", null]];
+const CFFPrivateDictLayout = [[6, "BlueValues", "delta", null], [7, "OtherBlues", "delta", null], [8, "FamilyBlues", "delta", null], [9, "FamilyOtherBlues", "delta", null], [[12, 9], "BlueScale", "num", 0.039625], [[12, 10], "BlueShift", "num", 7], [[12, 11], "BlueFuzz", "num", 1], [10, "StdHW", "num", null], [11, "StdVW", "num", null], [[12, 12], "StemSnapH", "delta", null], [[12, 13], "StemSnapV", "delta", null], [[12, 14], "ForceBold", "num", 0], [[12, 17], "LanguageGroup", "num", 0], [[12, 18], "ExpansionFactor", "num", 0.06], [[12, 19], "initialRandomSeed", "num", 0], [20, "defaultWidthX", "num", 0], [21, "nominalWidthX", "num", 0], [19, "Subrs", "offset", null]];
 class CFFPrivateDict extends CFFDict {
   static get tables() {
     return shadow(this, "tables", this.createTables(CFFPrivateDictLayout));
   }
-  subrsIndex = null;
   constructor(strings) {
     super(CFFPrivateDict.tables, strings);
+    this.subrsIndex = null;
   }
 }
 const CFFCharsetPredefinedTypes = {
@@ -18644,10 +19010,11 @@ const CFFCharsetPredefinedTypes = {
   EXPERT_SUBSET: 2
 };
 class CFFCharset {
-  constructor(predefined, format, charset) {
+  constructor(predefined, format, charset, raw) {
     this.predefined = predefined;
     this.format = format;
     this.charset = charset;
+    this.raw = raw;
   }
 }
 class CFFEncoding {
@@ -18664,31 +19031,34 @@ class CFFFDSelect {
     this.fdSelect = fdSelect;
   }
   getFDIndex(glyphIndex) {
-    return glyphIndex < 0 || glyphIndex >= this.fdSelect.length ? -1 : this.fdSelect[glyphIndex];
+    if (glyphIndex < 0 || glyphIndex >= this.fdSelect.length) {
+      return -1;
+    }
+    return this.fdSelect[glyphIndex];
   }
 }
 class CFFOffsetTracker {
-  #offsets = new Map();
+  offsets = Object.create(null);
   isTracking(key) {
-    return this.#offsets.has(key);
+    return key in this.offsets;
   }
   track(key, location) {
-    if (this.#offsets.has(key)) {
+    if (key in this.offsets) {
       throw new FormatError(`Already tracking location of ${key}`);
     }
-    this.#offsets.set(key, location);
+    this.offsets[key] = location;
   }
   offset(value) {
-    for (const [key, val] of this.#offsets) {
-      this.#offsets.set(key, val + value);
+    for (const key in this.offsets) {
+      this.offsets[key] += value;
     }
   }
   setEntryLocation(key, values, output) {
-    if (!this.#offsets.has(key)) {
+    if (!(key in this.offsets)) {
       throw new FormatError(`Not tracking location of ${key}`);
     }
     const data = output.data;
-    const dataOffset = this.#offsets.get(key);
+    const dataOffset = this.offsets[key];
     const size = 5;
     for (let i = 0, ii = values.length; i < ii; ++i) {
       const offset0 = i * size + dataOffset;
@@ -18708,19 +19078,54 @@ class CFFOffsetTracker {
     }
   }
 }
+class CompilerOutput {
+  #buf;
+  #bufLength = 1024;
+  #pos = 0;
+  constructor(minLength) {
+    this.#initBuf(minLength);
+  }
+  #initBuf(minLength) {
+    while (this.#bufLength < minLength) {
+      this.#bufLength *= 2;
+    }
+    const newBuf = new Uint8Array(this.#bufLength);
+    if (this.#buf) {
+      newBuf.set(this.#buf, 0);
+    }
+    this.#buf = newBuf;
+  }
+  get data() {
+    return this.#buf.subarray(0, this.#pos);
+  }
+  get finalData() {
+    const data = this.#buf.slice(0, this.#pos);
+    this.#buf = null;
+    return data;
+  }
+  get length() {
+    return this.#pos;
+  }
+  add(data) {
+    const newPos = this.#pos + data.length;
+    if (newPos > this.#bufLength) {
+      this.#initBuf(newPos);
+    }
+    this.#buf.set(data, this.#pos);
+    this.#pos = newPos;
+  }
+}
 class CFFCompiler {
   constructor(cff) {
     this.cff = cff;
   }
   compile() {
     const cff = this.cff;
-    const output = new DataBuilder({
-      minLength: cff.rawFileLength
-    });
+    const output = new CompilerOutput(cff.rawFileLength);
     const header = this.compileHeader(cff.header);
-    output.setArray(header);
+    output.add(header);
     const nameIndex = this.compileNameIndex(cff.names);
-    output.setArray(nameIndex);
+    output.add(nameIndex);
     if (cff.isCIDFont) {
       if (cff.topDict.hasName("FontMatrix")) {
         const base = cff.topDict.getByName("FontMatrix");
@@ -18740,43 +19145,46 @@ class CFFCompiler {
     }
     cff.topDict.setByName("charset", 0);
     let compiled = this.compileTopDicts([cff.topDict], output.length, cff.isCIDFont);
-    output.setArray(compiled.output);
+    output.add(compiled.output);
     const topDictTracker = compiled.trackers[0];
     const stringIndex = this.compileStringIndex(cff.strings.strings);
-    output.setArray(stringIndex);
+    output.add(stringIndex);
     const globalSubrIndex = this.compileIndex(cff.globalSubrIndex);
-    output.setArray(globalSubrIndex);
+    output.add(globalSubrIndex);
     if (cff.encoding && cff.topDict.hasName("Encoding")) {
       if (cff.encoding.predefined) {
         topDictTracker.setEntryLocation("Encoding", [cff.encoding.format], output);
       } else {
         const encoding = this.compileEncoding(cff.encoding);
         topDictTracker.setEntryLocation("Encoding", [output.length], output);
-        output.setArray(encoding);
+        output.add(encoding);
       }
     }
     const charset = this.compileCharset(cff.charset, cff.charStrings.count, cff.strings, cff.isCIDFont);
     topDictTracker.setEntryLocation("charset", [output.length], output);
-    output.setArray(charset);
+    output.add(charset);
     const charStrings = this.compileCharStrings(cff.charStrings);
     topDictTracker.setEntryLocation("CharStrings", [output.length], output);
-    output.setArray(charStrings);
+    output.add(charStrings);
     if (cff.isCIDFont) {
       topDictTracker.setEntryLocation("FDSelect", [output.length], output);
       const fdSelect = this.compileFDSelect(cff.fdSelect);
-      output.setArray(fdSelect);
+      output.add(fdSelect);
       compiled = this.compileTopDicts(cff.fdArray, output.length, true);
       topDictTracker.setEntryLocation("FDArray", [output.length], output);
-      output.setArray(compiled.output);
+      output.add(compiled.output);
       const fontDictTrackers = compiled.trackers;
       this.compilePrivateDicts(cff.fdArray, fontDictTrackers, output);
     }
     this.compilePrivateDicts([cff.topDict], [topDictTracker], output);
-    output.setArray([0]);
-    return output.data;
+    output.add([0]);
+    return output.finalData;
   }
   encodeNumber(value) {
-    return Number.isInteger(value) ? this.encodeInteger(value) : this.encodeFloat(value);
+    if (Number.isInteger(value)) {
+      return this.encodeInteger(value);
+    }
+    return this.encodeFloat(value);
   }
   static get EncodeFloatRegExp() {
     return shadow(this, "EncodeFloatRegExp", /\.(\d*?)(?:9{5,20}|0{5,20})\d{0,2}(?:e(.+)|$)/);
@@ -18887,22 +19295,22 @@ class CFFCompiler {
         outputLength = 0;
       }
       trackers[i].setEntryLocation("Private", [privateDictData.length, outputLength], output);
-      output.setArray(privateDictData);
+      output.add(privateDictData);
       if (privateDict.subrsIndex && privateDict.hasName("Subrs")) {
         const subrs = this.compileIndex(privateDict.subrsIndex);
         privateDictTracker.setEntryLocation("Subrs", [privateDictData.length], output);
-        output.setArray(subrs);
+        output.add(subrs);
       }
     }
   }
   compileDict(dict, offsetTracker) {
     const out = [];
     for (const key of dict.order) {
-      if (!dict.values.has(key)) {
+      if (!(key in dict.values)) {
         continue;
       }
-      let values = dict.values.get(key);
-      let types = dict.types.get(key);
+      let values = dict.values[key];
+      let types = dict.types[key];
       if (!Array.isArray(types)) {
         types = [types];
       }
@@ -18921,7 +19329,7 @@ class CFFCompiler {
             out.push(...this.encodeNumber(value));
             break;
           case "offset":
-            const name = dict.keyToNameMap.get(key);
+            const name = dict.keyToNameMap[key];
             if (!offsetTracker.isTracking(name)) {
               offsetTracker.track(name, out.length);
             }
@@ -18938,7 +19346,7 @@ class CFFCompiler {
             throw new FormatError(`Unknown data type of ${type}`);
         }
       }
-      out.push(...dict.opcodes.get(key));
+      out.push(...dict.opcodes[key]);
     }
     return out;
   }
@@ -19002,7 +19410,9 @@ class CFFCompiler {
       case 0:
         out = new Uint8Array(1 + fdSelect.fdSelect.length);
         out[0] = format;
-        out.set(fdSelect.fdSelect, 1);
+        for (i = 0; i < fdSelect.fdSelect.length; i++) {
+          out[i + 1] = fdSelect.fdSelect[i];
+        }
         break;
       case 3:
         const start = 0;
@@ -19081,7 +19491,6 @@ class CFFCompiler {
 }
 
 ;// ./src/core/standard_fonts.js
-
 
 
 const getStdFontMap = getLookupTableFactory(function (t) {
@@ -19225,10 +19634,6 @@ const getNonStdFontMap = getLookupTableFactory(function (t) {
   t["MS-PMincho-Italic"] = "MS PMincho-Italic";
   t.NuptialScript = "Times-Italic";
   t.SegoeUISymbol = "Helvetica";
-  t.TrebuchetMS = "Helvetica";
-  t["TrebuchetMS-Bold"] = "Helvetica-Bold";
-  t["TrebuchetMS-BoldItalic"] = "Helvetica-BoldOblique";
-  t["TrebuchetMS-Italic"] = "Helvetica-Oblique";
 });
 const getSerifFonts = getLookupTableFactory(function (t) {
   t["Adobe Jenson"] = true;
@@ -19373,16 +19778,6 @@ const getSymbolsFonts = getLookupTableFactory(function (t) {
   t.Wingdings = true;
   t["Wingdings-Bold"] = true;
   t["Wingdings-Regular"] = true;
-});
-const getGlyphMapForMacOrderedFonts = getLookupTableFactory(function (t) {
-  const glyphsUnicode = getGlyphsUnicode();
-  t[2] = 10;
-  for (let gid = 3; gid < MacStandardGlyphOrdering.length; gid++) {
-    const unicode = glyphsUnicode[MacStandardGlyphOrdering[gid]];
-    if (unicode !== undefined) {
-      t[gid] = unicode;
-    }
-  }
 });
 const getGlyphMapForStandardFonts = getLookupTableFactory(function (t) {
   t[2] = 10;
@@ -19882,83 +20277,6 @@ const getGlyphMapForStandardFonts = getLookupTableFactory(function (t) {
   t[3393] = 1159;
   t[3416] = 8377;
 });
-const getSupplementalGlyphMapForTrebuchetMS = getLookupTableFactory(function (t) {
-  t[151] = 956;
-  t[159] = 937;
-  t[168] = 916;
-  t[189] = 8364;
-  t[195] = 8729;
-  t[218] = 713;
-  t[236] = 222;
-  t[237] = 254;
-  t[238] = 8722;
-  t[239] = 185;
-  t[240] = 178;
-  t[241] = 179;
-  t[242] = 189;
-  t[243] = 188;
-  t[244] = 190;
-  t[245] = 181;
-  t[246] = 8486;
-  t[247] = 8710;
-  t[248] = 253;
-  t[249] = 215;
-  t[250] = 173;
-  t[253] = 8355;
-  t[254] = 286;
-  t[255] = 287;
-  t[256] = 304;
-  t[257] = 350;
-  t[258] = 351;
-  t[259] = 262;
-  t[260] = 263;
-  t[261] = 268;
-  t[262] = 269;
-  t[263] = 273;
-  t[264] = 175;
-  t[266] = 183;
-  t[267] = 258;
-  t[268] = 259;
-  t[269] = 260;
-  t[270] = 261;
-  t[271] = 270;
-  t[272] = 271;
-  t[273] = 272;
-  t[274] = 280;
-  t[275] = 281;
-  t[276] = 282;
-  t[277] = 283;
-  t[278] = 313;
-  t[279] = 314;
-  t[280] = 317;
-  t[281] = 318;
-  t[282] = 319;
-  t[283] = 320;
-  t[284] = 323;
-  t[285] = 324;
-  t[286] = 327;
-  t[287] = 328;
-  t[288] = 336;
-  t[289] = 337;
-  t[290] = 340;
-  t[291] = 341;
-  t[292] = 344;
-  t[293] = 345;
-  t[294] = 346;
-  t[295] = 347;
-  t[296] = 538;
-  t[297] = 539;
-  t[298] = 356;
-  t[299] = 357;
-  t[300] = 366;
-  t[301] = 367;
-  t[302] = 368;
-  t[303] = 369;
-  t[304] = 377;
-  t[305] = 378;
-  t[306] = 379;
-  t[307] = 380;
-});
 const getSupplementalGlyphMapForArialBlack = getLookupTableFactory(function (t) {
   t[227] = 322;
   t[264] = 261;
@@ -20093,676 +20411,41 @@ function isKnownFontName(name) {
   return !!(getStdFontMap()[fontName] || getNonStdFontMap()[fontName] || getSerifFonts()[fontName] || getSymbolsFonts()[fontName]);
 }
 
-;// ./src/core/glyf.js
-
-const ON_CURVE_POINT = 1 << 0;
-const X_SHORT_VECTOR = 1 << 1;
-const Y_SHORT_VECTOR = 1 << 2;
-const REPEAT_FLAG = 1 << 3;
-const X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR = 1 << 4;
-const Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR = 1 << 5;
-const OVERLAP_SIMPLE = 1 << 6;
-const ARG_1_AND_2_ARE_WORDS = 1 << 0;
-const ARGS_ARE_XY_VALUES = 1 << 1;
-const WE_HAVE_A_SCALE = 1 << 3;
-const MORE_COMPONENTS = 1 << 5;
-const WE_HAVE_AN_X_AND_Y_SCALE = 1 << 6;
-const WE_HAVE_A_TWO_BY_TWO = 1 << 7;
-const WE_HAVE_INSTRUCTIONS = 1 << 8;
-const GLYPH_HEADER_SIZE = 10;
-class GlyfTable {
-  constructor({
-    glyfTable,
-    isGlyphLocationsLong,
-    locaTable,
-    numGlyphs
-  }) {
-    this.glyphs = [];
-    const loca = new DataView(locaTable.buffer, locaTable.byteOffset, locaTable.byteLength);
-    const glyf = new DataView(glyfTable.buffer, glyfTable.byteOffset, glyfTable.byteLength);
-    const offsetSize = isGlyphLocationsLong ? 4 : 2;
-    let prev = isGlyphLocationsLong ? loca.getUint32(0) : 2 * loca.getUint16(0);
-    let pos = 0;
-    for (let i = 0; i < numGlyphs; i++) {
-      pos += offsetSize;
-      const next = isGlyphLocationsLong ? loca.getUint32(pos) : 2 * loca.getUint16(pos);
-      if (next === prev) {
-        this.glyphs.push(new Glyph({}));
-        continue;
-      }
-      const glyph = Glyph.parse(prev, glyf);
-      this.glyphs.push(glyph);
-      prev = next;
-    }
-  }
-  getSize() {
-    return Math.sumPrecise(this.glyphs.map(g => g.getSize() + 3 & ~3));
-  }
-  write() {
-    const totalSize = this.getSize();
-    const glyfTable = new DataView(new ArrayBuffer(totalSize));
-    const isLocationLong = totalSize > 0x1fffe;
-    const offsetSize = isLocationLong ? 4 : 2;
-    const locaTable = new DataView(new ArrayBuffer((this.glyphs.length + 1) * offsetSize));
-    if (isLocationLong) {
-      locaTable.setUint32(0, 0);
-    } else {
-      locaTable.setUint16(0, 0);
-    }
-    let pos = 0;
-    let locaIndex = 0;
-    for (const glyph of this.glyphs) {
-      pos += glyph.write(pos, glyfTable);
-      pos = pos + 3 & ~3;
-      locaIndex += offsetSize;
-      if (isLocationLong) {
-        locaTable.setUint32(locaIndex, pos);
-      } else {
-        locaTable.setUint16(locaIndex, pos >> 1);
-      }
-    }
-    return {
-      isLocationLong,
-      loca: new Uint8Array(locaTable.buffer),
-      glyf: new Uint8Array(glyfTable.buffer)
-    };
-  }
-  scale(factors) {
-    for (let i = 0, ii = this.glyphs.length; i < ii; i++) {
-      this.glyphs[i].scale(factors[i]);
-    }
-  }
-}
-class Glyph {
-  constructor({
-    header = null,
-    simple = null,
-    composites = null
-  }) {
-    this.header = header;
-    this.simple = simple;
-    this.composites = composites;
-  }
-  static parse(pos, glyf) {
-    const [read, header] = GlyphHeader.parse(pos, glyf);
-    pos += read;
-    if (header.numberOfContours < 0) {
-      const composites = [];
-      while (true) {
-        const [n, composite] = CompositeGlyph.parse(pos, glyf);
-        pos += n;
-        composites.push(composite);
-        if (!(composite.flags & MORE_COMPONENTS)) {
-          break;
-        }
-      }
-      return new Glyph({
-        header,
-        composites
-      });
-    }
-    const simple = SimpleGlyph.parse(pos, glyf, header.numberOfContours);
-    return new Glyph({
-      header,
-      simple
-    });
-  }
-  getSize() {
-    if (!this.header) {
-      return 0;
-    }
-    const size = this.simple ? this.simple.getSize() : Math.sumPrecise(this.composites.map(c => c.getSize()));
-    return this.header.getSize() + size;
-  }
-  write(pos, buf) {
-    if (!this.header) {
-      return 0;
-    }
-    const spos = pos;
-    pos += this.header.write(pos, buf);
-    if (this.simple) {
-      pos += this.simple.write(pos, buf);
-    } else {
-      for (const composite of this.composites) {
-        pos += composite.write(pos, buf);
-      }
-    }
-    return pos - spos;
-  }
-  scale(factor) {
-    if (!this.header) {
-      return;
-    }
-    const xMiddle = (this.header.xMin + this.header.xMax) / 2;
-    this.header.scale(xMiddle, factor);
-    if (this.simple) {
-      this.simple.scale(xMiddle, factor);
-    } else {
-      for (const composite of this.composites) {
-        composite.scale(xMiddle, factor);
-      }
-    }
-  }
-}
-class GlyphHeader {
-  constructor({
-    numberOfContours,
-    xMin,
-    yMin,
-    xMax,
-    yMax
-  }) {
-    this.numberOfContours = numberOfContours;
-    this.xMin = xMin;
-    this.yMin = yMin;
-    this.xMax = xMax;
-    this.yMax = yMax;
-  }
-  static parse(pos, glyf) {
-    return [GLYPH_HEADER_SIZE, new GlyphHeader({
-      numberOfContours: glyf.getInt16(pos),
-      xMin: glyf.getInt16(pos + 2),
-      yMin: glyf.getInt16(pos + 4),
-      xMax: glyf.getInt16(pos + 6),
-      yMax: glyf.getInt16(pos + 8)
-    })];
-  }
-  getSize() {
-    return GLYPH_HEADER_SIZE;
-  }
-  write(pos, buf) {
-    buf.setInt16(pos, this.numberOfContours);
-    buf.setInt16(pos + 2, this.xMin);
-    buf.setInt16(pos + 4, this.yMin);
-    buf.setInt16(pos + 6, this.xMax);
-    buf.setInt16(pos + 8, this.yMax);
-    return GLYPH_HEADER_SIZE;
-  }
-  scale(x, factor) {
-    this.xMin = Math.round(x + (this.xMin - x) * factor);
-    this.xMax = Math.round(x + (this.xMax - x) * factor);
-  }
-}
-class Contour {
-  constructor({
-    flags,
-    xCoordinates,
-    yCoordinates
-  }) {
-    this.xCoordinates = xCoordinates;
-    this.yCoordinates = yCoordinates;
-    this.flags = flags;
-  }
-}
-class SimpleGlyph {
-  constructor({
-    contours,
-    instructions
-  }) {
-    this.contours = contours;
-    this.instructions = instructions;
-  }
-  static parse(pos, glyf, numberOfContours) {
-    const endPtsOfContours = [];
-    for (let i = 0; i < numberOfContours; i++) {
-      const endPt = glyf.getUint16(pos);
-      pos += 2;
-      endPtsOfContours.push(endPt);
-    }
-    const numberOfPt = endPtsOfContours[numberOfContours - 1] + 1;
-    const instructionLength = glyf.getUint16(pos);
-    pos += 2;
-    const instructions = new Uint8Array(glyf).slice(pos, pos + instructionLength);
-    pos += instructionLength;
-    const flags = [];
-    for (let i = 0; i < numberOfPt; pos++, i++) {
-      let flag = glyf.getUint8(pos);
-      flags.push(flag);
-      if (flag & REPEAT_FLAG) {
-        const count = glyf.getUint8(++pos);
-        flag ^= REPEAT_FLAG;
-        for (let m = 0; m < count; m++) {
-          flags.push(flag);
-        }
-        i += count;
-      }
-    }
-    const allXCoordinates = [];
-    let xCoordinates = [];
-    let yCoordinates = [];
-    let pointFlags = [];
-    const contours = [];
-    let endPtsOfContoursIndex = 0;
-    let lastCoordinate = 0;
-    for (let i = 0; i < numberOfPt; i++) {
-      const flag = flags[i];
-      if (flag & X_SHORT_VECTOR) {
-        const x = glyf.getUint8(pos++);
-        lastCoordinate += flag & X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR ? x : -x;
-        xCoordinates.push(lastCoordinate);
-      } else if (flag & X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR) {
-        xCoordinates.push(lastCoordinate);
-      } else {
-        lastCoordinate += glyf.getInt16(pos);
-        pos += 2;
-        xCoordinates.push(lastCoordinate);
-      }
-      if (endPtsOfContours[endPtsOfContoursIndex] === i) {
-        endPtsOfContoursIndex++;
-        allXCoordinates.push(xCoordinates);
-        xCoordinates = [];
-      }
-    }
-    lastCoordinate = 0;
-    endPtsOfContoursIndex = 0;
-    for (let i = 0; i < numberOfPt; i++) {
-      const flag = flags[i];
-      if (flag & Y_SHORT_VECTOR) {
-        const y = glyf.getUint8(pos++);
-        lastCoordinate += flag & Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR ? y : -y;
-        yCoordinates.push(lastCoordinate);
-      } else if (flag & Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR) {
-        yCoordinates.push(lastCoordinate);
-      } else {
-        lastCoordinate += glyf.getInt16(pos);
-        pos += 2;
-        yCoordinates.push(lastCoordinate);
-      }
-      pointFlags.push(flag & ON_CURVE_POINT | flag & OVERLAP_SIMPLE);
-      if (endPtsOfContours[endPtsOfContoursIndex] === i) {
-        xCoordinates = allXCoordinates[endPtsOfContoursIndex];
-        endPtsOfContoursIndex++;
-        contours.push(new Contour({
-          flags: pointFlags,
-          xCoordinates,
-          yCoordinates
-        }));
-        yCoordinates = [];
-        pointFlags = [];
-      }
-    }
-    return new SimpleGlyph({
-      contours,
-      instructions
-    });
-  }
-  getSize() {
-    let size = this.contours.length * 2 + 2 + this.instructions.length;
-    let lastX = 0;
-    let lastY = 0;
-    for (const contour of this.contours) {
-      size += contour.flags.length;
-      for (let i = 0, ii = contour.xCoordinates.length; i < ii; i++) {
-        const x = contour.xCoordinates[i];
-        const y = contour.yCoordinates[i];
-        let abs = Math.abs(x - lastX);
-        if (abs > 255) {
-          size += 2;
-        } else if (abs > 0) {
-          size += 1;
-        }
-        lastX = x;
-        abs = Math.abs(y - lastY);
-        if (abs > 255) {
-          size += 2;
-        } else if (abs > 0) {
-          size += 1;
-        }
-        lastY = y;
-      }
-    }
-    return size;
-  }
-  write(pos, buf) {
-    const spos = pos;
-    const xCoordinates = [];
-    const yCoordinates = [];
-    const flags = [];
-    let lastX = 0;
-    let lastY = 0;
-    for (const contour of this.contours) {
-      for (let i = 0, ii = contour.xCoordinates.length; i < ii; i++) {
-        let flag = contour.flags[i];
-        const x = contour.xCoordinates[i];
-        let delta = x - lastX;
-        if (delta === 0) {
-          flag |= X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR;
-          xCoordinates.push(0);
-        } else {
-          const abs = Math.abs(delta);
-          if (abs <= 255) {
-            flag |= delta >= 0 ? X_SHORT_VECTOR | X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR : X_SHORT_VECTOR;
-            xCoordinates.push(abs);
-          } else {
-            xCoordinates.push(delta);
-          }
-        }
-        lastX = x;
-        const y = contour.yCoordinates[i];
-        delta = y - lastY;
-        if (delta === 0) {
-          flag |= Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR;
-          yCoordinates.push(0);
-        } else {
-          const abs = Math.abs(delta);
-          if (abs <= 255) {
-            flag |= delta >= 0 ? Y_SHORT_VECTOR | Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR : Y_SHORT_VECTOR;
-            yCoordinates.push(abs);
-          } else {
-            yCoordinates.push(delta);
-          }
-        }
-        lastY = y;
-        flags.push(flag);
-      }
-      buf.setUint16(pos, xCoordinates.length - 1);
-      pos += 2;
-    }
-    buf.setUint16(pos, this.instructions.length);
-    pos += 2;
-    if (this.instructions.length) {
-      new Uint8Array(buf.buffer, 0, buf.buffer.byteLength).set(this.instructions, pos);
-      pos += this.instructions.length;
-    }
-    for (const flag of flags) {
-      buf.setUint8(pos++, flag);
-    }
-    for (let i = 0, ii = xCoordinates.length; i < ii; i++) {
-      const x = xCoordinates[i];
-      const flag = flags[i];
-      if (flag & X_SHORT_VECTOR) {
-        buf.setUint8(pos++, x);
-      } else if (!(flag & X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR)) {
-        buf.setInt16(pos, x);
-        pos += 2;
-      }
-    }
-    for (let i = 0, ii = yCoordinates.length; i < ii; i++) {
-      const y = yCoordinates[i];
-      const flag = flags[i];
-      if (flag & Y_SHORT_VECTOR) {
-        buf.setUint8(pos++, y);
-      } else if (!(flag & Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR)) {
-        buf.setInt16(pos, y);
-        pos += 2;
-      }
-    }
-    return pos - spos;
-  }
-  scale(x, factor) {
-    for (const contour of this.contours) {
-      if (contour.xCoordinates.length === 0) {
-        continue;
-      }
-      for (let i = 0, ii = contour.xCoordinates.length; i < ii; i++) {
-        contour.xCoordinates[i] = Math.round(x + (contour.xCoordinates[i] - x) * factor);
-      }
-    }
-  }
-}
-class CompositeGlyph {
-  constructor({
-    flags,
-    glyphIndex,
-    argument1,
-    argument2,
-    transf,
-    instructions
-  }) {
-    this.flags = flags;
-    this.glyphIndex = glyphIndex;
-    this.argument1 = argument1;
-    this.argument2 = argument2;
-    this.transf = transf;
-    this.instructions = instructions;
-  }
-  static parse(pos, glyf) {
-    const spos = pos;
-    const transf = [];
-    let flags = glyf.getUint16(pos);
-    const glyphIndex = glyf.getUint16(pos + 2);
-    pos += 4;
-    let argument1, argument2;
-    if (flags & ARG_1_AND_2_ARE_WORDS) {
-      if (flags & ARGS_ARE_XY_VALUES) {
-        argument1 = glyf.getInt16(pos);
-        argument2 = glyf.getInt16(pos + 2);
-      } else {
-        argument1 = glyf.getUint16(pos);
-        argument2 = glyf.getUint16(pos + 2);
-      }
-      pos += 4;
-      flags ^= ARG_1_AND_2_ARE_WORDS;
-    } else {
-      if (flags & ARGS_ARE_XY_VALUES) {
-        argument1 = glyf.getInt8(pos);
-        argument2 = glyf.getInt8(pos + 1);
-      } else {
-        argument1 = glyf.getUint8(pos);
-        argument2 = glyf.getUint8(pos + 1);
-      }
-      pos += 2;
-    }
-    if (flags & WE_HAVE_A_SCALE) {
-      transf.push(glyf.getUint16(pos));
-      pos += 2;
-    } else if (flags & WE_HAVE_AN_X_AND_Y_SCALE) {
-      transf.push(glyf.getUint16(pos), glyf.getUint16(pos + 2));
-      pos += 4;
-    } else if (flags & WE_HAVE_A_TWO_BY_TWO) {
-      transf.push(glyf.getUint16(pos), glyf.getUint16(pos + 2), glyf.getUint16(pos + 4), glyf.getUint16(pos + 6));
-      pos += 8;
-    }
-    let instructions = null;
-    if (flags & WE_HAVE_INSTRUCTIONS) {
-      const instructionLength = glyf.getUint16(pos);
-      pos += 2;
-      instructions = new Uint8Array(glyf).slice(pos, pos + instructionLength);
-      pos += instructionLength;
-    }
-    return [pos - spos, new CompositeGlyph({
-      flags,
-      glyphIndex,
-      argument1,
-      argument2,
-      transf,
-      instructions
-    })];
-  }
-  getSize() {
-    let size = 2 + 2 + this.transf.length * 2;
-    if (this.flags & WE_HAVE_INSTRUCTIONS) {
-      size += 2 + this.instructions.length;
-    }
-    size += 2;
-    if (this.flags & 2) {
-      if (!(this.argument1 >= -128 && this.argument1 <= 127 && this.argument2 >= -128 && this.argument2 <= 127)) {
-        size += 2;
-      }
-    } else if (!(this.argument1 >= 0 && this.argument1 <= 255 && this.argument2 >= 0 && this.argument2 <= 255)) {
-      size += 2;
-    }
-    return size;
-  }
-  write(pos, buf) {
-    const spos = pos;
-    if (this.flags & ARGS_ARE_XY_VALUES) {
-      if (!(this.argument1 >= -128 && this.argument1 <= 127 && this.argument2 >= -128 && this.argument2 <= 127)) {
-        this.flags |= ARG_1_AND_2_ARE_WORDS;
-      }
-    } else if (!(this.argument1 >= 0 && this.argument1 <= 255 && this.argument2 >= 0 && this.argument2 <= 255)) {
-      this.flags |= ARG_1_AND_2_ARE_WORDS;
-    }
-    buf.setUint16(pos, this.flags);
-    buf.setUint16(pos + 2, this.glyphIndex);
-    pos += 4;
-    if (this.flags & ARG_1_AND_2_ARE_WORDS) {
-      if (this.flags & ARGS_ARE_XY_VALUES) {
-        buf.setInt16(pos, this.argument1);
-        buf.setInt16(pos + 2, this.argument2);
-      } else {
-        buf.setUint16(pos, this.argument1);
-        buf.setUint16(pos + 2, this.argument2);
-      }
-      pos += 4;
-    } else {
-      buf.setUint8(pos, this.argument1);
-      buf.setUint8(pos + 1, this.argument2);
-      pos += 2;
-    }
-    if (this.flags & WE_HAVE_INSTRUCTIONS) {
-      buf.setUint16(pos, this.instructions.length);
-      pos += 2;
-      if (this.instructions.length) {
-        new Uint8Array(buf.buffer, 0, buf.buffer.byteLength).set(this.instructions, pos);
-        pos += this.instructions.length;
-      }
-    }
-    return pos - spos;
-  }
-  scale(x, factor) {}
-}
-function pruneCompositeGlyphCycles(glyfTable, locaEntries, numGlyphs) {
-  const glyf = new DataView(glyfTable.buffer, glyfTable.byteOffset, glyfTable.byteLength);
-  const components = new Array(numGlyphs);
-  for (let i = 0; i < numGlyphs; i++) {
-    const offset = locaEntries[i].offset;
-    const endOffset = Math.min(locaEntries[i].endOffset, glyf.byteLength);
-    if (endOffset - offset <= GLYPH_HEADER_SIZE || glyf.getInt16(offset) >= 0) {
-      continue;
-    }
-    const comps = [];
-    let p = offset + GLYPH_HEADER_SIZE;
-    while (p + 4 <= endOffset) {
-      const flags = glyf.getUint16(p);
-      const gid = glyf.getUint16(p + 2);
-      let size = 4 + (flags & ARG_1_AND_2_ARE_WORDS ? 4 : 2);
-      if (flags & WE_HAVE_A_SCALE) {
-        size += 2;
-      } else if (flags & WE_HAVE_AN_X_AND_Y_SCALE) {
-        size += 4;
-      } else if (flags & WE_HAVE_A_TWO_BY_TWO) {
-        size += 8;
-      }
-      comps.push({
-        gid,
-        offset: p,
-        size,
-        flags
-      });
-      p += size;
-      if (!(flags & MORE_COMPONENTS)) {
-        break;
-      }
-    }
-    if (comps.length) {
-      components[i] = comps;
-    }
-  }
-  const WHITE = 0,
-    GRAY = 1,
-    BLACK = 2;
-  const state = new Uint8Array(numGlyphs);
-  const backEdges = new Map();
-  for (let start = 0; start < numGlyphs; start++) {
-    if (state[start] !== WHITE || !components[start]) {
-      continue;
-    }
-    const stack = [{
-      node: start,
-      idx: 0
-    }];
-    state[start] = GRAY;
-    while (stack.length > 0) {
-      const top = stack.at(-1);
-      const comps = components[top.node];
-      if (!comps || top.idx >= comps.length) {
-        state[top.node] = BLACK;
-        stack.pop();
-        continue;
-      }
-      const compIdx = top.idx++;
-      const next = comps[compIdx].gid;
-      if (next >= numGlyphs || state[next] === BLACK) {
-        continue;
-      }
-      if (state[next] === WHITE) {
-        state[next] = GRAY;
-        stack.push({
-          node: next,
-          idx: 0
-        });
-        continue;
-      }
-      backEdges.getOrInsertComputed(top.node, makeSet).add(compIdx);
-    }
-  }
-  const droppedGlyphs = new Set();
-  for (const [gIdx, removeSet] of backEdges) {
-    const comps = components[gIdx];
-    const remaining = [];
-    for (let ci = 0; ci < comps.length; ci++) {
-      if (!removeSet.has(ci)) {
-        remaining.push(comps[ci]);
-      }
-    }
-    if (remaining.length === 0) {
-      droppedGlyphs.add(gIdx);
-      continue;
-    }
-    const start = locaEntries[gIdx].offset;
-    const endOffset = Math.min(locaEntries[gIdx].endOffset, glyf.byteLength);
-    let writePos = start + GLYPH_HEADER_SIZE;
-    for (let ci = 0; ci < remaining.length; ci++) {
-      const c = remaining[ci];
-      const isLast = ci === remaining.length - 1;
-      let newFlags = c.flags & ~WE_HAVE_INSTRUCTIONS;
-      newFlags = isLast ? newFlags & ~MORE_COMPONENTS : newFlags | MORE_COMPONENTS;
-      if (writePos !== c.offset) {
-        glyfTable.copyWithin(writePos, c.offset, c.offset + c.size);
-      }
-      glyf.setUint16(writePos, newFlags);
-      writePos += c.size;
-    }
-    if (writePos < endOffset) {
-      glyfTable.fill(0, writePos, endOffset);
-    }
-  }
-  return droppedGlyphs;
-}
-
 ;// ./src/core/to_unicode_map.js
 
 class ToUnicodeMap {
-  #map;
-  constructor(cmap) {
-    this.#map = cmap;
+  constructor(cmap = []) {
+    this._map = cmap;
   }
-  get size() {
-    return this.#map.size;
+  get length() {
+    return this._map.length;
   }
   forEach(callback) {
-    for (const [charCode, entry] of this.#map) {
-      callback(charCode, entry.codePointAt(0));
+    for (const charCode in this._map) {
+      callback(charCode, this._map[charCode].codePointAt(0));
     }
   }
   has(i) {
-    return this.#map.has(i);
+    return this._map[i] !== undefined;
   }
   get(i) {
-    return this.#map.get(i);
+    return this._map[i];
   }
   charCodeOf(value) {
-    for (const [charCode, entry] of this.#map) {
-      if (entry === value) {
-        return charCode;
+    const map = this._map;
+    if (map.length <= 0x10000) {
+      return map.indexOf(value);
+    }
+    for (const charCode in map) {
+      if (map[charCode] === value) {
+        return charCode | 0;
       }
     }
     return -1;
   }
   amend(map) {
-    for (const [charCode, entry] of map) {
-      this.#map.set(charCode, entry);
+    for (const charCode in map) {
+      this._map[charCode] = map[charCode];
     }
   }
 }
@@ -20771,7 +20454,7 @@ class IdentityToUnicodeMap {
     this.firstChar = firstChar;
     this.lastChar = lastChar;
   }
-  get size() {
+  get length() {
     return this.lastChar + 1 - this.firstChar;
   }
   forEach(callback) {
@@ -20783,7 +20466,10 @@ class IdentityToUnicodeMap {
     return this.firstChar <= i && i <= this.lastChar;
   }
   get(i) {
-    return this.firstChar <= i && i <= this.lastChar ? String.fromCharCode(i) : undefined;
+    if (this.firstChar <= i && i <= this.lastChar) {
+      return String.fromCharCode(i);
+    }
+    return undefined;
   }
   charCodeOf(v) {
     return Number.isInteger(v) && v >= this.firstChar && v <= this.lastChar ? v : -1;
@@ -20800,17 +20486,16 @@ class IdentityToUnicodeMap {
 class CFFFont {
   constructor(file, properties) {
     this.properties = properties;
-    const parser = new CFFParser(file, properties, (/* inlined export .SEAC_ANALYSIS_ENABLED */true));
+    const parser = new CFFParser(file, properties, SEAC_ANALYSIS_ENABLED);
     this.cff = parser.parse();
     this.cff.duplicateFirstGlyph();
     const compiler = new CFFCompiler(this.cff);
     this.seacs = this.cff.seacs;
     try {
       this.data = compiler.compile();
-    } catch (ex) {
-      warn(`Failed to compile font "${properties.loadedName}": "${ex}".`);
-      file.reset();
-      this.data = file.getBytes();
+    } catch {
+      warn("Failed to compile font " + properties.loadedName);
+      this.data = file;
     }
     this._createBuiltInEncoding();
   }
@@ -20828,29 +20513,34 @@ class CFFFont {
       cMap
     } = properties;
     const charsets = cff.charset.charset;
+    let charCodeToGlyphId;
+    let glyphId;
     if (properties.composite) {
       let invCidToGidMap;
-      if (cidToGidMap?.size) {
-        invCidToGidMap = new Map();
-        for (const [i, gid] of cidToGidMap) {
-          invCidToGidMap.set(gid, i);
+      if (cidToGidMap?.length > 0) {
+        invCidToGidMap = Object.create(null);
+        for (let i = 0, ii = cidToGidMap.length; i < ii; i++) {
+          const gid = cidToGidMap[i];
+          if (gid !== undefined) {
+            invCidToGidMap[gid] = i;
+          }
         }
       }
-      const charCodeToGlyphId = new Map();
-      let charCode, glyphId;
+      charCodeToGlyphId = Object.create(null);
+      let charCode;
       if (cff.isCIDFont) {
         for (glyphId = 0; glyphId < charsets.length; glyphId++) {
           const cid = charsets[glyphId];
           charCode = cMap.charCodeOf(cid);
-          if (invCidToGidMap?.has(charCode)) {
-            charCode = invCidToGidMap.get(charCode);
+          if (invCidToGidMap?.[charCode] !== undefined) {
+            charCode = invCidToGidMap[charCode];
           }
-          charCodeToGlyphId.set(charCode, glyphId);
+          charCodeToGlyphId[charCode] = glyphId;
         }
       } else {
         for (glyphId = 0; glyphId < cff.charStrings.count; glyphId++) {
           charCode = cMap.charCodeOf(glyphId);
-          charCodeToGlyphId.set(charCode, glyphId);
+          charCodeToGlyphId[charCode] = glyphId;
         }
       }
       return charCodeToGlyphId;
@@ -20859,7 +20549,8 @@ class CFFFont {
     if (properties.isInternalFont) {
       encoding = properties.defaultEncoding;
     }
-    return type1FontGlyphMapping(properties, encoding, charsets);
+    charCodeToGlyphId = type1FontGlyphMapping(properties, encoding, charsets);
+    return charCodeToGlyphId;
   }
   hasGlyphId(id) {
     return this.cff.hasGlyphId(id);
@@ -20890,250 +20581,7 @@ class CFFFont {
   }
 }
 
-;// ./src/shared/obj_bin_transform_utils.js
-
-class CSS_FONT_INFO {
-  static strings = ["fontFamily", "fontWeight", "italicAngle"];
-}
-class SYSTEM_FONT_INFO {
-  static strings = ["css", "loadedName", "baseFontName", "src"];
-}
-class FONT_INFO {
-  static bools = ["black", "bold", "disableFontFace", "fontExtraProperties", "isInvalidPDFjsFont", "isType3Font", "italic", "missingFile", "remeasure", "vertical"];
-  static strings = ["fallbackName", "loadedName"];
-  static OFFSET_BBOX = Math.ceil(this.bools.length * 2 / 8);
-  static OFFSET_FONT_MATRIX = this.OFFSET_BBOX + 1 + 2 * 4;
-  static OFFSET_STRINGS = this.OFFSET_FONT_MATRIX + 1 + 8 * 6;
-}
-class PATTERN_INFO {
-  static KIND = 0;
-  static HAS_BBOX = 1;
-  static HAS_BACKGROUND = 2;
-  static SHADING_TYPE = 3;
-  static N_COORD = 4;
-  static N_COLOR = 8;
-  static N_STOP = 12;
-  static N_FIGURES = 16;
-}
-class InfoUtils {
-  static get decoder() {
-    return shadow(this, "decoder", new TextDecoder());
-  }
-  static get encoder() {
-    return shadow(this, "encoder", new TextEncoder());
-  }
-}
-
-;// ./src/core/obj_bin_transform_core.js
-
-
-function encodeStrings(strings, obj) {
-  const {
-    encoder
-  } = InfoUtils;
-  const encodedStrings = new Map();
-  let stringsLength = 0;
-  for (const prop of strings) {
-    const encoded = encoder.encode(obj[prop]),
-      len = encoded.length;
-    encodedStrings.set(encoded, len);
-    stringsLength += 4 + len;
-  }
-  return {
-    encodedStrings,
-    stringsLength
-  };
-}
-function writeStrings(encodedStrings, data, view, offset = 0) {
-  for (const [encoded, len] of encodedStrings) {
-    view.setUint32(offset, len);
-    data.set(encoded, offset + 4);
-    offset += 4 + len;
-  }
-  return offset;
-}
-function compileCssFontInfo(info) {
-  const {
-    encodedStrings,
-    stringsLength
-  } = encodeStrings(CSS_FONT_INFO.strings, info);
-  const buffer = new ArrayBuffer(stringsLength);
-  const data = new Uint8Array(buffer);
-  const view = new DataView(buffer);
-  const offset = writeStrings(encodedStrings, data, view);
-  assert(offset === buffer.byteLength, "compileCssFontInfo: Buffer overflow");
-  return buffer;
-}
-function compileSystemFontInfo(info) {
-  const {
-    encodedStrings,
-    stringsLength
-  } = encodeStrings(SYSTEM_FONT_INFO.strings, info);
-  let encodedStyleStrings,
-    styleStringsLength = 0;
-  if (info.style) {
-    ({
-      encodedStrings: encodedStyleStrings,
-      stringsLength: styleStringsLength
-    } = encodeStrings(["style", "weight"], info.style));
-  }
-  const lengthEstimate = 4 + stringsLength + styleStringsLength;
-  const buffer = new ArrayBuffer(lengthEstimate);
-  const data = new Uint8Array(buffer);
-  const view = new DataView(buffer);
-  let offset = 0;
-  view.setUint32(offset, stringsLength);
-  offset = writeStrings(encodedStrings, data, view, offset + 4);
-  if (encodedStyleStrings) {
-    offset = writeStrings(encodedStyleStrings, data, view, offset);
-  }
-  assert(offset <= buffer.byteLength, "compileSystemFontInfo: Buffer overflow");
-  return buffer.transferToFixedLength(offset);
-}
-function compileFontInfo(font) {
-  function writeArray(arr, arrLen, writerName, increment) {
-    if (arr) {
-      view.setUint8(offset++, arrLen);
-      for (const val of arr) {
-        view[writerName](offset, val, true);
-        offset += increment;
-      }
-    } else {
-      view.setUint8(offset++, 0);
-      offset += increment * arrLen;
-    }
-  }
-  function writeBuffer(buf, name) {
-    if (!buf) {
-      view.setUint32(offset, 0);
-      offset += 4;
-      return;
-    }
-    const length = buf.byteLength;
-    view.setUint32(offset, length);
-    assert(offset + 4 + length <= buffer.byteLength, `compileFontInfo: Buffer overflow at ${name}`);
-    data.set(new Uint8Array(buf), offset + 4);
-    offset += 4 + length;
-  }
-  const systemFontInfoBuffer = font.systemFontInfo ? compileSystemFontInfo(font.systemFontInfo) : null;
-  const cssFontInfoBuffer = font.cssFontInfo ? compileCssFontInfo(font.cssFontInfo) : null;
-  const {
-    encodedStrings,
-    stringsLength
-  } = encodeStrings(FONT_INFO.strings, font);
-  const lengthEstimate = FONT_INFO.OFFSET_STRINGS + 4 + stringsLength + 4 + (systemFontInfoBuffer?.byteLength ?? 0) + 4 + (cssFontInfoBuffer?.byteLength ?? 0) + 4 + (font.data?.length ?? 0);
-  const buffer = new ArrayBuffer(lengthEstimate);
-  const data = new Uint8Array(buffer);
-  const view = new DataView(buffer);
-  let offset = 0;
-  const numBools = FONT_INFO.bools.length;
-  let boolByte = 0,
-    boolBit = 0;
-  for (let i = 0; i < numBools; i++) {
-    const value = font[FONT_INFO.bools[i]];
-    const bits = value === undefined ? 0x00 : value ? 0x02 : 0x01;
-    boolByte |= bits << boolBit;
-    boolBit += 2;
-    if (boolBit === 8 || i === numBools - 1) {
-      view.setUint8(offset++, boolByte);
-      boolByte = 0;
-      boolBit = 0;
-    }
-  }
-  assert(offset === FONT_INFO.OFFSET_BBOX, "compileFontInfo: Boolean properties offset mismatch");
-  writeArray(font.bbox, 4, "setInt16", 2);
-  assert(offset === FONT_INFO.OFFSET_FONT_MATRIX, "compileFontInfo: BBox properties offset mismatch");
-  writeArray(font.fontMatrix, 6, "setFloat64", 8);
-  assert(offset === FONT_INFO.OFFSET_STRINGS, "compileFontInfo: FontMatrix properties offset mismatch");
-  view.setUint32(offset, stringsLength);
-  offset = writeStrings(encodedStrings, data, view, offset + 4);
-  writeBuffer(systemFontInfoBuffer, "systemFontInfo");
-  writeBuffer(cssFontInfoBuffer, "cssFontInfo");
-  if (font.data === undefined) {
-    view.setUint32(offset, 0);
-    offset += 4;
-  } else {
-    view.setUint32(offset, font.data.length);
-    data.set(font.data, offset + 4);
-    offset += 4 + font.data.length;
-  }
-  assert(offset <= buffer.byteLength, "compileFontInfo: Buffer overflow");
-  return buffer.transferToFixedLength(offset);
-}
-function compilePatternInfo(ir) {
-  let kind,
-    bbox = null,
-    coords = [],
-    colors = [],
-    colorStops = [],
-    shadingType = null,
-    background = null;
-  switch (ir[0]) {
-    case "RadialAxial":
-      kind = ir[1] === "axial" ? 1 : 2;
-      bbox = ir[2];
-      colorStops = ir[3];
-      if (kind === 1) {
-        coords.push(...ir[4], ...ir[5]);
-      } else {
-        coords.push(ir[4][0], ir[4][1], ir[6], ir[5][0], ir[5][1], ir[7]);
-      }
-      break;
-    case "Mesh":
-      kind = 3;
-      shadingType = ir[1];
-      coords = ir[2];
-      colors = ir[3];
-      bbox = ir[6];
-      background = ir[7];
-      break;
-    default:
-      throw new Error(`Unsupported pattern type: ${ir[0]}`);
-  }
-  const nCoord = Math.floor(coords.length / 2);
-  const nColor = Math.floor(colors.length / 4);
-  const nStop = colorStops.length;
-  const byteLen = 20 + nCoord * 8 + nColor * 4 + nStop * 8 + (bbox ? 16 : 0) + (background ? 3 : 0);
-  const buffer = new ArrayBuffer(byteLen);
-  const dataView = new DataView(buffer);
-  const u8data = new Uint8Array(buffer);
-  dataView.setUint8(PATTERN_INFO.KIND, kind);
-  dataView.setUint8(PATTERN_INFO.HAS_BBOX, bbox ? 1 : 0);
-  dataView.setUint8(PATTERN_INFO.HAS_BACKGROUND, background ? 1 : 0);
-  dataView.setUint8(PATTERN_INFO.SHADING_TYPE, shadingType);
-  dataView.setUint32(PATTERN_INFO.N_COORD, nCoord, true);
-  dataView.setUint32(PATTERN_INFO.N_COLOR, nColor, true);
-  dataView.setUint32(PATTERN_INFO.N_STOP, nStop, true);
-  dataView.setUint32(PATTERN_INFO.N_FIGURES, 0, true);
-  let offset = 20;
-  const coordsView = new Float32Array(buffer, offset, nCoord * 2);
-  coordsView.set(coords);
-  offset += nCoord * 8;
-  u8data.set(colors, offset);
-  offset += nColor * 4;
-  for (const [pos, hex] of colorStops) {
-    dataView.setFloat32(offset, pos, true);
-    offset += 4;
-    dataView.setUint32(offset, parseInt(hex.slice(1), 16), true);
-    offset += 4;
-  }
-  if (bbox) {
-    for (const v of bbox) {
-      dataView.setFloat32(offset, v, true);
-      offset += 4;
-    }
-  }
-  if (background) {
-    u8data.set(background, offset);
-  }
-  return buffer;
-}
-function compileFontPathInfo(path) {
-  return path.slice().buffer;
-}
-
 ;// ./src/core/font_renderer.js
-
 
 
 
@@ -21145,10 +20593,13 @@ function getFloat214(view, offset) {
 }
 function getSubroutineBias(subrs) {
   const numSubrs = subrs.length;
-  if (numSubrs >= 33900) {
-    return 32768;
+  let bias = 32768;
+  if (numSubrs < 1240) {
+    bias = 107;
+  } else if (numSubrs < 33900) {
+    bias = 1131;
   }
-  return numSubrs < 1240 ? 107 : 1131;
+  return bias;
 }
 function parseCmap(data, start, end) {
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
@@ -21254,9 +20705,6 @@ function lookupCmap(ranges, unicode) {
   };
 }
 function compileGlyf(code, cmds, font, visitedGlyphs = new Set()) {
-  if (!code?.length) {
-    return;
-  }
   if (visitedGlyphs.has(code)) {
     warn("compileGlyf: skipping recursive composite glyph reference.");
     return;
@@ -21816,34 +21264,35 @@ class Commands {
   }
 }
 class CompiledFont {
-  #compiledCharCodes = new Set();
-  #compiledGlyphs = new Map();
   constructor(fontMatrix) {
     this.fontMatrix = fontMatrix;
+    this.compiledGlyphs = Object.create(null);
+    this.compiledCharCodeToGlyphId = Object.create(null);
   }
   static get NOOP() {
     return shadow(this, "NOOP", FeatureTest.isFloat16ArraySupported ? new Float16Array(0) : new Float32Array(0));
   }
-  getPath(unicode) {
+  getPathJs(unicode) {
     const {
       charCode,
       glyphId
     } = lookupCmap(this.cmap, unicode);
-    if (this.#compiledGlyphs.has(glyphId) && this.#compiledCharCodes.has(charCode)) {
-      return null;
-    }
-    const path = this.#compiledGlyphs.getOrInsertComputed(glyphId, () => {
+    let fn = this.compiledGlyphs[glyphId],
+      compileEx;
+    if (fn === undefined) {
       try {
-        return this.compileGlyph(this.glyphs[glyphId], glyphId);
+        fn = this.compileGlyph(this.glyphs[glyphId], glyphId);
       } catch (ex) {
-        return ex;
+        fn = CompiledFont.NOOP;
+        compileEx = ex;
       }
-    });
-    this.#compiledCharCodes.add(charCode);
-    if (path instanceof Error) {
-      throw path;
+      this.compiledGlyphs[glyphId] = fn;
     }
-    return compileFontPathInfo(path);
+    this.compiledCharCodeToGlyphId[charCode] ??= glyphId;
+    if (compileEx) {
+      throw compileEx;
+    }
+    return fn;
   }
   compileGlyph(code, glyphId) {
     if (!code?.length || code[0] === 14) {
@@ -21868,6 +21317,13 @@ class CompiledFont {
   }
   compileGlyphImpl() {
     unreachable("Children classes should implement this.");
+  }
+  hasBuiltPath(unicode) {
+    const {
+      charCode,
+      glyphId
+    } = lookupCmap(this.cmap, unicode);
+    return this.compiledGlyphs[glyphId] !== undefined && this.compiledCharCodeToGlyphId[charCode] !== undefined;
   }
 }
 class TrueTypeCompiled extends CompiledFont {
@@ -24962,6 +24418,534 @@ const getFontBasicMetrics = getLookupTableFactory(function (t) {
   };
 });
 
+;// ./src/core/glyf.js
+const ON_CURVE_POINT = 1 << 0;
+const X_SHORT_VECTOR = 1 << 1;
+const Y_SHORT_VECTOR = 1 << 2;
+const REPEAT_FLAG = 1 << 3;
+const X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR = 1 << 4;
+const Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR = 1 << 5;
+const OVERLAP_SIMPLE = 1 << 6;
+const ARG_1_AND_2_ARE_WORDS = 1 << 0;
+const ARGS_ARE_XY_VALUES = 1 << 1;
+const WE_HAVE_A_SCALE = 1 << 3;
+const MORE_COMPONENTS = 1 << 5;
+const WE_HAVE_AN_X_AND_Y_SCALE = 1 << 6;
+const WE_HAVE_A_TWO_BY_TWO = 1 << 7;
+const WE_HAVE_INSTRUCTIONS = 1 << 8;
+class GlyfTable {
+  constructor({
+    glyfTable,
+    isGlyphLocationsLong,
+    locaTable,
+    numGlyphs
+  }) {
+    this.glyphs = [];
+    const loca = new DataView(locaTable.buffer, locaTable.byteOffset, locaTable.byteLength);
+    const glyf = new DataView(glyfTable.buffer, glyfTable.byteOffset, glyfTable.byteLength);
+    const offsetSize = isGlyphLocationsLong ? 4 : 2;
+    let prev = isGlyphLocationsLong ? loca.getUint32(0) : 2 * loca.getUint16(0);
+    let pos = 0;
+    for (let i = 0; i < numGlyphs; i++) {
+      pos += offsetSize;
+      const next = isGlyphLocationsLong ? loca.getUint32(pos) : 2 * loca.getUint16(pos);
+      if (next === prev) {
+        this.glyphs.push(new Glyph({}));
+        continue;
+      }
+      const glyph = Glyph.parse(prev, glyf);
+      this.glyphs.push(glyph);
+      prev = next;
+    }
+  }
+  getSize() {
+    return Math.sumPrecise(this.glyphs.map(g => g.getSize() + 3 & ~3));
+  }
+  write() {
+    const totalSize = this.getSize();
+    const glyfTable = new DataView(new ArrayBuffer(totalSize));
+    const isLocationLong = totalSize > 0x1fffe;
+    const offsetSize = isLocationLong ? 4 : 2;
+    const locaTable = new DataView(new ArrayBuffer((this.glyphs.length + 1) * offsetSize));
+    if (isLocationLong) {
+      locaTable.setUint32(0, 0);
+    } else {
+      locaTable.setUint16(0, 0);
+    }
+    let pos = 0;
+    let locaIndex = 0;
+    for (const glyph of this.glyphs) {
+      pos += glyph.write(pos, glyfTable);
+      pos = pos + 3 & ~3;
+      locaIndex += offsetSize;
+      if (isLocationLong) {
+        locaTable.setUint32(locaIndex, pos);
+      } else {
+        locaTable.setUint16(locaIndex, pos >> 1);
+      }
+    }
+    return {
+      isLocationLong,
+      loca: new Uint8Array(locaTable.buffer),
+      glyf: new Uint8Array(glyfTable.buffer)
+    };
+  }
+  scale(factors) {
+    for (let i = 0, ii = this.glyphs.length; i < ii; i++) {
+      this.glyphs[i].scale(factors[i]);
+    }
+  }
+}
+class Glyph {
+  constructor({
+    header = null,
+    simple = null,
+    composites = null
+  }) {
+    this.header = header;
+    this.simple = simple;
+    this.composites = composites;
+  }
+  static parse(pos, glyf) {
+    const [read, header] = GlyphHeader.parse(pos, glyf);
+    pos += read;
+    if (header.numberOfContours < 0) {
+      const composites = [];
+      while (true) {
+        const [n, composite] = CompositeGlyph.parse(pos, glyf);
+        pos += n;
+        composites.push(composite);
+        if (!(composite.flags & MORE_COMPONENTS)) {
+          break;
+        }
+      }
+      return new Glyph({
+        header,
+        composites
+      });
+    }
+    const simple = SimpleGlyph.parse(pos, glyf, header.numberOfContours);
+    return new Glyph({
+      header,
+      simple
+    });
+  }
+  getSize() {
+    if (!this.header) {
+      return 0;
+    }
+    const size = this.simple ? this.simple.getSize() : Math.sumPrecise(this.composites.map(c => c.getSize()));
+    return this.header.getSize() + size;
+  }
+  write(pos, buf) {
+    if (!this.header) {
+      return 0;
+    }
+    const spos = pos;
+    pos += this.header.write(pos, buf);
+    if (this.simple) {
+      pos += this.simple.write(pos, buf);
+    } else {
+      for (const composite of this.composites) {
+        pos += composite.write(pos, buf);
+      }
+    }
+    return pos - spos;
+  }
+  scale(factor) {
+    if (!this.header) {
+      return;
+    }
+    const xMiddle = (this.header.xMin + this.header.xMax) / 2;
+    this.header.scale(xMiddle, factor);
+    if (this.simple) {
+      this.simple.scale(xMiddle, factor);
+    } else {
+      for (const composite of this.composites) {
+        composite.scale(xMiddle, factor);
+      }
+    }
+  }
+}
+class GlyphHeader {
+  constructor({
+    numberOfContours,
+    xMin,
+    yMin,
+    xMax,
+    yMax
+  }) {
+    this.numberOfContours = numberOfContours;
+    this.xMin = xMin;
+    this.yMin = yMin;
+    this.xMax = xMax;
+    this.yMax = yMax;
+  }
+  static parse(pos, glyf) {
+    return [10, new GlyphHeader({
+      numberOfContours: glyf.getInt16(pos),
+      xMin: glyf.getInt16(pos + 2),
+      yMin: glyf.getInt16(pos + 4),
+      xMax: glyf.getInt16(pos + 6),
+      yMax: glyf.getInt16(pos + 8)
+    })];
+  }
+  getSize() {
+    return 10;
+  }
+  write(pos, buf) {
+    buf.setInt16(pos, this.numberOfContours);
+    buf.setInt16(pos + 2, this.xMin);
+    buf.setInt16(pos + 4, this.yMin);
+    buf.setInt16(pos + 6, this.xMax);
+    buf.setInt16(pos + 8, this.yMax);
+    return 10;
+  }
+  scale(x, factor) {
+    this.xMin = Math.round(x + (this.xMin - x) * factor);
+    this.xMax = Math.round(x + (this.xMax - x) * factor);
+  }
+}
+class Contour {
+  constructor({
+    flags,
+    xCoordinates,
+    yCoordinates
+  }) {
+    this.xCoordinates = xCoordinates;
+    this.yCoordinates = yCoordinates;
+    this.flags = flags;
+  }
+}
+class SimpleGlyph {
+  constructor({
+    contours,
+    instructions
+  }) {
+    this.contours = contours;
+    this.instructions = instructions;
+  }
+  static parse(pos, glyf, numberOfContours) {
+    const endPtsOfContours = [];
+    for (let i = 0; i < numberOfContours; i++) {
+      const endPt = glyf.getUint16(pos);
+      pos += 2;
+      endPtsOfContours.push(endPt);
+    }
+    const numberOfPt = endPtsOfContours[numberOfContours - 1] + 1;
+    const instructionLength = glyf.getUint16(pos);
+    pos += 2;
+    const instructions = new Uint8Array(glyf).slice(pos, pos + instructionLength);
+    pos += instructionLength;
+    const flags = [];
+    for (let i = 0; i < numberOfPt; pos++, i++) {
+      let flag = glyf.getUint8(pos);
+      flags.push(flag);
+      if (flag & REPEAT_FLAG) {
+        const count = glyf.getUint8(++pos);
+        flag ^= REPEAT_FLAG;
+        for (let m = 0; m < count; m++) {
+          flags.push(flag);
+        }
+        i += count;
+      }
+    }
+    const allXCoordinates = [];
+    let xCoordinates = [];
+    let yCoordinates = [];
+    let pointFlags = [];
+    const contours = [];
+    let endPtsOfContoursIndex = 0;
+    let lastCoordinate = 0;
+    for (let i = 0; i < numberOfPt; i++) {
+      const flag = flags[i];
+      if (flag & X_SHORT_VECTOR) {
+        const x = glyf.getUint8(pos++);
+        lastCoordinate += flag & X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR ? x : -x;
+        xCoordinates.push(lastCoordinate);
+      } else if (flag & X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR) {
+        xCoordinates.push(lastCoordinate);
+      } else {
+        lastCoordinate += glyf.getInt16(pos);
+        pos += 2;
+        xCoordinates.push(lastCoordinate);
+      }
+      if (endPtsOfContours[endPtsOfContoursIndex] === i) {
+        endPtsOfContoursIndex++;
+        allXCoordinates.push(xCoordinates);
+        xCoordinates = [];
+      }
+    }
+    lastCoordinate = 0;
+    endPtsOfContoursIndex = 0;
+    for (let i = 0; i < numberOfPt; i++) {
+      const flag = flags[i];
+      if (flag & Y_SHORT_VECTOR) {
+        const y = glyf.getUint8(pos++);
+        lastCoordinate += flag & Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR ? y : -y;
+        yCoordinates.push(lastCoordinate);
+      } else if (flag & Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR) {
+        yCoordinates.push(lastCoordinate);
+      } else {
+        lastCoordinate += glyf.getInt16(pos);
+        pos += 2;
+        yCoordinates.push(lastCoordinate);
+      }
+      pointFlags.push(flag & ON_CURVE_POINT | flag & OVERLAP_SIMPLE);
+      if (endPtsOfContours[endPtsOfContoursIndex] === i) {
+        xCoordinates = allXCoordinates[endPtsOfContoursIndex];
+        endPtsOfContoursIndex++;
+        contours.push(new Contour({
+          flags: pointFlags,
+          xCoordinates,
+          yCoordinates
+        }));
+        yCoordinates = [];
+        pointFlags = [];
+      }
+    }
+    return new SimpleGlyph({
+      contours,
+      instructions
+    });
+  }
+  getSize() {
+    let size = this.contours.length * 2 + 2 + this.instructions.length;
+    let lastX = 0;
+    let lastY = 0;
+    for (const contour of this.contours) {
+      size += contour.flags.length;
+      for (let i = 0, ii = contour.xCoordinates.length; i < ii; i++) {
+        const x = contour.xCoordinates[i];
+        const y = contour.yCoordinates[i];
+        let abs = Math.abs(x - lastX);
+        if (abs > 255) {
+          size += 2;
+        } else if (abs > 0) {
+          size += 1;
+        }
+        lastX = x;
+        abs = Math.abs(y - lastY);
+        if (abs > 255) {
+          size += 2;
+        } else if (abs > 0) {
+          size += 1;
+        }
+        lastY = y;
+      }
+    }
+    return size;
+  }
+  write(pos, buf) {
+    const spos = pos;
+    const xCoordinates = [];
+    const yCoordinates = [];
+    const flags = [];
+    let lastX = 0;
+    let lastY = 0;
+    for (const contour of this.contours) {
+      for (let i = 0, ii = contour.xCoordinates.length; i < ii; i++) {
+        let flag = contour.flags[i];
+        const x = contour.xCoordinates[i];
+        let delta = x - lastX;
+        if (delta === 0) {
+          flag |= X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR;
+          xCoordinates.push(0);
+        } else {
+          const abs = Math.abs(delta);
+          if (abs <= 255) {
+            flag |= delta >= 0 ? X_SHORT_VECTOR | X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR : X_SHORT_VECTOR;
+            xCoordinates.push(abs);
+          } else {
+            xCoordinates.push(delta);
+          }
+        }
+        lastX = x;
+        const y = contour.yCoordinates[i];
+        delta = y - lastY;
+        if (delta === 0) {
+          flag |= Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR;
+          yCoordinates.push(0);
+        } else {
+          const abs = Math.abs(delta);
+          if (abs <= 255) {
+            flag |= delta >= 0 ? Y_SHORT_VECTOR | Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR : Y_SHORT_VECTOR;
+            yCoordinates.push(abs);
+          } else {
+            yCoordinates.push(delta);
+          }
+        }
+        lastY = y;
+        flags.push(flag);
+      }
+      buf.setUint16(pos, xCoordinates.length - 1);
+      pos += 2;
+    }
+    buf.setUint16(pos, this.instructions.length);
+    pos += 2;
+    if (this.instructions.length) {
+      new Uint8Array(buf.buffer, 0, buf.buffer.byteLength).set(this.instructions, pos);
+      pos += this.instructions.length;
+    }
+    for (const flag of flags) {
+      buf.setUint8(pos++, flag);
+    }
+    for (let i = 0, ii = xCoordinates.length; i < ii; i++) {
+      const x = xCoordinates[i];
+      const flag = flags[i];
+      if (flag & X_SHORT_VECTOR) {
+        buf.setUint8(pos++, x);
+      } else if (!(flag & X_IS_SAME_OR_POSITIVE_X_SHORT_VECTOR)) {
+        buf.setInt16(pos, x);
+        pos += 2;
+      }
+    }
+    for (let i = 0, ii = yCoordinates.length; i < ii; i++) {
+      const y = yCoordinates[i];
+      const flag = flags[i];
+      if (flag & Y_SHORT_VECTOR) {
+        buf.setUint8(pos++, y);
+      } else if (!(flag & Y_IS_SAME_OR_POSITIVE_Y_SHORT_VECTOR)) {
+        buf.setInt16(pos, y);
+        pos += 2;
+      }
+    }
+    return pos - spos;
+  }
+  scale(x, factor) {
+    for (const contour of this.contours) {
+      if (contour.xCoordinates.length === 0) {
+        continue;
+      }
+      for (let i = 0, ii = contour.xCoordinates.length; i < ii; i++) {
+        contour.xCoordinates[i] = Math.round(x + (contour.xCoordinates[i] - x) * factor);
+      }
+    }
+  }
+}
+class CompositeGlyph {
+  constructor({
+    flags,
+    glyphIndex,
+    argument1,
+    argument2,
+    transf,
+    instructions
+  }) {
+    this.flags = flags;
+    this.glyphIndex = glyphIndex;
+    this.argument1 = argument1;
+    this.argument2 = argument2;
+    this.transf = transf;
+    this.instructions = instructions;
+  }
+  static parse(pos, glyf) {
+    const spos = pos;
+    const transf = [];
+    let flags = glyf.getUint16(pos);
+    const glyphIndex = glyf.getUint16(pos + 2);
+    pos += 4;
+    let argument1, argument2;
+    if (flags & ARG_1_AND_2_ARE_WORDS) {
+      if (flags & ARGS_ARE_XY_VALUES) {
+        argument1 = glyf.getInt16(pos);
+        argument2 = glyf.getInt16(pos + 2);
+      } else {
+        argument1 = glyf.getUint16(pos);
+        argument2 = glyf.getUint16(pos + 2);
+      }
+      pos += 4;
+      flags ^= ARG_1_AND_2_ARE_WORDS;
+    } else {
+      if (flags & ARGS_ARE_XY_VALUES) {
+        argument1 = glyf.getInt8(pos);
+        argument2 = glyf.getInt8(pos + 1);
+      } else {
+        argument1 = glyf.getUint8(pos);
+        argument2 = glyf.getUint8(pos + 1);
+      }
+      pos += 2;
+    }
+    if (flags & WE_HAVE_A_SCALE) {
+      transf.push(glyf.getUint16(pos));
+      pos += 2;
+    } else if (flags & WE_HAVE_AN_X_AND_Y_SCALE) {
+      transf.push(glyf.getUint16(pos), glyf.getUint16(pos + 2));
+      pos += 4;
+    } else if (flags & WE_HAVE_A_TWO_BY_TWO) {
+      transf.push(glyf.getUint16(pos), glyf.getUint16(pos + 2), glyf.getUint16(pos + 4), glyf.getUint16(pos + 6));
+      pos += 8;
+    }
+    let instructions = null;
+    if (flags & WE_HAVE_INSTRUCTIONS) {
+      const instructionLength = glyf.getUint16(pos);
+      pos += 2;
+      instructions = new Uint8Array(glyf).slice(pos, pos + instructionLength);
+      pos += instructionLength;
+    }
+    return [pos - spos, new CompositeGlyph({
+      flags,
+      glyphIndex,
+      argument1,
+      argument2,
+      transf,
+      instructions
+    })];
+  }
+  getSize() {
+    let size = 2 + 2 + this.transf.length * 2;
+    if (this.flags & WE_HAVE_INSTRUCTIONS) {
+      size += 2 + this.instructions.length;
+    }
+    size += 2;
+    if (this.flags & 2) {
+      if (!(this.argument1 >= -128 && this.argument1 <= 127 && this.argument2 >= -128 && this.argument2 <= 127)) {
+        size += 2;
+      }
+    } else if (!(this.argument1 >= 0 && this.argument1 <= 255 && this.argument2 >= 0 && this.argument2 <= 255)) {
+      size += 2;
+    }
+    return size;
+  }
+  write(pos, buf) {
+    const spos = pos;
+    if (this.flags & ARGS_ARE_XY_VALUES) {
+      if (!(this.argument1 >= -128 && this.argument1 <= 127 && this.argument2 >= -128 && this.argument2 <= 127)) {
+        this.flags |= ARG_1_AND_2_ARE_WORDS;
+      }
+    } else if (!(this.argument1 >= 0 && this.argument1 <= 255 && this.argument2 >= 0 && this.argument2 <= 255)) {
+      this.flags |= ARG_1_AND_2_ARE_WORDS;
+    }
+    buf.setUint16(pos, this.flags);
+    buf.setUint16(pos + 2, this.glyphIndex);
+    pos += 4;
+    if (this.flags & ARG_1_AND_2_ARE_WORDS) {
+      if (this.flags & ARGS_ARE_XY_VALUES) {
+        buf.setInt16(pos, this.argument1);
+        buf.setInt16(pos + 2, this.argument2);
+      } else {
+        buf.setUint16(pos, this.argument1);
+        buf.setUint16(pos + 2, this.argument2);
+      }
+      pos += 4;
+    } else {
+      buf.setUint8(pos, this.argument1);
+      buf.setUint8(pos + 1, this.argument2);
+      pos += 2;
+    }
+    if (this.flags & WE_HAVE_INSTRUCTIONS) {
+      buf.setUint16(pos, this.instructions.length);
+      pos += 2;
+      if (this.instructions.length) {
+        new Uint8Array(buf.buffer, 0, buf.buffer.byteLength).set(this.instructions, pos);
+        pos += this.instructions.length;
+      }
+    }
+    return pos - spos;
+  }
+  scale(x, factor) {}
+}
+
 ;// ./src/core/opentype_file_builder.js
 
 const OTF_HEADER_SIZE = 12;
@@ -25079,14 +25063,14 @@ class Type1CharString {
         }
         switch (value) {
           case 1:
-            if (true) {
+            if (!HINTING_ENABLED) {
               this.stack = [];
               break;
             }
             error = this.executeCommand(2, COMMAND_MAP.hstem);
             break;
           case 3:
-            if (true) {
+            if (!HINTING_ENABLED) {
               this.stack = [];
               break;
             }
@@ -25171,14 +25155,14 @@ class Type1CharString {
             this.stack = [];
             break;
           case (12 << 8) + 1:
-            if (true) {
+            if (!HINTING_ENABLED) {
               this.stack = [];
               break;
             }
             error = this.executeCommand(2, COMMAND_MAP.vstem);
             break;
           case (12 << 8) + 2:
-            if (true) {
+            if (!HINTING_ENABLED) {
               this.stack = [];
               break;
             }
@@ -25428,9 +25412,7 @@ class Type1Parser {
         privateData
       }
     };
-    let token, length, data;
-    let subrsParsed = false;
-    let charStringsParsed = false;
+    let token, length, data, lenIV;
     while ((token = this.getToken()) !== null) {
       if (token !== "/") {
         continue;
@@ -25438,10 +25420,6 @@ class Type1Parser {
       token = this.getToken();
       switch (token) {
         case "CharStrings":
-          if (charStringsParsed) {
-            break;
-          }
-          charStringsParsed = true;
           this.getToken();
           this.getToken();
           this.getToken();
@@ -25458,7 +25436,8 @@ class Type1Parser {
             length = this.readInt();
             this.getToken();
             data = length > 0 ? stream.getBytes(length) : new Uint8Array(0);
-            const encoded = this.readCharStrings(data, privateData.get("lenIV"));
+            lenIV = privateData.get("lenIV");
+            const encoded = this.readCharStrings(data, lenIV);
             this.nextChar();
             token = this.getToken();
             if (token === "noaccess") {
@@ -25473,10 +25452,6 @@ class Type1Parser {
           }
           break;
         case "Subrs":
-          if (subrsParsed) {
-            break;
-          }
-          subrsParsed = true;
           this.readInt();
           this.getToken();
           while (this.getToken() === "dup") {
@@ -25484,7 +25459,8 @@ class Type1Parser {
             length = this.readInt();
             this.getToken();
             data = length > 0 ? stream.getBytes(length) : new Uint8Array(0);
-            const encoded = this.readCharStrings(data, privateData.get("lenIV"));
+            lenIV = privateData.get("lenIV");
+            const encoded = this.readCharStrings(data, lenIV);
             this.nextChar();
             token = this.getToken();
             if (token === "noaccess") {
@@ -25498,8 +25474,9 @@ class Type1Parser {
         case "FamilyBlues":
         case "FamilyOtherBlues":
           const blueArray = this.readNumberArray();
-          if (false) // removed by dead control flow
-{}
+          if (blueArray.length > 0 && blueArray.length % 2 === 0 && HINTING_ENABLED) {
+            privateData.set(token, blueArray);
+          }
           break;
         case "StemSnapH":
         case "StemSnapV":
@@ -25530,7 +25507,10 @@ class Type1Parser {
     } of charstrings) {
       const charString = new Type1CharString();
       const error = charString.convert(encoded, subrs, this.seacAnalysisEnabled);
-      const output = !error ? charString.output : [14];
+      let output = charString.output;
+      if (error) {
+        output = [14];
+      }
       const charStringObject = {
         glyphName: glyph,
         charstring: output,
@@ -25550,214 +25530,6 @@ class Type1Parser {
         }
       }
     }
-    return program;
-  }
-  extractCidKeyedFontProgram(properties) {
-    const stream = this.stream;
-    const privateData = new Map([["lenIV", 4]]);
-    const program = {
-      subrs: [],
-      charstrings: [],
-      properties: {
-        privateData
-      }
-    };
-    let cidCount = 0;
-    let cidMapOffset = -1;
-    let fdBytes = 1;
-    let gdBytes = 0;
-    let subrMapOffset = -1;
-    let sdBytes = 0;
-    let subrCount = 0;
-    let startDataLength = 0;
-    let startDataIsHex = false;
-    let foundStartData = false;
-    const previousTokens = [];
-    function rememberToken(value) {
-      previousTokens.push(value);
-      if (previousTokens.length > 4) {
-        previousTokens.shift();
-      }
-    }
-    let token;
-    while ((token = this.getToken()) !== null) {
-      if (token === "StartData") {
-        const dataType = previousTokens.at(-3);
-        const dataLength = previousTokens.at(-1);
-        if (previousTokens.at(-4) !== "(" || previousTokens.at(-2) !== ")" || dataType !== "Binary" && dataType !== "Hex" || !/^\d+$/.test(dataLength)) {
-          return null;
-        }
-        startDataLength = parseInt(dataLength, 10);
-        if (startDataLength <= 0) {
-          return null;
-        }
-        startDataIsHex = dataType === "Hex";
-        foundStartData = true;
-        break;
-      }
-      rememberToken(token);
-      if (token !== "/") {
-        continue;
-      }
-      token = this.getToken();
-      rememberToken(token);
-      switch (token) {
-        case "FontMatrix":
-          properties.fontMatrix = this.readNumberArray();
-          break;
-        case "FontBBox":
-          const fontBBox = this.readNumberArray();
-          properties.ascent = Math.max(fontBBox[3], fontBBox[1]);
-          properties.descent = Math.min(fontBBox[1], fontBBox[3]);
-          properties.ascentScaled = true;
-          break;
-        case "CIDCount":
-          cidCount = this.readInt();
-          break;
-        case "CIDMapOffset":
-          cidMapOffset = this.readInt();
-          break;
-        case "FDBytes":
-          fdBytes = this.readInt();
-          break;
-        case "GDBytes":
-          gdBytes = this.readInt();
-          break;
-        case "SubrMapOffset":
-          subrMapOffset = this.readInt();
-          break;
-        case "SDBytes":
-          sdBytes = this.readInt();
-          break;
-        case "SubrCount":
-          subrCount = this.readInt();
-          break;
-        case "BlueValues":
-        case "OtherBlues":
-        case "FamilyBlues":
-        case "FamilyOtherBlues":
-          this.readNumberArray();
-          break;
-        case "StemSnapH":
-        case "StemSnapV":
-          privateData.set(token, this.readNumberArray());
-          break;
-        case "StdHW":
-        case "StdVW":
-          privateData.set(token, this.readNumberArray()[0]);
-          break;
-        case "BlueShift":
-        case "lenIV":
-        case "BlueFuzz":
-        case "BlueScale":
-        case "LanguageGroup":
-          privateData.set(token, this.readNumber());
-          break;
-        case "ExpansionFactor":
-          privateData.set(token, this.readNumber() || 0.06);
-          break;
-        case "ForceBold":
-          privateData.set(token, this.readBoolean());
-          break;
-      }
-    }
-    if (!foundStartData || cidCount <= 0 || cidMapOffset < 0 || fdBytes < 0 || fdBytes > 4 || gdBytes < 1 || gdBytes > 4) {
-      return null;
-    }
-    const maxLength = stream.end - stream.pos;
-    if (startDataLength > maxLength) {
-      if (!startDataIsHex) {
-        startDataLength = maxLength;
-      } else if (startDataLength > 2 * maxLength) {
-        return null;
-      }
-    }
-    let binary = stream.getBytes(startDataIsHex ? undefined : startDataLength);
-    if (startDataIsHex) {
-      const decoded = new Uint8Array(startDataLength);
-      let digit1 = -1,
-        j = 0;
-      for (let i = 0, ii = binary.length; i < ii && j < startDataLength; i++) {
-        const digit = binary[i];
-        if (!isHexDigit(digit)) {
-          continue;
-        }
-        if (digit1 < 0) {
-          digit1 = digit;
-          continue;
-        }
-        decoded[j++] = parseInt(String.fromCharCode(digit1, digit), 16);
-        digit1 = -1;
-      }
-      if (j !== startDataLength) {
-        return null;
-      }
-      binary = decoded;
-    }
-    const lenIV = privateData.get("lenIV");
-    const cidEntrySize = fdBytes + gdBytes;
-    const subrs = [];
-    function readUint(offset, byteCount) {
-      let n = 0;
-      for (let i = 0; i < byteCount; i++) {
-        n = n << 8 | binary[offset + i];
-      }
-      return n >>> 0;
-    }
-    if (cidMapOffset + (cidCount + 1) * cidEntrySize > binary.length || subrCount > 0 && (subrMapOffset < 0 || sdBytes < 1 || sdBytes > 4 || subrMapOffset + (subrCount + 1) * sdBytes > binary.length)) {
-      return null;
-    }
-    if (fdBytes > 0) {
-      for (let cid = 0; cid < cidCount; cid++) {
-        if (readUint(cidMapOffset + cid * cidEntrySize, fdBytes) !== 0) {
-          return null;
-        }
-      }
-    }
-    if (subrCount > 0) {
-      const subrOffsets = new Array(subrCount + 1);
-      for (let i = 0; i <= subrCount; i++) {
-        subrOffsets[i] = readUint(subrMapOffset + i * sdBytes, sdBytes);
-      }
-      for (let i = 0; i < subrCount; i++) {
-        const start = subrOffsets[i];
-        const end = subrOffsets[i + 1];
-        if (end > binary.length || end < start) {
-          subrs[i] = new Uint8Array(0);
-          continue;
-        }
-        subrs[i] = this.readCharStrings(binary.subarray(start, end), lenIV);
-      }
-    }
-    const charstrings = [];
-    let prevOffset = readUint(cidMapOffset + fdBytes, gdBytes);
-    for (let cid = 0; cid < cidCount; cid++) {
-      const nextOffset = readUint(cidMapOffset + (cid + 1) * cidEntrySize + fdBytes, gdBytes);
-      const glyphName = cid === 0 ? ".notdef" : `cid${cid}`;
-      if (nextOffset > prevOffset && nextOffset <= binary.length) {
-        const encoded = this.readCharStrings(binary.subarray(prevOffset, nextOffset), lenIV);
-        const charString = new Type1CharString();
-        const error = charString.convert(encoded, subrs, this.seacAnalysisEnabled);
-        charstrings.push({
-          glyphName,
-          charstring: error ? [14] : charString.output,
-          width: charString.width,
-          lsb: charString.lsb,
-          seac: charString.seac
-        });
-      } else {
-        const notDef = charstrings[0];
-        charstrings.push({
-          glyphName,
-          charstring: notDef?.charstring.slice() || [0x8b, 0x0e],
-          width: notDef?.width || 0,
-          lsb: notDef?.lsb || 0
-        });
-      }
-      prevOffset = nextOffset;
-    }
-    program.subrs = subrs;
-    program.charstrings = charstrings;
     return program;
   }
   extractFontHeader(properties) {
@@ -25901,33 +25673,9 @@ function getEexecBlock(stream, suggestedLength) {
     length: eexecBytes.length
   };
 }
-function isCidKeyedType1File(file) {
-  const sample = file.peekBytes(2048);
-  if (sample.length < 2 || sample[0] !== 0x25 || sample[1] !== 0x21) {
-    return false;
-  }
-  const text = bytesToString(sample);
-  return text.includes("Resource-CIDFont") || /\/CIDFontType\s+0\b/.test(text);
-}
 class Type1Font {
   #rawFileLength;
   constructor(name, file, properties) {
-    let data;
-    if (properties.composite && isCidKeyedType1File(file)) {
-      data = this.#parseCidKeyedType1(file, properties);
-    }
-    data ||= this.#parseType1(file, properties);
-    for (const key in data.properties) {
-      properties[key] = data.properties[key];
-    }
-    const charstrings = data.charstrings;
-    const type2Charstrings = this.getType2Charstrings(charstrings);
-    const subrs = this.getType2Subrs(data.subrs);
-    this.charstrings = charstrings;
-    this.data = this.wrap(name, type2Charstrings, this.charstrings, subrs, properties);
-    this.seacs = this.getSeacs(data.charstrings);
-  }
-  #parseType1(file, properties) {
     const PFB_HEADER_SIZE = 6;
     let headerBlockLength = properties.length1;
     let eexecBlockLength = properties.length2;
@@ -25938,30 +25686,25 @@ class Type1Font {
       headerBlockLength = pfbHeader[5] << 24 | pfbHeader[4] << 16 | pfbHeader[3] << 8 | pfbHeader[2];
     }
     const headerBlock = getHeaderBlock(file, headerBlockLength);
-    const headerBlockParser = new Type1Parser(headerBlock.stream, false, (/* inlined export .SEAC_ANALYSIS_ENABLED */true));
+    const headerBlockParser = new Type1Parser(headerBlock.stream, false, SEAC_ANALYSIS_ENABLED);
     headerBlockParser.extractFontHeader(properties);
     if (pfbHeaderPresent) {
       pfbHeader = file.getBytes(PFB_HEADER_SIZE);
       eexecBlockLength = pfbHeader[5] << 24 | pfbHeader[4] << 16 | pfbHeader[3] << 8 | pfbHeader[2];
     }
     const eexecBlock = getEexecBlock(file, eexecBlockLength);
-    const eexecBlockParser = new Type1Parser(eexecBlock.stream, true, (/* inlined export .SEAC_ANALYSIS_ENABLED */true));
+    const eexecBlockParser = new Type1Parser(eexecBlock.stream, true, SEAC_ANALYSIS_ENABLED);
     const data = eexecBlockParser.extractFontProgram(properties);
-    this.#rawFileLength = headerBlock.length + eexecBlock.length;
-    return data;
-  }
-  #parseCidKeyedType1(file, properties) {
-    const fileStart = file.pos;
-    const length = file.end - fileStart;
-    const parser = new Type1Parser(file, false, (/* inlined export .SEAC_ANALYSIS_ENABLED */true));
-    const data = parser.extractCidKeyedFontProgram(properties);
-    if (!data) {
-      file.pos = fileStart;
-      warn("Type1Font: unable to parse CID-keyed Type 1 font.");
-      return null;
+    for (const key in data.properties) {
+      properties[key] = data.properties[key];
     }
-    this.#rawFileLength = length;
-    return data;
+    this.#rawFileLength = headerBlock.length + eexecBlock.length;
+    const charstrings = data.charstrings;
+    const type2Charstrings = this.getType2Charstrings(charstrings);
+    const subrs = this.getType2Subrs(data.subrs);
+    this.charstrings = charstrings;
+    this.data = this.wrap(name, type2Charstrings, this.charstrings, subrs, properties);
+    this.seacs = this.getSeacs(data.charstrings);
   }
   get numGlyphs() {
     return this.charstrings.length + 1;
@@ -25978,10 +25721,10 @@ class Type1Font {
   getGlyphMapping(properties) {
     const charstrings = this.charstrings;
     if (properties.composite) {
-      const charCodeToGlyphId = new Map();
+      const charCodeToGlyphId = Object.create(null);
       for (let glyphId = 0, charstringsLen = charstrings.length; glyphId < charstringsLen; glyphId++) {
         const charCode = properties.cMap.charCodeOf(glyphId);
-        charCodeToGlyphId.set(charCode, glyphId + 1);
+        charCodeToGlyphId[charCode] = glyphId + 1;
       }
       return charCodeToGlyphId;
     }
@@ -26013,16 +25756,14 @@ class Type1Font {
     return glyph.charstring.length > 0;
   }
   getSeacs(charstrings) {
-    const seacs = new Map();
+    const seacMap = [];
     for (let i = 0, ii = charstrings.length; i < ii; i++) {
-      const {
-        seac
-      } = charstrings[i];
-      if (seac) {
-        seacs.set(i + 1, seac);
+      const charstring = charstrings[i];
+      if (charstring.seac) {
+        seacMap[i + 1] = charstring.seac;
       }
     }
-    return seacs;
+    return seacMap;
   }
   getType2Charstrings(type1Charstrings) {
     const type2Charstrings = [];
@@ -26139,13 +25880,15 @@ class Type1Font {
 
 
 
-
 const PRIVATE_USE_AREAS = [[0xe000, 0xf8ff], [0x100000, 0x10fffd]];
 const PDF_GLYPH_SPACE_UNITS = 1000;
-const EXPORT_DATA_PROPERTIES = ["bbox", "black", "bold", "cssFontInfo", "data", "disableFontFace", "fallbackName", "fontExtraProperties", "fontMatrix", "isInvalidPDFjsFont", "isType3Font", "italic", "loadedName", "missingFile", "remeasure", "systemFontInfo", "vertical"];
-const EXPORT_DATA_EXTRA_PROPERTIES = ["ascent", "composite", "defaultEncoding", "defaultVMetrics", "defaultWidth", "descent", "differences", "isMonospace", "isSerifFont", "isSymbolicFont", "name", "seacMap", "subtype", "toFontChar", "type", "vmetrics", "widths"];
+const EXPORT_DATA_PROPERTIES = ["ascent", "bbox", "black", "bold", "cssFontInfo", "data", "defaultVMetrics", "defaultWidth", "descent", "disableFontFace", "fallbackName", "fontExtraProperties", "fontMatrix", "isInvalidPDFjsFont", "isType3Font", "italic", "loadedName", "mimetype", "missingFile", "name", "remeasure", "systemFontInfo", "vertical"];
+const EXPORT_DATA_EXTRA_PROPERTIES = ["cMap", "composite", "defaultEncoding", "differences", "isMonospace", "isSerifFont", "isSymbolicFont", "seacMap", "subtype", "toFontChar", "toUnicode", "type", "vmetrics", "widths"];
 function adjustWidths(properties) {
-  if (!properties.fontMatrix || properties.fontMatrix[0] === FONT_IDENTITY_MATRIX[0]) {
+  if (!properties.fontMatrix) {
+    return;
+  }
+  if (properties.fontMatrix[0] === FONT_IDENTITY_MATRIX[0]) {
     return;
   }
   const scale = 0.001 / properties.fontMatrix[0];
@@ -26183,7 +25926,7 @@ function adjustTrueTypeToUnicode(properties, isSymbolicFont, nameRecords) {
     }
   }
   const encoding = WinAnsiEncoding;
-  const toUnicode = new Map(),
+  const toUnicode = [],
     glyphsUnicodeMap = getGlyphsUnicode();
   for (const charCode in encoding) {
     const glyphName = encoding[charCode];
@@ -26194,9 +25937,11 @@ function adjustTrueTypeToUnicode(properties, isSymbolicFont, nameRecords) {
     if (unicode === undefined) {
       continue;
     }
-    toUnicode.set(+charCode, String.fromCharCode(unicode));
+    toUnicode[charCode] = String.fromCharCode(unicode);
   }
-  properties.toUnicode.amend(toUnicode);
+  if (toUnicode.length > 0) {
+    properties.toUnicode.amend(toUnicode);
+  }
 }
 function adjustType1ToUnicode(properties, builtInEncoding) {
   if (properties.isInternalFont) {
@@ -26211,34 +25956,41 @@ function adjustType1ToUnicode(properties, builtInEncoding) {
   if (properties.toUnicode instanceof IdentityToUnicodeMap) {
     return;
   }
-  const toUnicode = new Map(),
+  const toUnicode = [],
     glyphsUnicodeMap = getGlyphsUnicode();
   for (const charCode in builtInEncoding) {
     if (properties.hasEncoding) {
-      if (properties.baseEncodingName || properties.differences.has(+charCode)) {
+      if (properties.baseEncodingName || properties.differences[charCode] !== undefined) {
         continue;
       }
     }
     const glyphName = builtInEncoding[charCode];
     const unicode = getUnicodeForGlyph(glyphName, glyphsUnicodeMap);
     if (unicode !== -1) {
-      toUnicode.set(+charCode, String.fromCharCode(unicode));
+      toUnicode[charCode] = String.fromCharCode(unicode);
     }
   }
-  properties.toUnicode.amend(toUnicode);
+  if (toUnicode.length > 0) {
+    properties.toUnicode.amend(toUnicode);
+  }
 }
 function amendFallbackToUnicode(properties) {
-  if (!properties.fallbackToUnicode || properties.toUnicode instanceof IdentityToUnicodeMap) {
+  if (!properties.fallbackToUnicode) {
     return;
   }
-  const toUnicode = new Map();
-  for (const [charCode, entry] of properties.fallbackToUnicode) {
+  if (properties.toUnicode instanceof IdentityToUnicodeMap) {
+    return;
+  }
+  const toUnicode = [];
+  for (const charCode in properties.fallbackToUnicode) {
     if (properties.toUnicode.has(charCode)) {
       continue;
     }
-    toUnicode.set(charCode, entry);
+    toUnicode[charCode] = properties.fallbackToUnicode[charCode];
   }
-  properties.toUnicode.amend(toUnicode);
+  if (toUnicode.length > 0) {
+    properties.toUnicode.amend(toUnicode);
+  }
 }
 class fonts_Glyph {
   constructor(originalCharCode, fontChar, unicode, accent, width, vmetric, operatorListId, isSpace, isInFont) {
@@ -26272,6 +26024,76 @@ function writeUint32(bytes, index, value) {
   bytes[index + 2] = value >>> 8;
   bytes[index + 1] = value >>> 16;
   bytes[index] = value >>> 24;
+}
+class TrueTypeTableBuilder {
+  #buf;
+  #bufLength = 1024;
+  #hasExactLength = false;
+  #pos = 0;
+  #view;
+  constructor({
+    exactLength,
+    minLength
+  }) {
+    this.#hasExactLength = !!exactLength;
+    this.#initBuf(exactLength || minLength);
+  }
+  #initBuf(minLength) {
+    if (this.#hasExactLength) {
+      this.#bufLength = minLength;
+    } else {
+      while (this.#bufLength < minLength) {
+        this.#bufLength *= 2;
+      }
+    }
+    const newBuf = new Uint8Array(this.#bufLength);
+    if (this.#buf) {
+      newBuf.set(this.#buf, 0);
+    }
+    this.#buf = newBuf;
+    this.#view = new DataView(newBuf.buffer);
+  }
+  get data() {
+    return this.#buf.subarray(0, this.#pos);
+  }
+  get length() {
+    return this.#pos;
+  }
+  skip(n) {
+    this.#pos += n;
+  }
+  setArray(arr) {
+    const newPos = this.#pos + arr.length;
+    if (!this.#hasExactLength && newPos > this.#bufLength) {
+      this.#initBuf(newPos);
+    }
+    this.#buf.set(arr, this.#pos);
+    this.#pos = newPos;
+  }
+  setInt16(val) {
+    const newPos = this.#pos + 2;
+    if (!this.#hasExactLength && newPos > this.#bufLength) {
+      this.#initBuf(newPos);
+    }
+    this.#view.setInt16(this.#pos, val);
+    this.#pos = newPos;
+  }
+  setSafeInt16(val) {
+    const newPos = this.#pos + 2;
+    if (!this.#hasExactLength && newPos > this.#bufLength) {
+      this.#initBuf(newPos);
+    }
+    this.#view.setInt16(this.#pos, MathClamp(val, -0x8000, 0x7fff));
+    this.#pos = newPos;
+  }
+  setInt32(val) {
+    const newPos = this.#pos + 4;
+    if (!this.#hasExactLength && newPos > this.#bufLength) {
+      this.#initBuf(newPos);
+    }
+    this.#view.setInt32(this.#pos, val);
+    this.#pos = newPos;
+  }
 }
 function isTrueTypeFile(file) {
   const header = file.peekBytes(4),
@@ -26336,30 +26158,22 @@ function getFontFileType(file, {
 }
 function applyStandardFontGlyphMap(map, glyphMap) {
   for (const charCode in glyphMap) {
-    map.set(+charCode, glyphMap[charCode]);
+    map[+charCode] = glyphMap[charCode];
   }
 }
-const getSymbolGlyphIdEncoding = getLookupTableFactory(t => {
-  let glyphId = 3;
-  for (const [firstCharCode, lastCharCode] of [[0x20, 0x7e], [0xa1, 0xfe]]) {
-    for (let charCode = firstCharCode; charCode <= lastCharCode; charCode++) {
-      t[glyphId++] = SymbolSetEncoding[charCode];
-    }
-  }
-}, true);
 function buildToFontChar(encoding, glyphsUnicodeMap, differences) {
-  const toFontChar = new Map();
+  const toFontChar = [];
   let unicode;
   for (let i = 0, ii = encoding.length; i < ii; i++) {
     unicode = getUnicodeForGlyph(encoding[i], glyphsUnicodeMap);
     if (unicode !== -1) {
-      toFontChar.set(i, unicode);
+      toFontChar[i] = unicode;
     }
   }
-  for (const [charCode, glyphName] of differences) {
-    unicode = getUnicodeForGlyph(glyphName, glyphsUnicodeMap);
+  for (const charCode in differences) {
+    unicode = getUnicodeForGlyph(differences[charCode], glyphsUnicodeMap);
     if (unicode !== -1) {
-      toFontChar.set(charCode, unicode);
+      toFontChar[+charCode] = unicode;
     }
   }
   return toFontChar;
@@ -26385,9 +26199,9 @@ function convertCidString(charCode, cid, shouldThrow = false) {
   return cid;
 }
 function adjustMapping(charCodeToGlyphId, hasGlyph, newGlyphZeroId, toUnicode) {
-  const newMap = new Map();
+  const newMap = Object.create(null);
   const toUnicodeExtraMap = new Map();
-  const toFontChar = new Map();
+  const toFontChar = [];
   const usedGlyphIds = new Set();
   let privateUseAreaIndex = 0;
   const privateUseOffetStart = PRIVATE_USE_AREAS[privateUseAreaIndex][0];
@@ -26395,8 +26209,9 @@ function adjustMapping(charCodeToGlyphId, hasGlyph, newGlyphZeroId, toUnicode) {
   let privateUseOffetEnd = PRIVATE_USE_AREAS[privateUseAreaIndex][1];
   const isInPrivateArea = code => PRIVATE_USE_AREAS[0][0] <= code && code <= PRIVATE_USE_AREAS[0][1] || PRIVATE_USE_AREAS[1][0] <= code && code <= PRIVATE_USE_AREAS[1][1];
   let LIGATURE_TO_UNICODE = null;
-  for (const [charCode, gid] of charCodeToGlyphId) {
-    if (!hasGlyph(gid)) {
+  for (const originalCharCode in charCodeToGlyphId) {
+    let glyphId = charCodeToGlyphId[originalCharCode];
+    if (!hasGlyph(glyphId)) {
       continue;
     }
     if (nextAvailableFontCharCode > privateUseOffetEnd) {
@@ -26409,8 +26224,10 @@ function adjustMapping(charCodeToGlyphId, hasGlyph, newGlyphZeroId, toUnicode) {
       privateUseOffetEnd = PRIVATE_USE_AREAS[privateUseAreaIndex][1];
     }
     const fontCharCode = nextAvailableFontCharCode++;
-    const glyphId = gid === 0 ? newGlyphZeroId : gid;
-    let unicode = toUnicode.get(charCode);
+    if (glyphId === 0) {
+      glyphId = newGlyphZeroId;
+    }
+    let unicode = toUnicode.get(originalCharCode);
     if (typeof unicode === "string") {
       if (unicode.length === 1) {
         unicode = unicode.codePointAt(0);
@@ -26431,8 +26248,8 @@ function adjustMapping(charCodeToGlyphId, hasGlyph, newGlyphZeroId, toUnicode) {
       toUnicodeExtraMap.set(unicode, glyphId);
       usedGlyphIds.add(glyphId);
     }
-    newMap.set(fontCharCode, glyphId);
-    toFontChar.set(charCode, fontCharCode);
+    newMap[fontCharCode] = glyphId;
+    toFontChar[originalCharCode] = fontCharCode;
   }
   return {
     toFontChar,
@@ -26441,15 +26258,15 @@ function adjustMapping(charCodeToGlyphId, hasGlyph, newGlyphZeroId, toUnicode) {
     nextAvailableFontCharCode
   };
 }
-function getRanges(charCodeToGlyphId, toUnicodeExtraMap, numGlyphs) {
+function getRanges(glyphs, toUnicodeExtraMap, numGlyphs) {
   const codes = [];
-  for (const [charCode, glyphId] of charCodeToGlyphId) {
-    if (glyphId >= numGlyphs) {
+  for (const charCode in glyphs) {
+    if (glyphs[charCode] >= numGlyphs) {
       continue;
     }
     codes.push({
-      fontCharCode: charCode,
-      glyphId
+      fontCharCode: charCode | 0,
+      glyphId: glyphs[charCode]
     });
   }
   if (toUnicodeExtraMap) {
@@ -26489,10 +26306,18 @@ function getRanges(charCodeToGlyphId, toUnicodeExtraMap, numGlyphs) {
   }
   return ranges;
 }
-function createCmapTable(charCodeToGlyphId, toUnicodeExtraMap, numGlyphs) {
-  const ranges = getRanges(charCodeToGlyphId, toUnicodeExtraMap, numGlyphs);
-  const hasNonBmp = ranges.at(-1)[1] > 0xffff;
-  let i, j, jj;
+function createCmapTable(glyphs, toUnicodeExtraMap, numGlyphs) {
+  const ranges = getRanges(glyphs, toUnicodeExtraMap, numGlyphs);
+  const numTables = ranges.at(-1)[1] > 0xffff ? 2 : 1;
+  const cmap = new TrueTypeTableBuilder({
+    exactLength: 12
+  });
+  cmap.skip(2);
+  cmap.setInt16(numTables);
+  cmap.setArray([0x00, 0x03]);
+  cmap.setArray([0x00, 0x01]);
+  cmap.setInt32(4 + numTables * 8);
+  let i, ii, j, jj;
   for (i = ranges.length - 1; i >= 0; --i) {
     if (ranges[i][0] <= 0xffff) {
       break;
@@ -26506,22 +26331,21 @@ function createCmapTable(charCodeToGlyphId, toUnicodeExtraMap, numGlyphs) {
   const segCount = bmpLength + trailingRangesCount;
   const searchParams = OpenTypeFileBuilder.getSearchParams(segCount, 2);
   const segmentsLength = bmpLength * 2 + trailingRangesCount * 2;
-  const startCount = new DataBuilder({
+  const startCount = new TrueTypeTableBuilder({
       exactLength: segmentsLength
     }),
-    endCount = new DataBuilder({
+    endCount = new TrueTypeTableBuilder({
       exactLength: segmentsLength
     }),
-    idDeltas = new DataBuilder({
+    idDeltas = new TrueTypeTableBuilder({
       exactLength: segmentsLength
     }),
-    idRangeOffsets = new DataBuilder({
+    idRangeOffsets = new TrueTypeTableBuilder({
       exactLength: segmentsLength
     }),
-    glyphsIds = new DataBuilder({});
+    glyphsIds = new TrueTypeTableBuilder({});
   let bias = 0;
-  let format4Overflow = false;
-  for (i = 0; i < bmpLength; i++) {
+  for (i = 0, ii = bmpLength; i < ii; i++) {
     const [start, end, codes] = ranges[i];
     startCount.setInt16(start);
     endCount.setInt16(end);
@@ -26536,12 +26360,7 @@ function createCmapTable(charCodeToGlyphId, toUnicodeExtraMap, numGlyphs) {
       const offset = (segCount - i) * 2 + bias * 2;
       bias += end - start + 1;
       idDeltas.skip(2);
-      if (offset > 0xffff) {
-        format4Overflow = true;
-        idRangeOffsets.skip(2);
-      } else {
-        idRangeOffsets.setInt16(offset);
-      }
+      idRangeOffsets.setInt16(offset);
       for (j = 0, jj = codes.length; j < jj; ++j) {
         glyphsIds.setInt16(codes[j]);
       }
@@ -26557,7 +26376,7 @@ function createCmapTable(charCodeToGlyphId, toUnicodeExtraMap, numGlyphs) {
     idDeltas.setArray([0x00, 0x01]);
     idRangeOffsets.skip(2);
   }
-  const format314 = new DataBuilder({
+  const format314 = new TrueTypeTableBuilder({
     exactLength: 12 + startCount.length + endCount.length + idDeltas.length + idRangeOffsets.length + glyphsIds.length
   });
   format314.skip(2);
@@ -26571,13 +26390,17 @@ function createCmapTable(charCodeToGlyphId, toUnicodeExtraMap, numGlyphs) {
   format314.setArray(idDeltas.data);
   format314.setArray(idRangeOffsets.data);
   format314.setArray(glyphsIds.data);
-  const useFormat4 = !format4Overflow && format314.length + 4 <= 0xffff;
-  const useFormat12 = hasNonBmp || !useFormat4;
-  const numTables = (useFormat4 ? 1 : 0) + (useFormat12 ? 1 : 0);
-  let format31012 = null,
+  let cmap31012 = null,
+    format31012 = null,
     header31012 = null;
-  if (useFormat12) {
-    format31012 = new DataBuilder({});
+  if (numTables > 1) {
+    cmap31012 = new TrueTypeTableBuilder({
+      exactLength: 8
+    });
+    cmap31012.setArray([0x00, 0x03]);
+    cmap31012.setArray([0x00, 0x0a]);
+    cmap31012.setInt32(4 + numTables * 8 + 4 + format314.length);
+    format31012 = new TrueTypeTableBuilder({});
     for (const range of ranges) {
       let start = range[0];
       const codes = range[2];
@@ -26596,7 +26419,7 @@ function createCmapTable(charCodeToGlyphId, toUnicodeExtraMap, numGlyphs) {
       format31012.setInt32(range[1]);
       format31012.setInt32(code);
     }
-    header31012 = new DataBuilder({
+    header31012 = new TrueTypeTableBuilder({
       exactLength: 16
     });
     header31012.setArray([0x00, 0x0c]);
@@ -26605,47 +26428,21 @@ function createCmapTable(charCodeToGlyphId, toUnicodeExtraMap, numGlyphs) {
     header31012.skip(4);
     header31012.setInt32(format31012.length / 12);
   }
-  const headerLength = 4 + numTables * 8;
-  const format4Length = useFormat4 ? 4 + format314.length : 0;
-  const cmap = new DataBuilder({
-    exactLength: headerLength
-  });
-  cmap.skip(2);
-  cmap.setInt16(numTables);
-  let tableOffset = headerLength;
-  if (useFormat4) {
-    cmap.setArray([0x00, 0x03]);
-    cmap.setArray([0x00, 0x01]);
-    cmap.setInt32(tableOffset);
-    tableOffset += format4Length;
-  }
-  if (useFormat12) {
-    cmap.setArray([0x00, 0x03]);
-    cmap.setArray([0x00, 0x0a]);
-    cmap.setInt32(tableOffset);
-  }
-  const table = new DataBuilder({
-    exactLength: cmap.length + format4Length + (header31012?.length ?? 0) + (format31012?.length ?? 0)
+  const table = new TrueTypeTableBuilder({
+    exactLength: 4 + cmap.length + (cmap31012?.length ?? 0) + format314.length + (header31012?.length ?? 0) + (format31012?.length ?? 0)
   });
   table.setArray(cmap.data);
-  if (useFormat4) {
-    table.setArray([0x00, 0x04]);
-    table.setInt16(format314.length + 4);
-    table.setArray(format314.data);
-  }
-  if (useFormat12) {
-    table.setArray(header31012.data);
-    table.setArray(format31012.data);
-  }
+  table.setArray(cmap31012?.data ?? []);
+  table.setArray([0x00, 0x04]);
+  table.setInt16(format314.length + 4);
+  table.setArray(format314.data);
+  table.setArray(header31012?.data ?? []);
+  table.setArray(format31012?.data ?? []);
   return table.data;
 }
 function validateOS2Table(os2, file) {
   file.pos = (file.start || 0) + os2.offset;
   const version = file.getUint16();
-  const minLength = [78, 86, 96, 96, 96, 100][version];
-  if (minLength === undefined || os2.length < minLength) {
-    return false;
-  }
   file.skip(60);
   const selection = file.getUint16();
   if (version < 4 && selection & 0x0300) {
@@ -26664,7 +26461,7 @@ function validateOS2Table(os2, file) {
   os2.data[8] = os2.data[9] = 0;
   return true;
 }
-function createOS2Table(properties, charCodeToGlyphId, override) {
+function createOS2Table(properties, charstrings, override) {
   override ||= {
     unitsPerEm: 0,
     yMax: 0,
@@ -26679,8 +26476,9 @@ function createOS2Table(properties, charCodeToGlyphId, override) {
   let firstCharIndex = null;
   let lastCharIndex = 0;
   let position = -1;
-  if (charCodeToGlyphId) {
-    for (const code of charCodeToGlyphId.keys()) {
+  if (charstrings) {
+    for (let code in charstrings) {
+      code |= 0;
       if (firstCharIndex > code || !firstCharIndex) {
         firstCharIndex = code;
       }
@@ -26717,7 +26515,7 @@ function createOS2Table(properties, charCodeToGlyphId, override) {
   }
   const winAscent = override.yMax || typoAscent;
   const winDescent = -override.yMin || -typoDescent;
-  const os2 = new DataBuilder({
+  const os2 = new TrueTypeTableBuilder({
     exactLength: 96
   });
   os2.setArray([0x00, 0x03]);
@@ -26759,7 +26557,7 @@ function createOS2Table(properties, charCodeToGlyphId, override) {
   return os2.data;
 }
 function createPostTable(properties) {
-  const post = new DataBuilder({
+  const post = new TrueTypeTableBuilder({
     exactLength: 32
   });
   post.setArray([0x00, 0x03, 0x00, 0x00]);
@@ -26775,12 +26573,12 @@ function createPostscriptName(name) {
 function createNameTable(name, proto) {
   proto ||= [[], []];
   const strings = [proto[0][0] || "Original licence", proto[0][1] || name, proto[0][2] || "Unknown", proto[0][3] || "uniqueID", proto[0][4] || name, proto[0][5] || "Version 0.11", proto[0][6] || createPostscriptName(name), proto[0][7] || "Unknown", proto[0][8] || "Unknown", proto[0][9] || "Unknown"];
-  const stringsBytes = strings.map(stringToBytes);
+  const stringsBytes = strings.map(s => stringToBytes(s));
   const stringsUnicodeBytes = new Array(strings.length);
   let i, ii, j, jj, str;
   for (i = 0, ii = strings.length; i < ii; i++) {
     str = proto[1][i] || strings[i];
-    const strUnicode = new DataBuilder({
+    const strUnicode = new TrueTypeTableBuilder({
       exactLength: str.length * 2
     });
     for (j = 0, jj = str.length; j < jj; j++) {
@@ -26798,7 +26596,7 @@ function createNameTable(name, proto) {
     const strs = namesBytes[i];
     for (j = 0, jj = strs.length; j < jj; j++) {
       str = strs[j];
-      const nameRecord = new DataBuilder({
+      const nameRecord = new TrueTypeTableBuilder({
         exactLength: 6 + platformsBytes[i].length + encodingsBytes[i].length + languagesBytes[i].length
       });
       nameRecord.setArray(platformsBytes[i]);
@@ -26812,7 +26610,7 @@ function createNameTable(name, proto) {
     }
   }
   const namesRecordCount = stringsBytes.length * platformsBytes.length;
-  const nameTable = new DataBuilder({
+  const nameTable = new TrueTypeTableBuilder({
     exactLength: 6 + Math.sumPrecise(nameRecords.map(arr => arr.length)) + Math.sumPrecise(stringsBytes.map(arr => arr.length)) + Math.sumPrecise(stringsUnicodeBytes.map(arr => arr.length))
   });
   nameTable.skip(2);
@@ -26833,10 +26631,10 @@ class Font {
   #charsCache = new Map();
   #glyphCache = new Map();
   charProcOperatorList;
-  toFontChar = new Map();
   constructor(name, file, properties, evaluatorOptions) {
     this.name = name;
     this.psName = null;
+    this.mimetype = null;
     this.disableFontFace = evaluatorOptions.disableFontFace;
     this.fontExtraProperties = evaluatorOptions.fontExtraProperties;
     this.loadedName = properties.loadedName;
@@ -26896,9 +26694,10 @@ class Font {
     this.bbox = properties.bbox;
     this.defaultEncoding = properties.defaultEncoding;
     this.toUnicode = properties.toUnicode;
+    this.toFontChar = [];
     if (properties.type === "Type3") {
       for (let charCode = 0; charCode < 256; charCode++) {
-        this.toFontChar.set(charCode, this.differences.get(charCode) || properties.defaultEncoding[charCode]);
+        this.toFontChar[charCode] = this.differences[charCode] || properties.defaultEncoding[charCode];
       }
       return;
     }
@@ -26926,6 +26725,7 @@ class Font {
           info("MMType1 font (" + name + "), falling back to Type1.");
         case "Type1":
         case "CIDFontType0":
+          this.mimetype = "font/opentype";
           const cff = subtype === "Type1C" || subtype === "CIDFontType0C" ? new CFFFont(file, properties) : new Type1Font(name, file, properties);
           adjustWidths(properties);
           data = this.convert(name, cff, properties);
@@ -26933,6 +26733,7 @@ class Font {
         case "OpenType":
         case "TrueType":
         case "CIDFontType2":
+          this.mimetype = "font/opentype";
           data = this.checkAndRepair(name, file, properties);
           adjustWidths(properties);
           if (this.isOpenType) {
@@ -26958,7 +26759,7 @@ class Font {
     this.seacMap = properties.seacMap;
   }
   get renderer() {
-    const renderer = FontRendererFactory.create(this, (/* inlined export .SEAC_ANALYSIS_ENABLED */true));
+    const renderer = FontRendererFactory.create(this, SEAC_ANALYSIS_ENABLED);
     return shadow(this, "renderer", renderer);
   }
   #getExportData(props) {
@@ -27003,71 +26804,67 @@ class Font {
         this.capHeight = metrics.capHeight / PDF_GLYPH_SPACE_UNITS;
       }
     }
-    this.bold = /bold/i.test(fontName);
-    this.italic = /oblique|italic/i.test(fontName);
-    this.black = /Black/.test(name);
-    const isNarrow = /Narrow/.test(name);
+    this.bold = /bold/gi.test(fontName);
+    this.italic = /oblique|italic/gi.test(fontName);
+    this.black = /Black/g.test(name);
+    const isNarrow = /Narrow/g.test(name);
     this.remeasure = (!isStandardFont || isNarrow) && Object.keys(this.widths).length > 0;
     if ((isStandardFont || isMappedToStandardFont) && type === "CIDFontType2" && this.cidEncoding.startsWith("Identity-")) {
       const cidToGidMap = properties.cidToGidMap;
-      const map = new Map();
-      if (/Trebuchet/i.test(name)) {
-        applyStandardFontGlyphMap(map, getGlyphMapForMacOrderedFonts());
-        applyStandardFontGlyphMap(map, getSupplementalGlyphMapForTrebuchetMS());
-      } else {
-        applyStandardFontGlyphMap(map, getGlyphMapForStandardFonts());
-        if (/Arial-?Black/i.test(name)) {
-          applyStandardFontGlyphMap(map, getSupplementalGlyphMapForArialBlack());
-        } else if (/Calibri/i.test(name)) {
-          applyStandardFontGlyphMap(map, getSupplementalGlyphMapForCalibri());
-        }
+      const map = [];
+      applyStandardFontGlyphMap(map, getGlyphMapForStandardFonts());
+      if (/Arial-?Black/i.test(name)) {
+        applyStandardFontGlyphMap(map, getSupplementalGlyphMapForArialBlack());
+      } else if (/Calibri/i.test(name)) {
+        applyStandardFontGlyphMap(map, getSupplementalGlyphMapForCalibri());
       }
       if (cidToGidMap) {
-        for (const [charCode, cid] of map) {
-          if (cidToGidMap.has(cid)) {
-            map.set(charCode, cidToGidMap.get(cid));
+        for (const charCode in map) {
+          const cid = map[charCode];
+          if (cidToGidMap[cid] !== undefined) {
+            map[+charCode] = cidToGidMap[cid];
           }
         }
-        if (cidToGidMap.size !== this.toUnicode.size && properties.hasIncludedToUnicodeMap && this.toUnicode instanceof IdentityToUnicodeMap) {
-          for (const [charCode, cid] of map) {
-            if (!cidToGidMap.has(cid) && this.toUnicode.has(charCode)) {
-              map.delete(charCode);
+        if (cidToGidMap.length !== this.toUnicode.length && properties.hasIncludedToUnicodeMap && this.toUnicode instanceof IdentityToUnicodeMap) {
+          this.toUnicode.forEach(function (charCode, unicodeCharCode) {
+            const cid = map[charCode];
+            if (cidToGidMap[cid] === undefined) {
+              map[+charCode] = unicodeCharCode;
             }
-          }
+          });
         }
       }
       if (!(this.toUnicode instanceof IdentityToUnicodeMap)) {
-        this.toUnicode.forEach((charCode, unicodeCharCode) => {
-          map.set(charCode, unicodeCharCode);
+        this.toUnicode.forEach(function (charCode, unicodeCharCode) {
+          map[+charCode] = unicodeCharCode;
         });
       }
       this.toFontChar = map;
-      this.toUnicode = new ToUnicodeMap(new Map(map));
+      this.toUnicode = new ToUnicodeMap(map);
     } else if (/Symbol/i.test(fontName)) {
-      const isCidKeyed = this.composite && this.cidEncoding.startsWith("Identity-");
-      this.toFontChar = buildToFontChar(isCidKeyed ? getSymbolGlyphIdEncoding() : SymbolSetEncoding, getGlyphsUnicode(), this.differences);
+      this.toFontChar = buildToFontChar(SymbolSetEncoding, getGlyphsUnicode(), this.differences);
     } else if (/Dingbats/i.test(fontName)) {
       this.toFontChar = buildToFontChar(ZapfDingbatsEncoding, getDingbatsGlyphsUnicode(), this.differences);
     } else if (isStandardFont || isMappedToStandardFont) {
       const map = buildToFontChar(this.defaultEncoding, getGlyphsUnicode(), this.differences);
       if (type === "CIDFontType2" && !this.cidEncoding.startsWith("Identity-") && !(this.toUnicode instanceof IdentityToUnicodeMap)) {
-        this.toUnicode.forEach((charCode, unicodeCharCode) => {
-          map.set(charCode, unicodeCharCode);
+        this.toUnicode.forEach(function (charCode, unicodeCharCode) {
+          map[+charCode] = unicodeCharCode;
         });
       }
       this.toFontChar = map;
     } else {
       const glyphsUnicodeMap = getGlyphsUnicode();
-      const map = new Map();
+      const map = [];
       this.toUnicode.forEach((charCode, unicodeCharCode) => {
         if (!this.composite) {
-          const glyphName = this.differences.get(charCode) || this.defaultEncoding[charCode];
+          const glyphName = this.differences[charCode] || this.defaultEncoding[charCode];
           const unicode = getUnicodeForGlyph(glyphName, glyphsUnicodeMap);
           if (unicode !== -1) {
             unicodeCharCode = unicode;
           }
         }
-        map.set(charCode, unicodeCharCode);
+        map[+charCode] = unicodeCharCode;
       });
       if (this.composite && this.toUnicode instanceof IdentityToUnicodeMap) {
         if (/Tahoma|Verdana/i.test(name)) {
@@ -27117,14 +26914,13 @@ class Font {
         data[8] = data[9] = data[10] = data[11] = 0;
         data[17] |= 0x20;
       }
-      const view = tag === "CFF " ? null : new DataView(data.buffer, data.byteOffset, data.byteLength);
       return {
         tag,
         checksum,
         length,
         offset,
         data,
-        view
+        view: new DataView(data.buffer, data.byteOffset, data.byteLength)
       };
     }
     function readOpenTypeHeader(ttf) {
@@ -27179,9 +26975,9 @@ class Font {
           throw new FormatError('TrueType Collection font must contain a "name" table.');
         }
         const [nameTable] = readNameTable(potentialTables.name);
-        for (const nameArr of nameTable) {
-          for (const entry of nameArr) {
-            const nameEntry = entry?.replaceAll(/\s/g, "");
+        for (let j = 0, jj = nameTable.length; j < jj; j++) {
+          for (let k = 0, kk = nameTable[j].length; k < kk; k++) {
+            const nameEntry = nameTable[j][k]?.replaceAll(/\s/g, "");
             if (!nameEntry) {
               continue;
             }
@@ -27433,6 +27229,7 @@ class Font {
           hasShortCmap: false
         };
       }
+      mappings.sort((a, b) => a.charCode - b.charCode);
       const finalMappings = [],
         seenCharCodes = new Set();
       for (const map of mappings) {
@@ -27448,7 +27245,7 @@ class Font {
       return {
         platformId: potentialTable.platformId,
         encodingId: potentialTable.encodingId,
-        mappings: finalMappings.sort((a, b) => a.charCode - b.charCode),
+        mappings: finalMappings,
         hasShortCmap
       };
     }
@@ -27692,18 +27489,14 @@ class Font {
       if (last.offset !== 0 && last.endOffset === 0) {
         last.endOffset = oldGlyfDataLength;
       }
-      const droppedGlyphs = pruneCompositeGlyphCycles(oldGlyfData, locaEntries, numGlyphs);
-      const missingGlyphs = new Uint8Array(numGlyphs);
+      const missingGlyphs = Object.create(null);
       let writeOffset = 0;
       itemEncode(locaData, 0, writeOffset);
       for (i = 0, j = itemSize; i < numGlyphs; i++, j += itemSize) {
-        const glyphProfile = droppedGlyphs.has(i) ? {
-          length: 0,
-          sizeOfInstructions: 0
-        } : sanitizeGlyph(oldGlyfData, locaEntries[i].offset, locaEntries[i].endOffset, newGlyfData, writeOffset, hintsValid);
+        const glyphProfile = sanitizeGlyph(oldGlyfData, locaEntries[i].offset, locaEntries[i].endOffset, newGlyfData, writeOffset, hintsValid);
         const newLength = glyphProfile.length;
         if (newLength === 0) {
-          missingGlyphs[i] = 1;
+          missingGlyphs[i] = true;
         }
         if (glyphProfile.sizeOfInstructions > maxSizeOfInstructions) {
           maxSizeOfInstructions = glyphProfile.sizeOfInstructions;
@@ -28102,14 +27895,8 @@ class Font {
       tables = readTables(font, header.numTables);
     }
     const isTrueType = !tables["CFF "];
-    let parsedCff = null;
     if (!isTrueType) {
-      try {
-        parsedCff = new CFFParser(new Stream(tables["CFF "].data), properties, (/* inlined export .SEAC_ANALYSIS_ENABLED */true)).parse();
-      } catch {
-        warn("Failed to parse font " + properties.loadedName);
-      }
-      if (header.version === "OTTO" && (!properties.composite || properties.fontFileN === "FontFile3" && parsedCff?.isCIDFont) || !tables.head || !tables.hhea || !tables.maxp || !tables.post) {
+      if (header.version === "OTTO" && !properties.composite || !tables.head || !tables.hhea || !tables.maxp || !tables.post) {
         return this.convert(name, new CFFFont(new Stream(tables["CFF "].data), properties), properties);
       }
       delete tables.glyf;
@@ -28135,11 +27922,14 @@ class Font {
       throw new FormatError('Required "maxp" table is not found');
     }
     let numGlyphsFromCFF;
-    if (parsedCff) {
+    if (!isTrueType) {
       try {
-        parsedCff.duplicateFirstGlyph();
-        tables["CFF "].data = new CFFCompiler(parsedCff).compile();
-        numGlyphsFromCFF = parsedCff.charStringCount;
+        const parser = new CFFParser(new Stream(tables["CFF "].data), properties, SEAC_ANALYSIS_ENABLED);
+        const cff = parser.parse();
+        cff.duplicateFirstGlyph();
+        const compiler = new CFFCompiler(cff);
+        tables["CFF "].data = compiler.compile();
+        numGlyphsFromCFF = cff.charStringCount;
       } catch {
         warn("Failed to compile font " + properties.loadedName);
       }
@@ -28231,19 +28021,6 @@ class Font {
       maxFunctionDefs = font.getUint16();
       font.pos += 4;
       maxSizeOfInstructions = font.getUint16();
-    } else if (isTrueType && version === 0x00005000) {
-      const newMaxp = new Uint8Array(32);
-      writeUint32(newMaxp, 0, 0x00010000);
-      newMaxp[4] = numGlyphs >> 8 & 0xff;
-      newMaxp[5] = numGlyphs & 0xff;
-      newMaxp.fill(0xff, 6, 14);
-      newMaxp[15] = 2;
-      newMaxp[28] = 0xff;
-      newMaxp[29] = 0xff;
-      newMaxp[31] = 0x10;
-      tables.maxp.data = newMaxp;
-      tables.maxp.length = 32;
-      version = 0x00010000;
     }
     tables.maxp.data[4] = numGlyphsOut >> 8;
     tables.maxp.data[5] = numGlyphsOut & 255;
@@ -28258,7 +28035,7 @@ class Font {
       throw new FormatError('Required "head" table is not found');
     }
     sanitizeHead(tables.head, numGlyphs, isTrueType ? tables.loca.length : 0);
-    let missingGlyphs = null;
+    let missingGlyphs = Object.create(null);
     if (isTrueType) {
       const glyphsInfo = sanitizeGlyphLocations(tables.loca, tables.glyf, numGlyphs, isGlyphLocationsLong, hintsValid, dupFirstEntry, maxSizeOfInstructions);
       missingGlyphs = glyphsInfo.missingGlyphs;
@@ -28298,26 +28075,28 @@ class Font {
       tag: "post",
       data: createPostTable(properties)
     };
-    const charCodeToGlyphId = new Map();
+    const charCodeToGlyphId = Object.create(null);
     function hasGlyph(glyphId) {
-      return !missingGlyphs?.[glyphId];
+      return !missingGlyphs[glyphId];
     }
     if (properties.composite) {
-      const {
-        cidToGidMap,
-        cMap
-      } = properties;
-      const isCidToGidMapEmpty = !cidToGidMap?.size;
-      cMap.forEach((charCode, cid) => {
+      const cidToGidMap = properties.cidToGidMap || [];
+      const isCidToGidMapEmpty = cidToGidMap.length === 0;
+      properties.cMap.forEach(function (charCode, cid) {
         if (typeof cid === "string") {
           cid = convertCidString(charCode, cid, true);
         }
         if (cid > 0xffff) {
           throw new FormatError("Max size of CID is 65,535");
         }
-        const glyphId = isCidToGidMapEmpty ? cid : cidToGidMap.get(cid) ?? -1;
+        let glyphId = -1;
+        if (isCidToGidMapEmpty) {
+          glyphId = cid;
+        } else if (cidToGidMap[cid] !== undefined) {
+          glyphId = cidToGidMap[cid];
+        }
         if (glyphId >= 0 && glyphId < numGlyphs && hasGlyph(glyphId)) {
-          charCodeToGlyphId.set(charCode, glyphId);
+          charCodeToGlyphId[charCode] = glyphId;
         }
       });
     } else {
@@ -28334,8 +28113,8 @@ class Font {
         const glyphsUnicodeMap = getGlyphsUnicode();
         for (let charCode = 0; charCode < 256; charCode++) {
           let glyphName;
-          if (this.differences.has(charCode)) {
-            glyphName = this.differences.get(charCode);
+          if (this.differences[charCode] !== undefined) {
+            glyphName = this.differences[charCode];
           } else if (baseEncoding.length && baseEncoding[charCode] !== "") {
             glyphName = baseEncoding[charCode];
           } else {
@@ -28366,13 +28145,13 @@ class Font {
             if (mapping.charCode !== unicodeOrCharCode) {
               continue;
             }
-            charCodeToGlyphId.set(charCode, mapping.glyphId);
+            charCodeToGlyphId[charCode] = mapping.glyphId;
             break;
           }
         }
       } else if (cmapPlatformId === 0) {
         for (const mapping of cmapMappings) {
-          charCodeToGlyphId.set(mapping.charCode, mapping.glyphId);
+          charCodeToGlyphId[mapping.charCode] = mapping.glyphId;
         }
         forcePostTable = true;
       } else if (cmapPlatformId === 3 && cmapEncodingId === 0) {
@@ -28381,36 +28160,36 @@ class Font {
           if (charCode >= 0xf000 && charCode <= 0xf0ff) {
             charCode &= 0xff;
           }
-          charCodeToGlyphId.set(charCode, mapping.glyphId);
+          charCodeToGlyphId[charCode] = mapping.glyphId;
         }
       } else {
         for (const mapping of cmapMappings) {
-          charCodeToGlyphId.set(mapping.charCode, mapping.glyphId);
+          charCodeToGlyphId[mapping.charCode] = mapping.glyphId;
         }
       }
-      if (properties.glyphNames && (baseEncoding.length || this.differences.size)) {
+      if (properties.glyphNames && (baseEncoding.length || this.differences.length)) {
         for (let i = 0; i < 256; ++i) {
-          if (!forcePostTable && charCodeToGlyphId.has(i)) {
+          if (!forcePostTable && charCodeToGlyphId[i] !== undefined) {
             continue;
           }
-          const glyphName = this.differences.get(i) || baseEncoding[i];
+          const glyphName = this.differences[i] || baseEncoding[i];
           if (!glyphName) {
             continue;
           }
           const glyphId = properties.glyphNames.indexOf(glyphName);
           if (glyphId > 0 && hasGlyph(glyphId)) {
-            charCodeToGlyphId.set(i, glyphId);
+            charCodeToGlyphId[i] = glyphId;
           }
         }
       }
-      if (!properties.isInternalFont && !charCodeToGlyphId.has(0) && hasGlyph(0)) {
-        charCodeToGlyphId.set(0, 0);
-      }
     }
-    if (!charCodeToGlyphId.size) {
-      charCodeToGlyphId.set(0, 0);
+    if (charCodeToGlyphId.length === 0) {
+      charCodeToGlyphId[0] = 0;
     }
-    const glyphZeroId = dupFirstEntry ? numGlyphsOut - 1 : 0;
+    let glyphZeroId = numGlyphsOut - 1;
+    if (!dupFirstEntry) {
+      glyphZeroId = 0;
+    }
     if (!properties.cssFontInfo) {
       const newMapping = adjustMapping(charCodeToGlyphId, hasGlyph, glyphZeroId, this.toUnicode);
       this.toFontChar = newMapping.toFontChar;
@@ -28449,7 +28228,10 @@ class Font {
     if (properties.builtInEncoding) {
       adjustType1ToUnicode(properties, properties.builtInEncoding);
     }
-    const glyphZeroId = font instanceof CFFFont ? font.numGlyphs - 1 : 1;
+    let glyphZeroId = 1;
+    if (font instanceof CFFFont) {
+      glyphZeroId = font.numGlyphs - 1;
+    }
     const mapping = font.getGlyphMapping(properties);
     let newMapping = null;
     let newCharCodeToGlyphId = mapping;
@@ -28460,33 +28242,33 @@ class Font {
       newCharCodeToGlyphId = newMapping.charCodeToGlyphId;
       toUnicodeExtraMap = newMapping.toUnicodeExtraMap;
     }
-    const {
-      numGlyphs,
-      seacs
-    } = font;
+    const numGlyphs = font.numGlyphs;
     function getCharCodes(charCodeToGlyphId, glyphId) {
       let charCodes = null;
-      for (const [charCode, gid] of charCodeToGlyphId) {
-        if (glyphId === gid) {
-          (charCodes ??= []).push(charCode);
+      for (const charCode in charCodeToGlyphId) {
+        if (glyphId === charCodeToGlyphId[charCode]) {
+          (charCodes ||= []).push(charCode | 0);
         }
       }
       return charCodes;
     }
     function createCharCode(charCodeToGlyphId, glyphId) {
-      for (const [charCode, gid] of charCodeToGlyphId) {
-        if (glyphId === gid) {
-          return charCode;
+      for (const charCode in charCodeToGlyphId) {
+        if (glyphId === charCodeToGlyphId[charCode]) {
+          return charCode | 0;
         }
       }
-      newMapping.charCodeToGlyphId.set(newMapping.nextAvailableFontCharCode, glyphId);
+      newMapping.charCodeToGlyphId[newMapping.nextAvailableFontCharCode] = glyphId;
       return newMapping.nextAvailableFontCharCode++;
     }
-    if (newMapping && (/* inlined export .SEAC_ANALYSIS_ENABLED */true) && seacs?.size) {
+    const seacs = font.seacs;
+    if (newMapping && SEAC_ANALYSIS_ENABLED && seacs?.length) {
       const matrix = properties.fontMatrix || FONT_IDENTITY_MATRIX;
       const charset = font.getCharset();
-      const seacMap = new Map();
-      for (const [glyphId, seac] of seacs) {
+      const seacMap = Object.create(null);
+      for (let glyphId in seacs) {
+        glyphId |= 0;
+        const seac = seacs[glyphId];
         const baseGlyphName = StandardEncoding[seac[2]];
         const accentGlyphName = StandardEncoding[seac[3]];
         const baseGlyphId = charset.indexOf(baseGlyphName);
@@ -28503,16 +28285,14 @@ class Font {
           continue;
         }
         for (const charCode of charCodes) {
-          const {
-            charCodeToGlyphId
-          } = newMapping;
+          const charCodeToGlyphId = newMapping.charCodeToGlyphId;
           const baseFontCharCode = createCharCode(charCodeToGlyphId, baseGlyphId);
           const accentFontCharCode = createCharCode(charCodeToGlyphId, accentGlyphId);
-          seacMap.set(charCode, {
+          seacMap[charCode] = {
             baseFontCharCode,
             accentFontCharCode,
             accentOffset
-          });
+          };
         }
       }
       properties.seacMap = seacMap;
@@ -28524,7 +28304,7 @@ class Font {
     builder.addTable("cmap", createCmapTable(newCharCodeToGlyphId, toUnicodeExtraMap, numGlyphs));
     builder.addTable("head", function fontTableHead() {
       const dateArr = [0x00, 0x00, 0x00, 0x00, 0x9e, 0x0b, 0x7e, 0x27];
-      const head = new DataBuilder({
+      const head = new TrueTypeTableBuilder({
         exactLength: 54
       });
       head.setArray([0x00, 0x01, 0x00, 0x00]);
@@ -28545,7 +28325,7 @@ class Font {
       return head.data;
     }());
     builder.addTable("hhea", function fontTableHhea() {
-      const hhea = new DataBuilder({
+      const hhea = new TrueTypeTableBuilder({
         exactLength: 36
       });
       hhea.setArray([0x00, 0x01, 0x00, 0x00]);
@@ -28563,11 +28343,11 @@ class Font {
     builder.addTable("hmtx", function fontTableHmtx() {
       const charstrings = font.charstrings;
       const cffWidths = font.cff?.widths ?? null;
-      const hmtx = new DataBuilder({
+      const hmtx = new TrueTypeTableBuilder({
         exactLength: numGlyphs * 4
       });
       hmtx.skip(4);
-      for (let i = 1; i < numGlyphs; i++) {
+      for (let i = 1, ii = numGlyphs; i < ii; i++) {
         let width = 0;
         if (charstrings) {
           width = charstrings[i - 1].width || 0;
@@ -28580,7 +28360,7 @@ class Font {
       return hmtx.data;
     }());
     builder.addTable("maxp", function fontTableMaxp() {
-      const maxp = new DataBuilder({
+      const maxp = new TrueTypeTableBuilder({
         exactLength: 6
       });
       maxp.setArray([0x00, 0x00, 0x50, 0x00]);
@@ -28638,26 +28418,20 @@ class Font {
     if (typeof width !== "number") {
       width = this.defaultWidth;
     }
-    let vmetric = this.vmetrics?.[widthCode];
-    if (!vmetric && this.defaultVMetrics) {
-      const [w1y,, vy] = this.defaultVMetrics;
-      vmetric = [w1y, width * 0.5, vy];
-    }
+    const vmetric = this.vmetrics?.[widthCode] || this.defaultVMetrics;
     let unicode = this.toUnicode.get(charcode) || charcode;
     if (typeof unicode === "number") {
       unicode = String.fromCharCode(unicode);
     }
-    let isInFont = this.toFontChar.has(charcode);
-    fontCharCode = this.toFontChar.get(charcode) || charcode;
+    let isInFont = this.toFontChar[charcode] !== undefined;
+    fontCharCode = this.toFontChar[charcode] || charcode;
     if (this.missingFile) {
-      const glyphName = this.differences.get(charcode) || this.defaultEncoding[charcode];
+      const glyphName = this.differences[charcode] || this.defaultEncoding[charcode];
       if ((glyphName === ".notdef" || glyphName === "") && this.type === "Type1") {
         fontCharCode = 0x20;
         if (glyphName === "") {
           width ||= this._spaceWidth;
-          if (!this.toUnicode.has(charcode)) {
-            unicode = String.fromCharCode(fontCharCode);
-          }
+          unicode = String.fromCharCode(fontCharCode);
         }
       }
       fontCharCode = mapSpecialUnicodeValues(fontCharCode);
@@ -28666,9 +28440,9 @@ class Font {
       operatorListId = fontCharCode;
     }
     let accent = null;
-    const seac = this.seacMap?.get(charcode);
-    if (seac) {
+    if (this.seacMap?.[charcode]) {
       isInFont = true;
+      const seac = this.seacMap[charcode];
       fontCharCode = seac.baseFontCharCode;
       accent = {
         fontChar: String.fromCodePoint(seac.accentFontCharCode),
@@ -28751,7 +28525,7 @@ class Font {
     const getCharCode = this.toUnicode instanceof IdentityToUnicodeMap ? unicode => this.toUnicode.charCodeOf(unicode) : unicode => this.toUnicode.charCodeOf(String.fromCodePoint(unicode));
     for (let i = 0, ii = str.length; i < ii; i++) {
       const unicode = str.codePointAt(i);
-      if (unicode > 0xffff) {
+      if (unicode > 0xd7ff && (unicode < 0xe000 || unicode > 0xfffd)) {
         i++;
       }
       if (this.toUnicode) {
@@ -29177,7 +28951,7 @@ class lexer_Lexer {
     this.data = data;
     this.pos = 0;
     this.len = data.length;
-    this._numberPattern = /[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?/iy;
+    this._numberPattern = /[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/y;
     this._identifierPattern = /[a-z]+/y;
   }
   _skipComment() {
@@ -29208,7 +28982,10 @@ class lexer_Lexer {
     this.pos = this._identifierPattern.lastIndex;
     const op = match[0];
     const token = lexer_Lexer.#operatorSingletons[op];
-    return token ?? new Token(TOKEN.number, 0);
+    if (!token) {
+      return new Token(TOKEN.number, 0);
+    }
+    return token;
   }
   next() {
     while (this.pos < this.len) {
@@ -30279,13 +30056,19 @@ class PsJsCompiler {
       second
     } = node;
     if (op === TOKEN.bitshift) {
-      if (first.type !== PS_NODE.const || !Number.isInteger(first.value) || !this._compileNode(second)) {
+      if (first.type !== PS_NODE.const || !Number.isInteger(first.value)) {
+        return false;
+      }
+      if (!this._compileNode(second)) {
         return false;
       }
       this.ir.push(OP.SHIFT, first.value);
       return true;
     }
-    if (!this._compileNode(second) || !this._compileNode(first)) {
+    if (!this._compileNode(second)) {
+      return false;
+    }
+    if (!this._compileNode(first)) {
       return false;
     }
     switch (op) {
@@ -30866,7 +30649,7 @@ class PSStackBasedInterpreter {
       const base = this.#sp - nOut;
       for (let i = 0; i < nOut; i++) {
         const v = base + i >= 0 ? this.#stack[base + i] : 0;
-        dest[destOffset + i] = MathClamp(v, range[i * 2], range[i * 2 + 1]);
+        dest[destOffset + i] = MathClamp(range[i * 2 + 1], range[i * 2], v);
       }
     };
   }
@@ -30883,7 +30666,6 @@ function buildPostScriptJsFunction(source, domain, range, forceInterpreter = fal
 }
 
 ;// ./src/core/postscript/wasm_compiler.js
-
 
 
 const wasm_compiler_OP = {
@@ -30951,7 +30733,7 @@ function unsignedLEB128(n) {
   return out;
 }
 function encodeASCIIString(s) {
-  return [...unsignedLEB128(s.length), ...stringToBytes(s)];
+  return [...unsignedLEB128(s.length), ...Array.from(s, c => c.charCodeAt(0))];
 }
 function section(id, data) {
   return [id, ...unsignedLEB128(data.length), ...data];
@@ -31033,17 +30815,6 @@ class PsWasmCompiler {
       }
       this._code.push(b);
     } while (n !== 0);
-  }
-  _emitSLEB128(n) {
-    for (;;) {
-      const b = n & 0x7f;
-      n >>= 7;
-      if (n === 0 && (b & 0x40) === 0 || n === -1 && (b & 0x40) !== 0) {
-        this._code.push(b);
-        return;
-      }
-      this._code.push(b | 0x80);
-    }
   }
   _emitF64Const(value) {
     this._code.push(wasm_compiler_OP.f64_const);
@@ -31202,7 +30973,10 @@ class PsWasmCompiler {
   _compileSafeDivNode(first, second) {
     const tmp = this._allocLocal();
     try {
-      if (!this._compileNode(second) || !this._compileNode(first)) {
+      if (!this._compileNode(second)) {
+        return false;
+      }
+      if (!this._compileNode(first)) {
         return false;
       }
       const code = this._code;
@@ -31220,7 +30994,10 @@ class PsWasmCompiler {
   _compileSafeIdivNode(first, second) {
     const tmp = this._allocLocal();
     try {
-      if (!this._compileNode(second) || !this._compileNode(first)) {
+      if (!this._compileNode(second)) {
+        return false;
+      }
+      if (!this._compileNode(first)) {
         return false;
       }
       const code = this._code;
@@ -31236,7 +31013,10 @@ class PsWasmCompiler {
     }
   }
   _compileBitshiftNode(first, second) {
-    if (first.type !== PS_NODE.const || !Number.isInteger(first.value) || !this._compileNode(second)) {
+    if (first.type !== PS_NODE.const || !Number.isInteger(first.value)) {
+      return false;
+    }
+    if (!this._compileNode(second)) {
       return false;
     }
     const code = this._code;
@@ -31244,11 +31024,11 @@ class PsWasmCompiler {
     const shift = first.value;
     if (shift > 0) {
       code.push(wasm_compiler_OP.i32_const);
-      this._emitSLEB128(shift);
+      this._emitULEB128(shift);
       code.push(wasm_compiler_OP.i32_shl);
     } else if (shift < 0) {
       code.push(wasm_compiler_OP.i32_const);
-      this._emitSLEB128(-shift);
+      this._emitULEB128(-shift);
       code.push(wasm_compiler_OP.i32_shr_s);
     }
     code.push(wasm_compiler_OP.f64_convert_i32_s);
@@ -31304,7 +31084,10 @@ class PsWasmCompiler {
   _compileAtanNode(first, second) {
     const localR = this._allocLocal();
     try {
-      if (!this._compileNode(second) || !this._compileNode(first)) {
+      if (!this._compileNode(second)) {
+        return false;
+      }
+      if (!this._compileNode(first)) {
         return false;
       }
       const code = this._code;
@@ -31326,7 +31109,10 @@ class PsWasmCompiler {
     }
   }
   _compileBitwiseNode(op, first, second) {
-    if (!this._compileBitwiseOperandI32(second) || !this._compileBitwiseOperandI32(first)) {
+    if (!this._compileBitwiseOperandI32(second)) {
+      return false;
+    }
+    if (!this._compileBitwiseOperandI32(first)) {
       return false;
     }
     const code = this._code;
@@ -31368,8 +31154,13 @@ class PsWasmCompiler {
       } finally {
         this._releaseLocal(tmp);
       }
-    } else if (!this._compileNode(second) || !this._compileNode(first)) {
-      return false;
+    } else {
+      if (!this._compileNode(second)) {
+        return false;
+      }
+      if (!this._compileNode(first)) {
+        return false;
+      }
     }
     const code = this._code;
     switch (op) {
@@ -31436,20 +31227,29 @@ class PsWasmCompiler {
     if (op === TOKEN.atan) {
       return this._compileAtanNode(first, second);
     }
-    return op === TOKEN.and || op === TOKEN.or || op === TOKEN.xor ? this._compileBitwiseNode(op, first, second) : this._compileStandardBinaryNode(op, first, second);
+    if (op === TOKEN.and || op === TOKEN.or || op === TOKEN.xor) {
+      return this._compileBitwiseNode(op, first, second);
+    }
+    return this._compileStandardBinaryNode(op, first, second);
   }
   _compileNodeAsBoolI32(node) {
     if (node.type === PS_NODE.binary) {
       const wasmOp = PsWasmCompiler.#comparisonToOp.get(node.op);
       if (wasmOp !== undefined) {
-        if (!this._compileNode(node.second) || !this._compileNode(node.first)) {
+        if (!this._compileNode(node.second)) {
+          return false;
+        }
+        if (!this._compileNode(node.first)) {
           return false;
         }
         this._code.push(wasmOp);
         return true;
       }
       if (node.valueType === PS_VALUE_TYPE.boolean && (node.op === TOKEN.and || node.op === TOKEN.or || node.op === TOKEN.xor)) {
-        if (!this._compileNodeAsBoolI32(node.second) || !this._compileNodeAsBoolI32(node.first)) {
+        if (!this._compileNodeAsBoolI32(node.second)) {
+          return false;
+        }
+        if (!this._compileNodeAsBoolI32(node.first)) {
           return false;
         }
         switch (node.op) {
@@ -31509,7 +31309,7 @@ class PsWasmCompiler {
       const min = this._range[i * 2];
       const max = this._range[i * 2 + 1];
       code.push(wasm_compiler_OP.i32_const);
-      this._emitSLEB128(i * 8);
+      this._emitULEB128(i * 8);
       if (!this._compileNode(outputs[i])) {
         return null;
       }
@@ -31653,14 +31453,17 @@ class BaseLocalCache {
       this._nameRefMap = new Map();
       this._imageMap = new Map();
     }
-    this._imageCache = new RefMap();
+    this._imageCache = new RefSetCache();
   }
   getByName(name) {
     if (this._onlyRefs) {
       unreachable("Should not call `getByName` method.");
     }
     const ref = this._nameRefMap.get(name);
-    return ref ? this.getByRef(ref) : this._imageMap.get(name) || null;
+    if (ref) {
+      return this.getByRef(ref);
+    }
+    return this._imageMap.get(name) || null;
   }
   getByRef(ref) {
     return this._imageCache.get(ref) || null;
@@ -31801,8 +31604,8 @@ class GlobalImageCache {
   static MAX_BYTE_SIZE = 5e7;
   #decodeFailedSet = new RefSet();
   constructor() {
-    this._refCache = new RefMap();
-    this._imageCache = new RefMap();
+    this._refCache = new RefSetCache();
+    this._imageCache = new RefSetCache();
   }
   get #byteSize() {
     let byteSize = 0;
@@ -31812,10 +31615,20 @@ class GlobalImageCache {
     return byteSize;
   }
   get #cacheLimitReached() {
-    return this._imageCache.size >= GlobalImageCache.MIN_IMAGES_TO_CACHE && this.#byteSize >= GlobalImageCache.MAX_BYTE_SIZE;
+    if (this._imageCache.size < GlobalImageCache.MIN_IMAGES_TO_CACHE) {
+      return false;
+    }
+    if (this.#byteSize < GlobalImageCache.MAX_BYTE_SIZE) {
+      return false;
+    }
+    return true;
   }
   shouldCache(ref, pageIndex) {
-    const pageIndexSet = this._refCache.getOrPutComputed(ref, makeSet);
+    let pageIndexSet = this._refCache.get(ref);
+    if (!pageIndexSet) {
+      pageIndexSet = new Set();
+      this._refCache.put(ref, pageIndexSet);
+    }
     pageIndexSet.add(pageIndex);
     if (pageIndexSet.size < GlobalImageCache.NUM_PAGES_THRESHOLD) {
       return false;
@@ -31843,7 +31656,10 @@ class GlobalImageCache {
   }
   getData(ref, pageIndex) {
     const pageIndexSet = this._refCache.get(ref);
-    if (!pageIndexSet || pageIndexSet.size < GlobalImageCache.NUM_PAGES_THRESHOLD) {
+    if (!pageIndexSet) {
+      return null;
+    }
+    if (pageIndexSet.size < GlobalImageCache.NUM_PAGES_THRESHOLD) {
       return null;
     }
     const imageData = this._imageCache.get(ref);
@@ -31947,16 +31763,7 @@ function toNumberArray(arr) {
   }
   return arr;
 }
-function setArity(fn, numInputs, numOutputs) {
-  fn.numInputs = numInputs;
-  fn.numOutputs = numOutputs;
-  return fn;
-}
-function interpolate(x, xmin, xmax, ymin, ymax) {
-  return xmin === xmax ? ymin : ymin + (x - xmin) * ((ymax - ymin) / (xmax - xmin));
-}
 class PDFFunction {
-  static MAX_MULTILINEAR_INPUTS = 8;
   static getSampleArray(size, outputSize, bps, stream) {
     let length = outputSize;
     for (const s of size) {
@@ -31989,7 +31796,7 @@ class PDFFunction {
       case FunctionType.EXPONENTIAL_INTERPOLATION:
         return this.constructInterpolated(factory, dict);
       case FunctionType.STITCHING:
-        return this.constructStitched(factory, dict);
+        return this.constructStiched(factory, dict);
       case FunctionType.POSTSCRIPT_CALCULATOR:
         return this.constructPostScript(factory, fn, dict);
     }
@@ -32003,20 +31810,16 @@ class PDFFunction {
     for (const fn of fnObj) {
       fnArray.push(this.parse(factory, xref.fetchIfRef(fn)));
     }
-    if (fnArray.length === 1) {
-      return fnArray[0];
-    }
-    const numInputs = fnArray[0]?.numInputs ?? 0;
-    if (fnArray.some(fn => fn.numInputs !== numInputs || fn.numOutputs !== 1)) {
-      throw new FormatError("Invalid array of functions.");
-    }
-    return setArity(function (src, srcOffset, dest, destOffset) {
+    return function (src, srcOffset, dest, destOffset) {
       for (let i = 0, ii = fnArray.length; i < ii; i++) {
         fnArray[i](src, srcOffset, dest, destOffset + i);
       }
-    }, numInputs, fnArray.length);
+    };
   }
   static constructSampled(factory, fn, dict) {
+    function interpolate(x, xmin, xmax, ymin, ymax) {
+      return ymin + (x - xmin) * ((ymax - ymin) / (xmax - xmin));
+    }
     const domain = toNumberArray(dict.getArray("Domain"));
     const range = toNumberArray(dict.getArray("Range"));
     if (!domain || !range) {
@@ -32039,80 +31842,48 @@ class PDFFunction {
     }
     const decode = toNumberArray(dict.getArray("Decode")) || range;
     const samples = this.getSampleArray(size, outputSize, bps, fn);
-    const useSimplex = inputSize > PDFFunction.MAX_MULTILINEAR_INPUTS;
-    const steps = new Float64Array(inputSize);
-    const weights0 = new Float64Array(inputSize);
-    const weights1 = new Float64Array(inputSize);
-    const sorted = useSimplex ? new Uint32Array(inputSize) : null;
-    const maxVertices = useSimplex ? inputSize + 1 : 1 << inputSize;
-    const vertices = new Uint32Array(maxVertices);
-    const vertexWeights = new Float64Array(maxVertices);
-    function constructSampledFn(src, srcOffset, dest, destOffset) {
-      let base = 0,
-        k = outputSize,
-        numActive = 0;
-      for (let i = 0; i < inputSize; ++i) {
+    return function constructSampledFn(src, srcOffset, dest, destOffset) {
+      const cubeVertices = 1 << inputSize;
+      const cubeN = new Float64Array(cubeVertices).fill(1);
+      const cubeVertex = new Uint32Array(cubeVertices);
+      let i, j;
+      let k = outputSize,
+        pos = 1;
+      for (i = 0; i < inputSize; ++i) {
         const domain_2i = domain[2 * i];
         const domain_2i_1 = domain[2 * i + 1];
         const xi = MathClamp(src[srcOffset + i], domain_2i, domain_2i_1);
         let e = interpolate(xi, domain_2i, domain_2i_1, encode[2 * i], encode[2 * i + 1]);
         const size_i = size[i];
         e = MathClamp(e, 0, size_i - 1);
-        const e0 = Math.floor(e);
-        base += e0 * k;
-        if (e !== e0) {
-          steps[numActive] = k;
-          weights0[numActive] = e0 + 1 - e;
-          weights1[numActive] = e - e0;
-          numActive++;
+        const e0 = e < size_i - 1 ? Math.floor(e) : e - 1;
+        const n0 = e0 + 1 - e;
+        const n1 = e - e0;
+        const offset0 = e0 * k;
+        const offset1 = offset0 + k;
+        for (j = 0; j < cubeVertices; j++) {
+          if (j & pos) {
+            cubeN[j] *= n1;
+            cubeVertex[j] += offset1;
+          } else {
+            cubeN[j] *= n0;
+            cubeVertex[j] += offset0;
+          }
         }
         k *= size_i;
+        pos <<= 1;
       }
-      vertices[0] = base;
-      vertexWeights[0] = 1;
-      let numVertices = 1;
-      if (!useSimplex) {
-        for (let i = 0; i < numActive; i++) {
-          const step = steps[i],
-            w0 = weights0[i],
-            w1 = weights1[i];
-          for (let j = 0; j < numVertices; j++) {
-            vertices[numVertices + j] = vertices[j] + step;
-            vertexWeights[numVertices + j] = vertexWeights[j] * w1;
-            vertexWeights[j] *= w0;
-          }
-          numVertices <<= 1;
-        }
-      } else if (numActive > 0) {
-        for (let i = 0; i < numActive; i++) {
-          const w1 = weights1[i];
-          let j = i;
-          for (; j > 0 && weights1[sorted[j - 1]] < w1; j--) {
-            sorted[j] = sorted[j - 1];
-          }
-          sorted[j] = i;
-        }
-        vertexWeights[0] = weights0[sorted[0]];
-        for (let i = 0; i < numActive; i++) {
-          const a = sorted[i];
-          vertices[i + 1] = vertices[i] + steps[a];
-          vertexWeights[i + 1] = i + 1 < numActive ? weights1[a] - weights1[sorted[i + 1]] : weights1[a];
-        }
-        numVertices = numActive + 1;
-      }
-      for (let j = 0; j < outputSize; ++j) {
+      for (j = 0; j < outputSize; ++j) {
         let rj = 0;
-        for (let i = 0; i < numVertices; i++) {
-          rj += samples[vertices[i] + j] * vertexWeights[i];
+        for (i = 0; i < cubeVertices; i++) {
+          rj += samples[cubeVertex[i] + j] * cubeN[i];
         }
         rj = interpolate(rj, 0, 1, decode[2 * j], decode[2 * j + 1]);
         dest[destOffset + j] = MathClamp(rj, range[2 * j], range[2 * j + 1]);
       }
-    }
-    return setArity(constructSampledFn, inputSize, outputSize);
+    };
   }
   static constructInterpolated(factory, dict) {
-    const domain = toNumberArray(dict.getArray("Domain"));
     const c0 = toNumberArray(dict.getArray("C0")) || [0];
     const c1 = toNumberArray(dict.getArray("C1")) || [1];
     const n = dict.get("N");
@@ -32121,22 +31892,21 @@ class PDFFunction {
       diff.push(c1[i] - c0[i]);
     }
     const length = diff.length;
-    function constructInterpolatedFn(src, srcOffset, dest, destOffset) {
+    return function constructInterpolatedFn(src, srcOffset, dest, destOffset) {
       const x = n === 1 ? src[srcOffset] : src[srcOffset] ** n;
       for (let j = 0; j < length; ++j) {
         dest[destOffset + j] = c0[j] + x * diff[j];
       }
-    }
-    return setArity(constructInterpolatedFn, domain ? domain.length / 2 : 1, length);
+    };
   }
-  static constructStitched(factory, dict) {
+  static constructStiched(factory, dict) {
     const domain = toNumberArray(dict.getArray("Domain"));
     if (!domain) {
       throw new FormatError("No domain");
     }
     const inputSize = domain.length / 2;
     if (inputSize !== 1) {
-      throw new FormatError("Bad domain for stitched function");
+      throw new FormatError("Bad domain for stiched function");
     }
     const {
       xref
@@ -32145,14 +31915,10 @@ class PDFFunction {
     for (const fn of dict.get("Functions")) {
       fns.push(this.parse(factory, xref.fetchIfRef(fn)));
     }
-    const numOutputs = fns[0]?.numOutputs ?? 0;
-    if (fns.length === 0 || fns.some(fn => fn.numInputs !== 1 || fn.numOutputs !== numOutputs)) {
-      throw new FormatError("Incompatible sub-functions for stitched function");
-    }
     const bounds = toNumberArray(dict.getArray("Bounds"));
     const encode = toNumberArray(dict.getArray("Encode"));
     const tmpBuf = new Float32Array(1);
-    function constructStitchedFn(src, srcOffset, dest, destOffset) {
+    return function constructStichedFn(src, srcOffset, dest, destOffset) {
       const v = MathClamp(src[srcOffset], domain[0], domain[1]);
       const length = bounds.length;
       let i;
@@ -32163,10 +31929,11 @@ class PDFFunction {
       }
       const dmin = i > 0 ? bounds[i - 1] : domain[0];
       const dmax = i < length ? bounds[i] : domain[1];
-      tmpBuf[0] = interpolate(v, dmin, dmax, encode[2 * i], encode[2 * i + 1]);
+      const rmin = encode[2 * i];
+      const rmax = encode[2 * i + 1];
+      tmpBuf[0] = dmin === dmax ? rmin : rmin + (v - dmin) * (rmax - rmin) / (dmax - dmin);
       fns[i](tmpBuf, 0, dest, destOffset);
-    }
-    return setArity(constructStitchedFn, inputSize, numOutputs);
+    };
   }
   static constructPostScript(factory, fn, dict) {
     const domain = toNumberArray(dict.getArray("Domain"));
@@ -32178,18 +31945,16 @@ class PDFFunction {
       throw new FormatError("No range.");
     }
     const psCode = fn.getString();
-    const numInputs = domain.length / 2,
-      numOutputs = range.length / 2;
     try {
       if (factory.useWasm) {
         const wasmFn = buildPostScriptWasmFunction(psCode, domain, range);
         if (wasmFn) {
-          return setArity(wasmFn, numInputs, numOutputs);
+          return wasmFn;
         }
       }
     } catch {}
     warn("Failed to compile PostScript function to wasm, falling back to JS");
-    return setArity(buildPostScriptJsFunction(psCode, domain, range), numInputs, numOutputs);
+    return buildPostScriptJsFunction(psCode, domain, range);
   }
 }
 function isPDFFunction(v) {
@@ -32202,115 +31967,6 @@ function isPDFFunction(v) {
     return false;
   }
   return fnDict.has("FunctionType");
-}
-
-;// ./src/core/evaluator_utils.js
-
-
-function textSinkWrapper(sink) {
-  const TEXT_CONTENT_CHUNK_SIZE = 100;
-  const resolved = sink ? null : Promise.resolve();
-  return {
-    enqueueInvoked: false,
-    enqueue(chunk, size) {
-      this.enqueueInvoked = true;
-      sink?.enqueue(chunk, size);
-    },
-    get desiredSize() {
-      return sink?.desiredSize ?? TEXT_CONTENT_CHUNK_SIZE;
-    },
-    get ready() {
-      return sink?.ready ?? resolved;
-    }
-  };
-}
-function _parseVisibilityExpression(xref, array, nestingCounter, currentResult) {
-  const MAX_NESTING = 10;
-  if (++nestingCounter > MAX_NESTING) {
-    warn("Visibility expression is too deeply nested");
-    return;
-  }
-  const length = array.length;
-  const operator = xref.fetchIfRef(array[0]);
-  if (length < 2 || !(operator instanceof Name)) {
-    warn("Invalid visibility expression");
-    return;
-  }
-  switch (operator.name) {
-    case "And":
-    case "Or":
-    case "Not":
-      currentResult.push(operator.name);
-      break;
-    default:
-      warn(`Invalid operator ${operator.name} in visibility expression`);
-      return;
-  }
-  for (let i = 1; i < length; i++) {
-    const raw = array[i];
-    const object = xref.fetchIfRef(raw);
-    if (Array.isArray(object)) {
-      const nestedResult = [];
-      currentResult.push(nestedResult);
-      _parseVisibilityExpression(xref, object, nestingCounter, nestedResult);
-    } else if (raw instanceof Ref) {
-      currentResult.push(raw.toString());
-    }
-  }
-}
-function parseMarkedContentProps(xref, contentProperties, resources) {
-  let optionalContent;
-  if (contentProperties instanceof Name) {
-    const properties = resources.get("Properties");
-    optionalContent = properties.get(contentProperties.name);
-  } else if (contentProperties instanceof Dict) {
-    optionalContent = contentProperties;
-  } else {
-    throw new FormatError("Optional content properties malformed.");
-  }
-  const optionalContentType = optionalContent.get("Type")?.name;
-  if (optionalContentType === "OCG") {
-    return {
-      type: optionalContentType,
-      id: optionalContent.objId
-    };
-  } else if (optionalContentType === "OCMD") {
-    const expression = optionalContent.get("VE");
-    if (Array.isArray(expression)) {
-      const result = [];
-      _parseVisibilityExpression(xref, expression, 0, result);
-      if (result.length > 0) {
-        return {
-          type: "OCMD",
-          expression: result
-        };
-      }
-    }
-    const optionalContentGroups = optionalContent.get("OCGs");
-    if (Array.isArray(optionalContentGroups) || optionalContentGroups instanceof Dict) {
-      const groupIds = [];
-      if (Array.isArray(optionalContentGroups)) {
-        for (const ocg of optionalContentGroups) {
-          groupIds.push(ocg.toString());
-        }
-      } else {
-        groupIds.push(optionalContentGroups.objId);
-      }
-      const p = optionalContent.get("P");
-      return {
-        type: optionalContentType,
-        ids: groupIds,
-        policy: p instanceof Name ? p.name : null,
-        expression: null
-      };
-    } else if (optionalContentGroups instanceof Ref) {
-      return {
-        type: optionalContentType,
-        id: optionalContentGroups.toString()
-      };
-    }
-  }
-  return null;
 }
 
 ;// ./src/core/bidi.js
@@ -32562,10 +32218,6 @@ const NORMAL = {
   style: "normal",
   weight: "normal"
 };
-const MEDIUM = {
-  style: "normal",
-  weight: "500"
-};
 const BOLD = {
   style: "normal",
   weight: "bold"
@@ -32713,78 +32365,6 @@ const substitutionMap = new Map([["Times-Roman", {
   ultimate: "serif"
 }], ["\xD0\xC2\xCB\xCE", {
   alias: "\xCB\xCE\xCC\xE5"
-}], ["HeiseiMin-W3", {
-  local: ["Hiragino Mincho ProN", "Hiragino Mincho Pro", "Yu Mincho", "YuMincho", "Source Han Serif JP", "Noto Serif JP", "Noto Serif CJK JP", "IPAexMincho", "IPAMincho", "Takao Mincho", "MS Mincho", "MS PMincho"],
-  style: NORMAL,
-  ultimate: "serif"
-}], ["HeiseiKakuGo-W5", {
-  local: ["Hiragino Kaku Gothic ProN", "Hiragino Kaku Gothic Pro", "Hiragino Sans", "Yu Gothic", "YuGothic", "Source Han Sans JP", "Noto Sans JP", "Noto Sans CJK JP", "IPAexGothic", "IPAGothic", "Takao Gothic", "Meiryo", "MS Gothic", "MS PGothic"],
-  style: MEDIUM,
-  ultimate: "sans-serif"
-}], ["HeiseiMin-W3-Acro", {
-  alias: "HeiseiMin-W3"
-}], ["HeiseiKakuGo-W5-Acro", {
-  alias: "HeiseiKakuGo-W5"
-}], ["KozMinPro-Regular", {
-  alias: "HeiseiMin-W3"
-}], ["KozMinProVI-Regular", {
-  alias: "HeiseiMin-W3"
-}], ["KozMinPr6N-Regular", {
-  alias: "HeiseiMin-W3"
-}], ["KozGoPro-Regular", {
-  alias: "HeiseiKakuGo-W5"
-}], ["KozGoProVI-Regular", {
-  alias: "HeiseiKakuGo-W5"
-}], ["KozGoPr6N-Regular", {
-  alias: "HeiseiKakuGo-W5"
-}], ["STSong-Light", {
-  local: ["STSong", "Songti SC", "Source Han Serif SC", "Source Han Serif CN", "Noto Serif SC", "Noto Serif CJK SC", "AR PL UMing CN", "SimSun", "NSimSun"],
-  style: NORMAL,
-  ultimate: "serif"
-}], ["STHeiti-Regular", {
-  local: ["STHeiti", "Heiti SC", "PingFang SC", "Source Han Sans SC", "Source Han Sans CN", "Noto Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", "SimHei", "WenQuanYi Zen Hei"],
-  style: NORMAL,
-  ultimate: "sans-serif"
-}], ["STSongStd-Light", {
-  alias: "STSong-Light"
-}], ["AdobeSongStd-Light", {
-  alias: "STSong-Light"
-}], ["AdobeHeitiStd-Regular", {
-  alias: "STHeiti-Regular"
-}], ["AdobeKaitiStd-Regular", {
-  alias: "\xBF\xAC\xCC\xE5"
-}], ["AdobeFangsongStd-Regular", {
-  alias: "\xB7\xC2\xCB\xCE"
-}], ["MSung-Light", {
-  local: ["Songti TC", "LiSong Pro", "Source Han Serif TC", "Source Han Serif TW", "Noto Serif TC", "Noto Serif CJK TC", "AR PL UMing TW", "PMingLiU", "MingLiU", "MingLiU_HKSCS"],
-  style: NORMAL,
-  ultimate: "serif"
-}], ["MHei-Medium", {
-  local: ["Heiti TC", "STHeiti", "Source Han Sans TC", "Source Han Sans TW", "Noto Sans TC", "Noto Sans CJK TC", "PingFang TC", "Microsoft JhengHei"],
-  style: MEDIUM,
-  ultimate: "sans-serif"
-}], ["MSungStd-Light", {
-  alias: "MSung-Light"
-}], ["AdobeMingStd-Light", {
-  alias: "MSung-Light"
-}], ["HYSMyeongJo-Medium", {
-  local: ["AppleMyungjo", "Source Han Serif KR", "Noto Serif KR", "Noto Serif CJK KR", "Nanum Myeongjo", "Batang"],
-  style: MEDIUM,
-  ultimate: "serif"
-}], ["HYGoThic-Medium", {
-  local: ["Apple SD Gothic Neo", "AppleGothic", "Source Han Sans KR", "Noto Sans KR", "Noto Sans CJK KR", "Nanum Gothic", "Malgun Gothic", "Dotum", "Gulim"],
-  style: MEDIUM,
-  ultimate: "sans-serif"
-}], ["HYSMyeongJoStd-Medium", {
-  alias: "HYSMyeongJo-Medium"
-}], ["AdobeMyungjoStd-Medium", {
-  alias: "HYSMyeongJo-Medium"
-}], ["HYGoThic-Bold", {
-  alias: "HYGoThic-Medium",
-  style: BOLD
-}], ["AdobeGothicStd-Bold", {
-  alias: "HYGoThic-Medium",
-  style: BOLD
 }]]);
 const fontAliases = new Map([["Arial-Black", "ArialBlack"]]);
 function getStyleToAppend(style) {
@@ -32885,8 +32465,8 @@ function getFontSubstitution(systemFontCache, idFactory, localFontPath, baseFont
       systemFontCache.set(key, null);
       return null;
     }
-    const bold = /bold/i.test(baseFontName);
-    const italic = /oblique|italic/i.test(baseFontName);
+    const bold = /bold/gi.test(baseFontName);
+    const italic = /oblique|italic/gi.test(baseFontName);
     const style = bold && italic && BOLDITALIC || bold && BOLD || italic && ITALIC || NORMAL;
     substitutionInfo = {
       css: `"${getFamilyName(baseFontName)}",${loadedName}`,
@@ -33064,7 +32644,7 @@ class PDFImage {
         this.jpxDecoderOptions = {
           numComponents: 0,
           isIndexedColormap: false,
-          smaskInData: dict.get("SMaskInData") >= 1,
+          smaskInData: dict.has("SMaskInData"),
           reducePower
         };
         if (reducePower) {
@@ -33120,20 +32700,6 @@ class PDFImage {
     if (!this.imageMask) {
       let colorSpace = dict.getRaw("CS") || dict.getRaw("ColorSpace");
       const hasColorSpace = !!colorSpace;
-      if (this.jpxDecoderOptions?.smaskInData && dict.get("SMaskInData") === 2) {
-        this.jpxPremultiplied = true;
-        if (this.matte) {
-          const matteColorSpace = ColorSpaceUtils.parse({
-            cs: hasColorSpace ? colorSpace : Name.get("DeviceRGB"),
-            xref,
-            resources: isInline ? res : null,
-            pdfFunctionFactory,
-            globalColorSpaceCache,
-            localColorSpaceCache
-          });
-          this.preblendMatte = matteColorSpace.getRgb(this.matte, 0);
-        }
-      }
       if (!hasColorSpace) {
         if (this.jpxDecoderOptions) {
           colorSpace = Name.get("DeviceRGBA");
@@ -33398,6 +32964,7 @@ class PDFImage {
     const rowComps = width * numComps;
     const max = (1 << bpc) - 1;
     let i = 0,
+      ii,
       buf;
     if (bpc === 1) {
       let mask, loop1End, loop2End;
@@ -33428,7 +32995,7 @@ class PDFImage {
     } else {
       let bits = 0;
       buf = 0;
-      for (i = 0; i < length; ++i) {
+      for (i = 0, ii = length; i < ii; ++i) {
         if (i % rowComps === 0) {
           buf = 0;
           bits = 0;
@@ -33438,7 +33005,13 @@ class PDFImage {
           bits += 8;
         }
         const remainingBits = bits - bpc;
-        output[i] = MathClamp(buf >> remainingBits, 0, max);
+        let value = buf >> remainingBits;
+        if (value < 0) {
+          value = 0;
+        } else if (value > max) {
+          value = max;
+        }
+        output[i] = value;
         buf &= (1 << remainingBits) - 1;
         bits = remainingBits;
       }
@@ -33501,7 +33074,16 @@ class PDFImage {
       stride: 4
     });
   }
-  static #undoPreblend(buffer, length, matteR, matteG, matteB) {
+  undoPreblend(buffer, width, height) {
+    const matte = this.smask?.matte;
+    if (!matte) {
+      return;
+    }
+    const matteRgb = this.colorSpace.getRgb(matte, 0);
+    const matteR = matteRgb[0];
+    const matteG = matteRgb[1];
+    const matteB = matteRgb[2];
+    const length = width * height * 4;
     for (let i = 0; i < length; i += 4) {
       const alpha = buffer[i + 3];
       if (alpha === 0) {
@@ -33515,14 +33097,6 @@ class PDFImage {
       buffer[i + 1] = (buffer[i + 1] - matteG) * k + matteG;
       buffer[i + 2] = (buffer[i + 2] - matteB) * k + matteB;
     }
-  }
-  undoPreblend(buffer, width, height) {
-    const matte = this.smask?.matte;
-    if (!matte) {
-      return;
-    }
-    const matteRgb = this.colorSpace.getRgb(matte, 0);
-    PDFImage.#undoPreblend(buffer, width * height * 4, matteRgb[0], matteRgb[1], matteRgb[2]);
   }
   async createImageData(forceRGBA = false, isOffscreenCanvasSupported = false) {
     const drawWidth = this.drawWidth;
@@ -33545,10 +33119,6 @@ class PDFImage {
       const imgArray = imgData.data = await this.getImageBytes(originalHeight * originalWidth * 4, {
         internal: isOffscreenCanvasSupported && mustBeResized
       });
-      if (this.jpxPremultiplied) {
-        const matteRgb = this.preblendMatte;
-        PDFImage.#undoPreblend(imgArray, imgArray.length, matteRgb?.[0] ?? 0, matteRgb?.[1] ?? 0, matteRgb?.[2] ?? 0);
-      }
       if (isOffscreenCanvasSupported) {
         if (!mustBeResized) {
           return this.createBitmap(ImageKind.RGBA_32BPP, drawWidth, drawHeight, imgArray);
@@ -33557,14 +33127,14 @@ class PDFImage {
       }
       return imgData;
     }
-    if (!forceRGBA && !this.smask && !this.mask) {
+    if (!forceRGBA) {
       let kind;
       if (this.colorSpace.name === "DeviceGray" && bpc === 1) {
         kind = ImageKind.GRAYSCALE_1BPP;
       } else if (this.colorSpace.name === "DeviceRGB" && bpc === 8 && !this.needsDecode) {
         kind = ImageKind.RGB_24BPP;
       }
-      if (kind && drawWidth === originalWidth && drawHeight === originalHeight) {
+      if (kind && !this.smask && !this.mask && drawWidth === originalWidth && drawHeight === originalHeight) {
         const image = await this.#getImage(originalWidth, originalHeight);
         if (image) {
           return image;
@@ -33595,31 +33165,27 @@ class PDFImage {
         }
         return imgData;
       }
-      if (this.image instanceof JpegStream && !this.needsDecode) {
-        let isHandled = false;
-        switch (this.colorSpace.name) {
-          case "DeviceGray":
-          case "DeviceRGB":
-          case "DeviceCMYK":
-            isHandled = true;
-            break;
-        }
-        if (isHandled) {
-          if (isOffscreenCanvasSupported) {
+      if (this.image instanceof JpegStream && !this.smask && !this.mask && !this.needsDecode) {
+        let imageLength = originalHeight * rowBytes;
+        if (isOffscreenCanvasSupported && !mustBeResized) {
+          let isHandled = false;
+          switch (this.colorSpace.name) {
+            case "DeviceGray":
+              imageLength *= 4;
+              isHandled = true;
+              break;
+            case "DeviceRGB":
+              imageLength = imageLength / 3 * 4;
+              isHandled = true;
+              break;
+            case "DeviceCMYK":
+              isHandled = true;
+              break;
+          }
+          if (isHandled) {
             const image = await this.#getImage(drawWidth, drawHeight);
             if (image) {
               return image;
-            }
-          }
-          let imageLength = originalHeight * rowBytes;
-          if (isOffscreenCanvasSupported && !mustBeResized) {
-            switch (this.colorSpace.name) {
-              case "DeviceGray":
-                imageLength *= 4;
-                break;
-              case "DeviceRGB":
-                imageLength = imageLength / 3 * 4;
-                break;
             }
             const rgba = await this.getImageBytes(imageLength, {
               drawWidth,
@@ -33629,17 +33195,24 @@ class PDFImage {
             });
             return this.createBitmap(ImageKind.RGBA_32BPP, drawWidth, drawHeight, rgba);
           }
-          if (this.colorSpace.name === "DeviceGray") {
-            imageLength *= 3;
+        } else {
+          switch (this.colorSpace.name) {
+            case "DeviceGray":
+              imageLength *= 3;
+            case "DeviceRGB":
+            case "DeviceCMYK":
+              imgData.kind = ImageKind.RGB_24BPP;
+              imgData.data = await this.getImageBytes(imageLength, {
+                drawWidth,
+                drawHeight,
+                forceRGB: true,
+                internal: mustBeResized
+              });
+              if (mustBeResized) {
+                return ImageResizer.createImage(imgData);
+              }
+              return imgData;
           }
-          imgData.kind = ImageKind.RGB_24BPP;
-          imgData.data = await this.getImageBytes(imageLength, {
-            drawWidth,
-            drawHeight,
-            forceRGB: true,
-            internal: mustBeResized
-          });
-          return mustBeResized ? ImageResizer.createImage(imgData) : imgData;
         }
       }
     }
@@ -33695,7 +33268,10 @@ class PDFImage {
       };
     }
     imgData.data = data;
-    return mustBeResized ? ImageResizer.createImage(imgData) : imgData;
+    if (mustBeResized) {
+      return ImageResizer.createImage(imgData);
+    }
+    return imgData;
   }
   async fillGrayBuffer(buffer, {
     destWidth,
@@ -33818,14 +33394,14 @@ class PDFImage {
     };
   }
   async #getImage(width, height) {
-    const bitmap = await this.image.getTransferableImage(width, height);
+    const bitmap = await this.image.getTransferableImage();
     if (!bitmap) {
       return null;
     }
     return {
       data: null,
-      width: bitmap.displayWidth ?? width,
-      height: bitmap.displayHeight ?? height,
+      width,
+      height,
       bitmap,
       interpolate: this.interpolate
     };
@@ -33879,8 +33455,6 @@ class PDFImage {
 
 
 
-
-
 const DefaultPartialEvaluatorOptions = Object.freeze({
   maxImageSize: -1,
   disableFontFace: false,
@@ -33905,7 +33479,6 @@ const PatternType = {
 };
 const TEXT_CHUNK_BATCH_SIZE = 10;
 const deferred = Promise.resolve();
-const argIsDict = arg => arg instanceof Dict;
 function normalizeBlendMode(value, parsingArray = false) {
   if (Array.isArray(value)) {
     for (const val of value) {
@@ -33917,45 +33490,52 @@ function normalizeBlendMode(value, parsingArray = false) {
     warn(`Unsupported blend mode Array: ${value}`);
     return "source-over";
   }
-  if (value instanceof Name) {
-    switch (value.name) {
-      case "Normal":
-      case "Compatible":
-        return "source-over";
-      case "Multiply":
-        return "multiply";
-      case "Screen":
-        return "screen";
-      case "Overlay":
-        return "overlay";
-      case "Darken":
-        return "darken";
-      case "Lighten":
-        return "lighten";
-      case "ColorDodge":
-        return "color-dodge";
-      case "ColorBurn":
-        return "color-burn";
-      case "HardLight":
-        return "hard-light";
-      case "SoftLight":
-        return "soft-light";
-      case "Difference":
-        return "difference";
-      case "Exclusion":
-        return "exclusion";
-      case "Hue":
-        return "hue";
-      case "Saturation":
-        return "saturation";
-      case "Color":
-        return "color";
-      case "Luminosity":
-        return "luminosity";
+  if (!(value instanceof Name)) {
+    if (parsingArray) {
+      return null;
     }
-    warn(`Unsupported blend mode: ${value.name}`);
+    return "source-over";
   }
-  return parsingArray ? null : "source-over";
+  switch (value.name) {
+    case "Normal":
+    case "Compatible":
+      return "source-over";
+    case "Multiply":
+      return "multiply";
+    case "Screen":
+      return "screen";
+    case "Overlay":
+      return "overlay";
+    case "Darken":
+      return "darken";
+    case "Lighten":
+      return "lighten";
+    case "ColorDodge":
+      return "color-dodge";
+    case "ColorBurn":
+      return "color-burn";
+    case "HardLight":
+      return "hard-light";
+    case "SoftLight":
+      return "soft-light";
+    case "Difference":
+      return "difference";
+    case "Exclusion":
+      return "exclusion";
+    case "Hue":
+      return "hue";
+    case "Saturation":
+      return "saturation";
+    case "Color":
+      return "color";
+    case "Luminosity":
+      return "luminosity";
+  }
+  if (parsingArray) {
+    return null;
+  }
+  warn(`Unsupported blend mode: ${value.name}`);
+  return "source-over";
 }
 function addCachedImageOps(opList, {
   objId,
@@ -33995,7 +33575,6 @@ class PartialEvaluator {
     xref,
     handler,
     pageIndex,
-    pageProxyId = null,
     idFactory,
     fontCache,
     builtInCMapCache,
@@ -34008,7 +33587,6 @@ class PartialEvaluator {
     this.xref = xref;
     this.handler = handler;
     this.pageIndex = pageIndex;
-    this.pageProxyId = pageProxyId;
     this.idFactory = idFactory;
     this.fontCache = fontCache;
     this.builtInCMapCache = builtInCMapCache;
@@ -34206,9 +33784,7 @@ class PartialEvaluator {
         smask,
         isolated: false,
         knockout: false,
-        needsIsolation: false,
-        hasSoftMask: false,
-        isGray: false
+        needsIsolation: false
       };
       const groupSubtype = group.get("S");
       let colorSpace = null;
@@ -34220,12 +33796,9 @@ class PartialEvaluator {
           colorSpace = cs instanceof ColorSpace ? cs : await this._handleColorSpace(cs);
         }
       }
-      groupOptions.isGray = colorSpace?.numComps === 1;
       if (smask?.backdrop) {
         colorSpace ||= ColorSpaceUtils.rgb;
         smask.backdrop = colorSpace.getRgbHex(smask.backdrop, 0);
-      } else if (smask?.subtype === "Luminosity") {
-        smask.backdrop = "#000000";
       }
       newOpList = new CheckedOperatorList();
     } else {
@@ -34242,7 +33815,6 @@ class PartialEvaluator {
     });
     if (group) {
       groupOptions.needsIsolation = newOpList.needsIsolation || !!smask;
-      groupOptions.hasSoftMask = newOpList.hasSoftMask || !!smask;
       operatorList.addOp(OPS.beginGroup, [groupOptions]);
       operatorList.addOp(OPS.paintFormXObjectBegin, args);
       operatorList.addOpList(newOpList);
@@ -34260,7 +33832,7 @@ class PartialEvaluator {
     if (this.parsingType3Font || cacheGlobally) {
       return this.handler.send("commonobj", [objId, "Image", imgData], transfers);
     }
-    return this.handler.send("obj", [objId, this.pageProxyId, "Image", imgData], transfers);
+    return this.handler.send("obj", [objId, this.pageIndex, "Image", imgData], transfers);
   }
   async buildPaintImageXObject({
     resources,
@@ -34465,17 +34037,6 @@ class PartialEvaluator {
       }
     }
   }
-  #createTransferMap(fn) {
-    const transferFn = this._pdfFunctionFactory.create(fn),
-      tmp = new Float32Array(1);
-    return Uint8Array.from({
-      length: 256
-    }, (_, i) => {
-      tmp[0] = i / 255;
-      transferFn(tmp, 0, tmp, 0);
-      return tmp[0] * 255 | 0;
-    });
-  }
   handleSMask(smask, resources, operatorList, task, stateManager, localColorSpaceCache, seenRefs) {
     const smaskContent = smask.get("G");
     const smaskOptions = {
@@ -34484,7 +34045,15 @@ class PartialEvaluator {
     };
     const transferObj = smask.get("TR");
     if (isPDFFunction(transferObj)) {
-      smaskOptions.transferMap = this.#createTransferMap(transferObj);
+      const transferFn = this._pdfFunctionFactory.create(transferObj);
+      const transferMap = new Uint8Array(256);
+      const tmp = new Float32Array(1);
+      for (let i = 0; i < 256; i++) {
+        tmp[0] = i / 255;
+        transferFn(tmp, 0, tmp, 0);
+        transferMap[i] = tmp[0] * 255 | 0;
+      }
+      smaskOptions.transferMap = transferMap;
     }
     return this.buildFormXObject(resources, smaskContent, smaskOptions, operatorList, task, stateManager.state.clone({
       newPath: true
@@ -34493,7 +34062,10 @@ class PartialEvaluator {
   handleTransferFunction(tr) {
     let transferArray;
     if (Array.isArray(tr)) {
-      transferArray = tr.length > 1 && tr.every(map => map === tr[0]) ? [tr[0]] : tr;
+      transferArray = tr;
+      if (tr.length > 1 && tr.every(map => map === tr[0])) {
+        transferArray = [tr[0]];
+      }
     } else if (isPDFFunction(tr)) {
       transferArray = [tr];
     } else {
@@ -34511,7 +34083,15 @@ class PartialEvaluator {
       } else if (!isPDFFunction(transferObj)) {
         return null;
       }
-      transferMaps.push(this.#createTransferMap(transferObj));
+      const transferFn = this._pdfFunctionFactory.create(transferObj);
+      const transferMap = new Uint8Array(256),
+        tmp = new Float32Array(1);
+      for (let j = 0; j < 256; j++) {
+        tmp[0] = j / 255;
+        transferFn(tmp, 0, tmp, 0);
+        transferMap[j] = tmp[0] * 255 | 0;
+      }
+      transferMaps.push(transferMap);
       numEffectfulFns++;
     }
     if (!(numFns === 1 || numFns === 4)) {
@@ -34522,7 +34102,7 @@ class PartialEvaluator {
     }
     return transferMaps;
   }
-  handleTilingType(fn, color, resources, pattern, patternDict, operatorList, task, localTilingPatternCache, seenRefs) {
+  handleTilingType(fn, color, resources, pattern, patternDict, operatorList, task, localTilingPatternCache) {
     const tilingOpList = new CheckedOperatorList();
     const patternResources = Dict.merge({
       xref: this.xref,
@@ -34532,8 +34112,7 @@ class PartialEvaluator {
       stream: pattern,
       task,
       resources: patternResources,
-      operatorList: tilingOpList,
-      prevRefs: seenRefs
+      operatorList: tilingOpList
     }).then(function () {
       const operatorListIR = tilingOpList.getIR();
       const {
@@ -34560,9 +34139,9 @@ class PartialEvaluator {
       throw reason;
     });
   }
-  async handleSetFont(resources, fontArgs, fontRef, operatorList, task, state, fallbackFontDict = null, cssFontInfo = null, seenRefs = null) {
+  async handleSetFont(resources, fontArgs, fontRef, operatorList, task, state, fallbackFontDict = null, cssFontInfo = null) {
     const fontName = fontArgs?.[0] instanceof Name ? fontArgs[0].name : null;
-    const translated = await this.loadFont(fontName, fontRef, resources, task, fallbackFontDict, cssFontInfo, seenRefs);
+    const translated = await this.loadFont(fontName, fontRef, resources, task, fallbackFontDict, cssFontInfo);
     if (translated.font.isType3Font) {
       operatorList.addDependencies(translated.type3Dependencies);
     }
@@ -34630,7 +34209,7 @@ class PartialEvaluator {
           break;
         case "Font":
           isSimpleGState = false;
-          promise = promise.then(() => this.handleSetFont(resources, null, value[0], operatorList, task, stateManager.state, null, null, seenRefs).then(function (loadedName) {
+          promise = promise.then(() => this.handleSetFont(resources, null, value[0], operatorList, task, stateManager.state).then(function (loadedName) {
             operatorList.addDependency(loadedName);
             gStateObj.push([key, [loadedName, value[1]]]);
           }));
@@ -34652,15 +34231,9 @@ class PartialEvaluator {
           }
           break;
         case "TR":
-          if (gState.has("TR2")) {
-            break;
-          }
-        case "TR2":
-          {
-            const transferMaps = this.handleTransferFunction(value);
-            gStateObj.push(["TR", transferMaps]);
-            break;
-          }
+          const transferMaps = this.handleTransferFunction(value);
+          gStateObj.push([key, transferMaps]);
+          break;
         case "OP":
         case "op":
         case "OPM":
@@ -34668,6 +34241,7 @@ class PartialEvaluator {
         case "BG2":
         case "UCR":
         case "UCR2":
+        case "TR2":
         case "HT":
         case "SM":
         case "SA":
@@ -34688,7 +34262,7 @@ class PartialEvaluator {
       localGStateCache.set(cacheKey, gStateRef, gStateObj);
     }
   }
-  loadFont(fontName, font, resources, task, fallbackFontDict = null, cssFontInfo = null, seenRefs = null) {
+  loadFont(fontName, font, resources, task, fallbackFontDict = null, cssFontInfo = null) {
     const errorFont = async () => new TranslatedFont({
       loadedName: "g_font_error",
       font: new ErrorFont(`Font "${fontName}" is not available.`),
@@ -34783,7 +34357,7 @@ class PartialEvaluator {
       });
       if (translatedFont.isType3Font) {
         try {
-          await translated.loadType3Data(this, resources, task, seenRefs);
+          await translated.loadType3Data(this, resources, task);
         } catch (reason) {
           throw new Error(`Type3 font load error: ${reason}`);
         }
@@ -34934,11 +34508,11 @@ class PartialEvaluator {
       const buffer = compilePatternInfo(patternIR);
       this.handler.send("commonobj", [id, "Pattern", buffer], [buffer]);
     } else {
-      this.handler.send("obj", [id, this.pageProxyId, "Pattern", patternIR]);
+      this.handler.send("obj", [id, this.pageIndex, "Pattern", patternIR]);
     }
     return id;
   }
-  handleColorN(operatorList, fn, args, cs, patterns, resources, task, localColorSpaceCache, localTilingPatternCache, localShadingPatternCache, seenRefs) {
+  handleColorN(operatorList, fn, args, cs, patterns, resources, task, localColorSpaceCache, localTilingPatternCache, localShadingPatternCache) {
     const patternName = args.pop();
     if (patternName instanceof Name) {
       const rawPattern = patterns.getRaw(patternName.name);
@@ -34957,7 +34531,7 @@ class PartialEvaluator {
         const typeNum = dict.get("PatternType");
         if (typeNum === PatternType.TILING) {
           const color = cs.base ? cs.base.getRgbHex(args, 0) : null;
-          return this.handleTilingType(fn, color, resources, pattern, dict, operatorList, task, localTilingPatternCache, seenRefs);
+          return this.handleTilingType(fn, color, resources, pattern, dict, operatorList, task, localTilingPatternCache);
         } else if (typeNum === PatternType.SHADING) {
           const shading = dict.get("Shading");
           const objId = this.parseShading({
@@ -34977,8 +34551,92 @@ class PartialEvaluator {
     }
     throw new FormatError(`Unknown PatternName: ${patternName}`);
   }
+  _parseVisibilityExpression(array, nestingCounter, currentResult) {
+    const MAX_NESTING = 10;
+    if (++nestingCounter > MAX_NESTING) {
+      warn("Visibility expression is too deeply nested");
+      return;
+    }
+    const length = array.length;
+    const operator = this.xref.fetchIfRef(array[0]);
+    if (length < 2 || !(operator instanceof Name)) {
+      warn("Invalid visibility expression");
+      return;
+    }
+    switch (operator.name) {
+      case "And":
+      case "Or":
+      case "Not":
+        currentResult.push(operator.name);
+        break;
+      default:
+        warn(`Invalid operator ${operator.name} in visibility expression`);
+        return;
+    }
+    for (let i = 1; i < length; i++) {
+      const raw = array[i];
+      const object = this.xref.fetchIfRef(raw);
+      if (Array.isArray(object)) {
+        const nestedResult = [];
+        currentResult.push(nestedResult);
+        this._parseVisibilityExpression(object, nestingCounter, nestedResult);
+      } else if (raw instanceof Ref) {
+        currentResult.push(raw.toString());
+      }
+    }
+  }
   async parseMarkedContentProps(contentProperties, resources) {
-    return parseMarkedContentProps(this.xref, contentProperties, resources);
+    let optionalContent;
+    if (contentProperties instanceof Name) {
+      const properties = resources.get("Properties");
+      optionalContent = properties.get(contentProperties.name);
+    } else if (contentProperties instanceof Dict) {
+      optionalContent = contentProperties;
+    } else {
+      throw new FormatError("Optional content properties malformed.");
+    }
+    const optionalContentType = optionalContent.get("Type")?.name;
+    if (optionalContentType === "OCG") {
+      return {
+        type: optionalContentType,
+        id: optionalContent.objId
+      };
+    } else if (optionalContentType === "OCMD") {
+      const expression = optionalContent.get("VE");
+      if (Array.isArray(expression)) {
+        const result = [];
+        this._parseVisibilityExpression(expression, 0, result);
+        if (result.length > 0) {
+          return {
+            type: "OCMD",
+            expression: result
+          };
+        }
+      }
+      const optionalContentGroups = optionalContent.get("OCGs");
+      if (Array.isArray(optionalContentGroups) || optionalContentGroups instanceof Dict) {
+        const groupIds = [];
+        if (Array.isArray(optionalContentGroups)) {
+          for (const ocg of optionalContentGroups) {
+            groupIds.push(ocg.toString());
+          }
+        } else {
+          groupIds.push(optionalContentGroups.objId);
+        }
+        return {
+          type: optionalContentType,
+          ids: groupIds,
+          policy: optionalContent.get("P") instanceof Name ? optionalContent.get("P").name : null,
+          expression: null
+        };
+      } else if (optionalContentGroups instanceof Ref) {
+        return {
+          type: optionalContentType,
+          id: optionalContentGroups.toString()
+        };
+      }
+    }
+    return null;
   }
   async getOperatorList({
     stream,
@@ -35020,15 +34678,9 @@ class PartialEvaluator {
     const stateManager = new StateManager(initialState);
     const preprocessor = new EvaluatorPreprocessor(stream, xref, stateManager);
     const timeSlotManager = new TimeSlotManager();
-    let markedContentLevel = 0;
     function closePendingRestoreOPS(argument) {
       for (let i = 0, ii = preprocessor.savedStatesDepth; i < ii; i++) {
         operatorList.addOp(OPS.restore, []);
-      }
-    }
-    function closePendingMarkedContentOPS() {
-      for (; markedContentLevel > 0; markedContentLevel--) {
-        operatorList.addOp(OPS.endMarkedContent, []);
       }
     }
     return new Promise(function promiseBody(resolve, reject) {
@@ -35044,7 +34696,7 @@ class PartialEvaluator {
       task.ensureNotTerminated();
       timeSlotManager.reset();
       const operation = {};
-      let stop, cs, name, isValidName;
+      let stop, i, ii, cs, name, isValidName;
       while (!(stop = timeSlotManager.check())) {
         operation.args = null;
         if (!preprocessor.read(operation)) {
@@ -35110,7 +34762,7 @@ class PartialEvaluator {
                 throw new FormatError(`Unhandled XObject subtype ${type.name}`);
               }
               resolveXObject();
-            }).catch(reason => {
+            }).catch(function (reason) {
               if (reason instanceof AbortException) {
                 return;
               }
@@ -35123,7 +34775,7 @@ class PartialEvaluator {
             return;
           case OPS.setFont:
             const fontSize = args[1];
-            next(self.handleSetFont(resources, args, null, operatorList, task, stateManager.state, fallbackFontDict, null, seenRefs).then(function (loadedName) {
+            next(self.handleSetFont(resources, args, null, operatorList, task, stateManager.state, fallbackFontDict).then(function (loadedName) {
               operatorList.addDependency(loadedName);
               operatorList.addOp(OPS.setFont, [loadedName, fontSize]);
             }));
@@ -35220,64 +34872,40 @@ class PartialEvaluator {
               return;
             }
           case OPS.setFillColor:
-            if (!isNumberArray(args, null)) {
-              continue;
-            }
             cs = stateManager.state.fillColorSpace;
             args = [cs.getRgbHex(args, 0)];
             fn = OPS.setFillRGBColor;
             break;
           case OPS.setStrokeColor:
-            if (!isNumberArray(args, null)) {
-              continue;
-            }
             cs = stateManager.state.strokeColorSpace;
             args = [cs.getRgbHex(args, 0)];
             fn = OPS.setStrokeRGBColor;
             break;
           case OPS.setFillGray:
-            if (!isNumberArray(args, null)) {
-              continue;
-            }
             stateManager.state.fillColorSpace = ColorSpaceUtils.gray;
             args = [ColorSpaceUtils.gray.getRgbHex(args, 0)];
             fn = OPS.setFillRGBColor;
             break;
           case OPS.setStrokeGray:
-            if (!isNumberArray(args, null)) {
-              continue;
-            }
             stateManager.state.strokeColorSpace = ColorSpaceUtils.gray;
             args = [ColorSpaceUtils.gray.getRgbHex(args, 0)];
             fn = OPS.setStrokeRGBColor;
             break;
           case OPS.setFillCMYKColor:
-            if (!isNumberArray(args, null)) {
-              continue;
-            }
             stateManager.state.fillColorSpace = ColorSpaceUtils.cmyk;
             args = [ColorSpaceUtils.cmyk.getRgbHex(args, 0)];
             fn = OPS.setFillRGBColor;
             break;
           case OPS.setStrokeCMYKColor:
-            if (!isNumberArray(args, null)) {
-              continue;
-            }
             stateManager.state.strokeColorSpace = ColorSpaceUtils.cmyk;
             args = [ColorSpaceUtils.cmyk.getRgbHex(args, 0)];
             fn = OPS.setStrokeRGBColor;
             break;
           case OPS.setFillRGBColor:
-            if (!isNumberArray(args, null)) {
-              continue;
-            }
             stateManager.state.fillColorSpace = ColorSpaceUtils.rgb;
             args = [ColorSpaceUtils.rgb.getRgbHex(args, 0)];
             break;
           case OPS.setStrokeRGBColor:
-            if (!isNumberArray(args, null)) {
-              continue;
-            }
             stateManager.state.strokeColorSpace = ColorSpaceUtils.rgb;
             args = [ColorSpaceUtils.rgb.getRgbHex(args, 0)];
             break;
@@ -35294,14 +34922,8 @@ class PartialEvaluator {
               break;
             }
             if (cs.name === "Pattern") {
-              if (!Array.isArray(args)) {
-                continue;
-              }
-              next(self.handleColorN(operatorList, OPS.setFillColorN, args, cs, patterns, resources, task, localColorSpaceCache, localTilingPatternCache, localShadingPatternCache, seenRefs));
+              next(self.handleColorN(operatorList, OPS.setFillColorN, args, cs, patterns, resources, task, localColorSpaceCache, localTilingPatternCache, localShadingPatternCache));
               return;
-            }
-            if (!isNumberArray(args, null)) {
-              continue;
             }
             args = [cs.getRgbHex(args, 0)];
             fn = OPS.setFillRGBColor;
@@ -35319,14 +34941,8 @@ class PartialEvaluator {
               break;
             }
             if (cs.name === "Pattern") {
-              if (!Array.isArray(args)) {
-                continue;
-              }
-              next(self.handleColorN(operatorList, OPS.setStrokeColorN, args, cs, patterns, resources, task, localColorSpaceCache, localTilingPatternCache, localShadingPatternCache, seenRefs));
+              next(self.handleColorN(operatorList, OPS.setStrokeColorN, args, cs, patterns, resources, task, localColorSpaceCache, localTilingPatternCache, localShadingPatternCache));
               return;
-            }
-            if (!isNumberArray(args, null)) {
-              continue;
             }
             args = [cs.getRgbHex(args, 0)];
             fn = OPS.setStrokeRGBColor;
@@ -35400,7 +35016,7 @@ class PartialEvaluator {
                 localColorSpaceCache,
                 seenRefs
               }).then(resolveGState, rejectGState);
-            }).catch(reason => {
+            }).catch(function (reason) {
               if (reason instanceof AbortException) {
                 return;
               }
@@ -35484,7 +35100,6 @@ class PartialEvaluator {
           case OPS.endCompat:
             continue;
           case OPS.beginMarkedContentProps:
-            markedContentLevel++;
             if (!(args[0] instanceof Name)) {
               warn(`Expected name for beginMarkedContentProps arg0=${args[0]}`);
               operatorList.addOp(OPS.beginMarkedContentProps, ["OC", null]);
@@ -35509,26 +35124,18 @@ class PartialEvaluator {
             args = [args[0].name, args[1] instanceof Dict ? args[1].get("MCID") : null];
             break;
           case OPS.beginMarkedContent:
-            if (args?.some(argIsDict)) {
-              warn(`getOperatorList - ignoring operator: ${fn}`);
-              continue;
-            }
-            markedContentLevel++;
-            break;
           case OPS.endMarkedContent:
-            if (args?.some(argIsDict)) {
-              warn(`getOperatorList - ignoring operator: ${fn}`);
-              continue;
-            }
-            if (markedContentLevel === 0) {
-              continue;
-            }
-            markedContentLevel--;
-            break;
           default:
-            if (args?.some(argIsDict)) {
-              warn(`getOperatorList - ignoring operator: ${fn}`);
-              continue;
+            if (args !== null) {
+              for (i = 0, ii = args.length; i < ii; i++) {
+                if (args[i] instanceof Dict) {
+                  break;
+                }
+              }
+              if (i < ii) {
+                warn("getOperatorList - ignoring operator: " + fn);
+                continue;
+              }
             }
         }
         operatorList.addOp(fn, args);
@@ -35537,7 +35144,6 @@ class PartialEvaluator {
         next(deferred);
         return;
       }
-      closePendingMarkedContentOPS();
       closePendingRestoreOPS();
       resolve();
     }).catch(reason => {
@@ -35546,7 +35152,6 @@ class PartialEvaluator {
       }
       if (this.options.ignoreErrors) {
         warn(`getOperatorList - ignoring errors during "${task.name}" ` + `task: "${reason}".`);
-        closePendingMarkedContentOPS();
         closePendingRestoreOPS();
         return;
       }
@@ -35563,6 +35168,7 @@ class PartialEvaluator {
     seenStyles = new Set(),
     viewBox,
     lang = null,
+    markedContentData = null,
     disableNormalization = false,
     keepWhiteSpace = false,
     prevRefs = null,
@@ -35574,7 +35180,6 @@ class PartialEvaluator {
         stream = new Stream(bytes, 0, bytes.length, stream.dict);
       }
     }
-    sink ??= textSinkWrapper(null);
     const objId = stream.dict?.objId;
     const seenRefs = new RefSet(prevRefs);
     if (objId) {
@@ -35585,8 +35190,11 @@ class PartialEvaluator {
     }
     resources ||= Dict.empty;
     stateManager ||= new StateManager(new TextState());
-    let markedContentLevel = 0;
-    let textMarkedContentLevel = null;
+    if (includeMarkedContent) {
+      markedContentData ||= {
+        level: 0
+      };
+    }
     const textContent = {
       items: [],
       styles: Object.create(null),
@@ -35754,7 +35362,7 @@ class PartialEvaluator {
       };
     }
     async function handleSetFont(fontName, fontRef) {
-      const translated = await self.loadFont(fontName, fontRef, resources, task, null, null, seenRefs);
+      const translated = await self.loadFont(fontName, fontRef, resources, task);
       textState.loadedName = translated.loadedName;
       textState.font = translated.font;
       textState.fontMatrix = translated.font.fontMatrix || FONT_IDENTITY_MATRIX;
@@ -35933,7 +35541,10 @@ class PartialEvaluator {
           continue;
         }
         let charSpacing = baseCharSpacing + (i + 1 === ii ? extraSpacing : 0);
-        const glyphWidth = font.vertical ? glyph.vmetric[0] : glyph.width;
+        let glyphWidth = glyph.width;
+        if (font.vertical) {
+          glyphWidth = glyph.vmetric ? glyph.vmetric[0] : -glyphWidth;
+        }
         let scaledDim = glyphWidth * scale;
         if (originalCharCode === 0x20) {
           charSpacing += textState.wordSpacing;
@@ -36049,17 +35660,6 @@ class PartialEvaluator {
       textContentItem.initialized = false;
       textContentItem.str.length = 0;
     }
-    function closePendingMarkedContentItems(level = 0) {
-      if (!includeMarkedContent || markedContentLevel <= level) {
-        return;
-      }
-      flushTextContentItem();
-      for (; markedContentLevel > level; markedContentLevel--) {
-        textContent.items.push({
-          type: "endMarkedContent"
-        });
-      }
-    }
     function enqueueChunk(batch = false) {
       const length = textContent.items.length;
       if (length === 0) {
@@ -36068,7 +35668,7 @@ class PartialEvaluator {
       if (batch && length < TEXT_CHUNK_BATCH_SIZE) {
         return;
       }
-      sink.enqueue(textContent, length);
+      sink?.enqueue(textContent, length);
       textContent.items = [];
       textContent.styles = Object.create(null);
     }
@@ -36076,7 +35676,7 @@ class PartialEvaluator {
     return new Promise(function promiseBody(resolve, reject) {
       const next = function (promise) {
         enqueueChunk(true);
-        Promise.all([promise, sink.ready]).then(function () {
+        Promise.all([promise, sink?.ready]).then(function () {
           try {
             promiseBody(resolve, reject);
           } catch (ex) {
@@ -36147,13 +35747,6 @@ class PartialEvaluator {
           case OPS.beginText:
             textState.textMatrix = IDENTITY_MATRIX.slice();
             textState.textLineMatrix = IDENTITY_MATRIX.slice();
-            textMarkedContentLevel = markedContentLevel;
-            break;
-          case OPS.endText:
-            if (textMarkedContentLevel !== null) {
-              closePendingMarkedContentItems(textMarkedContentLevel);
-              textMarkedContentLevel = null;
-            }
             break;
           case OPS.showSpacedText:
             if (!stateManager.state.font) {
@@ -36161,7 +35754,9 @@ class PartialEvaluator {
               continue;
             }
             const spaceFactor = (textState.font.vertical ? 1 : -1) * textState.fontSize / 1000;
-            for (const item of args[0]) {
+            const elements = args[0];
+            for (let i = 0, ii = elements.length; i < ii; i++) {
+              const item = elements[i];
               if (typeof item === "string") {
                 showSpacedTextBuffer.push(item);
               } else if (typeof item === "number" && item !== 0) {
@@ -36264,17 +35859,30 @@ class PartialEvaluator {
               }
               const localResources = dict.get("Resources");
               enqueueChunk();
-              const sinkWrapper = textSinkWrapper(sink);
+              const sinkWrapper = {
+                enqueueInvoked: false,
+                enqueue(chunk, size) {
+                  this.enqueueInvoked = true;
+                  sink.enqueue(chunk, size);
+                },
+                get desiredSize() {
+                  return sink.desiredSize ?? 0;
+                },
+                get ready() {
+                  return sink.ready;
+                }
+              };
               self.getTextContent({
                 stream: xobj,
                 task,
                 resources: localResources instanceof Dict ? localResources : resources,
                 stateManager: xObjStateManager,
                 includeMarkedContent,
-                sink: sinkWrapper,
+                sink: sink && sinkWrapper,
                 seenStyles,
                 viewBox,
                 lang,
+                markedContentData,
                 disableNormalization,
                 keepWhiteSpace,
                 prevRefs: seenRefs
@@ -36284,7 +35892,7 @@ class PartialEvaluator {
                 }
                 resolveXObject();
               }, rejectXObject);
-            }).catch(reason => {
+            }).catch(function (reason) {
               if (reason instanceof AbortException) {
                 return;
               }
@@ -36323,7 +35931,7 @@ class PartialEvaluator {
               textState.fontName = null;
               textState.fontSize = gStateFont[1];
               handleSetFont(null, gStateFont[0]).then(resolveGState, rejectGState);
-            }).catch(reason => {
+            }).catch(function (reason) {
               if (reason instanceof AbortException) {
                 return;
               }
@@ -36337,7 +35945,7 @@ class PartialEvaluator {
           case OPS.beginMarkedContent:
             flushTextContentItem();
             if (includeMarkedContent) {
-              markedContentLevel++;
+              markedContentData.level++;
               textContent.items.push({
                 type: "beginMarkedContent",
                 tag: args[0] instanceof Name ? args[0].name : null
@@ -36347,8 +35955,11 @@ class PartialEvaluator {
           case OPS.beginMarkedContentProps:
             flushTextContentItem();
             if (includeMarkedContent) {
-              markedContentLevel++;
-              const mcid = args[1] instanceof Dict ? args[1].get("MCID") : null;
+              markedContentData.level++;
+              let mcid = null;
+              if (args[1] instanceof Dict) {
+                mcid = args[1].get("MCID");
+              }
               textContent.items.push({
                 type: "beginMarkedContentProps",
                 id: Number.isInteger(mcid) ? `${self.idFactory.getPageObjId()}_mc${mcid}` : null,
@@ -36359,17 +35970,17 @@ class PartialEvaluator {
           case OPS.endMarkedContent:
             flushTextContentItem();
             if (includeMarkedContent) {
-              if (markedContentLevel === 0) {
+              if (markedContentData.level === 0) {
                 break;
               }
-              markedContentLevel--;
+              markedContentData.level--;
               textContent.items.push({
                 type: "endMarkedContent"
               });
             }
             break;
         }
-        if (textContent.items.length >= sink.desiredSize) {
+        if (textContent.items.length >= (sink?.desiredSize ?? 1)) {
           stop = true;
           break;
         }
@@ -36379,7 +35990,6 @@ class PartialEvaluator {
         return;
       }
       flushTextContentItem();
-      closePendingMarkedContentItems();
       enqueueChunk();
       resolve();
     }).catch(reason => {
@@ -36389,7 +35999,6 @@ class PartialEvaluator {
       if (this.options.ignoreErrors) {
         warn(`getTextContent - ignoring errors during "${task.name}" ` + `task: "${reason}".`);
         flushTextContentItem();
-        closePendingMarkedContentItems();
         enqueueChunk();
         return;
       }
@@ -36421,7 +36030,7 @@ class PartialEvaluator {
         warn(`extractDataStructures - ignoring CIDToGIDMap data: "${ex}".`);
       }
     }
-    const differences = new Map();
+    const differences = [];
     let baseEncodingName = null;
     let encoding;
     if (dict.has("Encoding")) {
@@ -36437,7 +36046,7 @@ class PartialEvaluator {
             if (typeof data === "number") {
               index = data;
             } else if (data instanceof Name) {
-              differences.set(index++, data.name);
+              differences[index++] = data.name;
             } else {
               throw new FormatError(`Invalid entry in 'Differences' array: ${data}`);
             }
@@ -36488,7 +36097,7 @@ class PartialEvaluator {
     } else {
       let isSymbolicFont = !!(properties.flags & FontFlags.Symbolic);
       const isNonsymbolicFont = !!(properties.flags & FontFlags.Nonsymbolic);
-      if (properties.type === "TrueType" && isSymbolicFont && isNonsymbolicFont && differences.size) {
+      if (properties.type === "TrueType" && isSymbolicFont && isNonsymbolicFont && differences.length !== 0) {
         properties.flags &= ~FontFlags.Symbolic;
         isSymbolicFont = false;
       }
@@ -36512,7 +36121,7 @@ class PartialEvaluator {
     }
     properties.differences = differences;
     properties.baseEncodingName = baseEncodingName;
-    properties.hasEncoding = !!baseEncodingName || !!differences.size;
+    properties.hasEncoding = !!baseEncodingName || differences.length > 0;
     properties.dict = dict;
     properties.toUnicode = await toUnicodePromise;
     const builtToUnicode = await this.buildToUnicode(properties);
@@ -36524,14 +36133,16 @@ class PartialEvaluator {
   }
   _simpleFontToUnicode(properties, forceGlyphs = false) {
     assert(!properties.composite, "Must be a simple font.");
-    const toUnicode = new Map();
+    const toUnicode = [];
     const encoding = properties.defaultEncoding.slice();
     const baseEncodingName = properties.baseEncodingName;
-    for (const [charCode, glyphName] of properties.differences) {
+    const differences = properties.differences;
+    for (const charcode in differences) {
+      const glyphName = differences[charcode];
       if (glyphName === ".notdef") {
         continue;
       }
-      encoding[charCode] = glyphName;
+      encoding[charcode] = glyphName;
     }
     const glyphsUnicodeMap = getGlyphsUnicode();
     for (const charcode in encoding) {
@@ -36541,7 +36152,7 @@ class PartialEvaluator {
       }
       let unicode = glyphsUnicodeMap[glyphName];
       if (unicode !== undefined) {
-        toUnicode.set(+charcode, String.fromCharCode(unicode));
+        toUnicode[charcode] = String.fromCharCode(unicode);
         continue;
       }
       let code = 0;
@@ -36581,7 +36192,7 @@ class PartialEvaluator {
             case "f_h":
             case "f_t":
             case "T_h":
-              toUnicode.set(+charcode, glyphName.replaceAll("_", ""));
+              toUnicode[charcode] = glyphName.replaceAll("_", "");
               continue;
           }
           break;
@@ -36590,17 +36201,17 @@ class PartialEvaluator {
         if (baseEncodingName && code === +charcode) {
           const baseEncoding = getEncoding(baseEncodingName);
           if (baseEncoding && (glyphName = baseEncoding[charcode])) {
-            toUnicode.set(+charcode, String.fromCharCode(glyphsUnicodeMap[glyphName]));
+            toUnicode[charcode] = String.fromCharCode(glyphsUnicodeMap[glyphName]);
             continue;
           }
         }
-        toUnicode.set(+charcode, String.fromCodePoint(code));
+        toUnicode[charcode] = String.fromCodePoint(code);
       }
     }
     return toUnicode;
   }
   async buildToUnicode(properties) {
-    properties.hasIncludedToUnicodeMap = !!properties.toUnicode?.size;
+    properties.hasIncludedToUnicodeMap = properties.toUnicode?.length > 0;
     if (properties.hasIncludedToUnicodeMap) {
       if (!properties.composite && properties.hasEncoding) {
         properties.fallbackToUnicode = this._simpleFontToUnicode(properties);
@@ -36610,7 +36221,7 @@ class PartialEvaluator {
     if (!properties.composite) {
       return new ToUnicodeMap(this._simpleFontToUnicode(properties));
     }
-    if (properties.cMap.builtInCMap && !(properties.cMap instanceof IdentityCMap) || properties.cidSystemInfo?.registry === "Adobe" && (properties.cidSystemInfo.ordering === "GB1" || properties.cidSystemInfo.ordering === "CNS1" || properties.cidSystemInfo.ordering === "Japan1" || properties.cidSystemInfo.ordering === "Korea1")) {
+    if (properties.composite && (properties.cMap.builtInCMap && !(properties.cMap instanceof IdentityCMap) || properties.cidSystemInfo?.registry === "Adobe" && (properties.cidSystemInfo.ordering === "GB1" || properties.cidSystemInfo.ordering === "CNS1" || properties.cidSystemInfo.ordering === "Japan1" || properties.cidSystemInfo.ordering === "Korea1"))) {
       const {
         registry,
         ordering
@@ -36621,9 +36232,9 @@ class PartialEvaluator {
         fetchBuiltInCMap: this._fetchBuiltInCMapBound,
         useCMap: null
       });
-      const toUnicode = new Map(),
+      const toUnicode = [],
         buf = [];
-      properties.cMap.forEach((charcode, cid) => {
+      properties.cMap.forEach(function (charcode, cid) {
         if (cid > 0xffff) {
           throw new FormatError("Max size of CID is 65,535");
         }
@@ -36633,7 +36244,7 @@ class PartialEvaluator {
           for (let i = 0, ii = ucs2.length; i < ii; i += 2) {
             buf.push((ucs2.charCodeAt(i) << 8) + ucs2.charCodeAt(i + 1));
           }
-          toUnicode.set(charcode, String.fromCharCode(...buf));
+          toUnicode[charcode] = String.fromCharCode(...buf);
         }
       });
       return new ToUnicodeMap(toUnicode);
@@ -36650,7 +36261,10 @@ class PartialEvaluator {
         fetchBuiltInCMap: this._fetchBuiltInCMapBound,
         useCMap: null
       });
-      return cmap instanceof IdentityCMap ? new IdentityToUnicodeMap(0, 0xffff) : new ToUnicodeMap(cmap.getMap());
+      if (cmap instanceof IdentityCMap) {
+        return new IdentityToUnicodeMap(0, 0xffff);
+      }
+      return new ToUnicodeMap(cmap.getMap());
     }
     if (cmapObj instanceof BaseStream) {
       try {
@@ -36662,10 +36276,10 @@ class PartialEvaluator {
         if (cmap instanceof IdentityCMap) {
           return new IdentityToUnicodeMap(0, 0xffff);
         }
-        const map = new Map();
-        cmap.forEach((charCode, token) => {
+        const map = new Array(cmap.length);
+        cmap.forEach(function (charCode, token) {
           if (typeof token === "number") {
-            map.set(charCode, String.fromCodePoint(token));
+            map[charCode] = String.fromCodePoint(token);
             return;
           }
           if (token.length % 2 !== 0) {
@@ -36682,7 +36296,7 @@ class PartialEvaluator {
             const w2 = token.charCodeAt(k) << 8 | token.charCodeAt(k + 1);
             str.push(((w1 & 0x3ff) << 10) + (w2 & 0x3ff) + 0x10000);
           }
-          map.set(charCode, String.fromCodePoint(...str));
+          map[charCode] = String.fromCodePoint(...str);
         });
         return new ToUnicodeMap(map);
       } catch (reason) {
@@ -36699,16 +36313,16 @@ class PartialEvaluator {
     return null;
   }
   readCidToGidMap(glyphsData, toUnicode) {
-    const map = new Map();
+    const result = [];
     for (let j = 0, jj = glyphsData.length; j < jj; j++) {
       const glyphID = glyphsData[j++] << 8 | glyphsData[j];
       const code = j >> 1;
       if (glyphID === 0 && !toUnicode.has(code)) {
         continue;
       }
-      map.set(code, glyphID);
+      result[code] = glyphID;
     }
-    return map;
+    return result;
   }
   extractWidths(dict, descriptor, properties) {
     const xref = this.xref;
@@ -36832,7 +36446,7 @@ class PartialEvaluator {
   }
   isSerifFont(baseFontName) {
     const fontNameWoStyle = baseFontName.split("-", 1)[0];
-    return fontNameWoStyle in getSerifFonts() || /serif/i.test(fontNameWoStyle);
+    return fontNameWoStyle in getSerifFonts() || /serif/gi.test(fontNameWoStyle);
   }
   getBaseFontMetrics(name) {
     let defaultWidth = 0;
@@ -36857,12 +36471,16 @@ class PartialEvaluator {
   }
   buildCharCodeToWidth(widthsByGlyphName, properties) {
     const widths = Object.create(null);
-    const diffs = properties.differences,
-      encoding = properties.defaultEncoding;
+    const differences = properties.differences;
+    const encoding = properties.defaultEncoding;
     for (let charCode = 0; charCode < 256; charCode++) {
-      const width = diffs.has(charCode) && widthsByGlyphName[diffs.get(charCode)] || charCode in encoding && widthsByGlyphName[encoding[charCode]];
-      if (width) {
-        widths[charCode] = width;
+      if (charCode in differences && widthsByGlyphName[differences[charCode]]) {
+        widths[charCode] = widthsByGlyphName[differences[charCode]];
+        continue;
+      }
+      if (charCode in encoding && widthsByGlyphName[encoding[charCode]]) {
+        widths[charCode] = widthsByGlyphName[encoding[charCode]];
+        continue;
       }
     }
     return widths;
@@ -37011,8 +36629,6 @@ class PartialEvaluator {
     if (!descriptor) {
       if (isType3Font) {
         descriptor = Dict.empty;
-      } else if (composite) {
-        descriptor = Dict.empty;
       } else {
         let baseFontName = dict.get("BaseFont");
         if (!(baseFontName instanceof Name)) {
@@ -37091,15 +36707,9 @@ class PartialEvaluator {
     if (!(fontName instanceof Name)) {
       throw new FormatError("invalid font name");
     }
-    let fontFile, fontFileN, subtype, length1, length2, length3;
+    let fontFile, subtype, length1, length2, length3;
     try {
-      for (const n of ["FontFile", "FontFile2", "FontFile3"]) {
-        fontFile = descriptor.get(n);
-        if (fontFile) {
-          fontFileN = n;
-          break;
-        }
-      }
+      fontFile = descriptor.get("FontFile", "FontFile2", "FontFile3");
       if (fontFile) {
         if (!(fontFile instanceof BaseStream)) {
           throw new FormatError("FontFile should be a stream");
@@ -37187,7 +36797,6 @@ class PartialEvaluator {
       name: fontName.name,
       subtype,
       file: fontFile,
-      fontFileN,
       length1,
       length2,
       length3,
@@ -37226,28 +36835,16 @@ class PartialEvaluator {
     }
     const newProperties = await this.extractDataStructures(dict, properties);
     this.extractWidths(dict, descriptor, newProperties);
-    const font = new Font(fontName.name, fontFile, newProperties, this.options);
-    if (font.missingFile && !font.systemFontInfo && !isType3Font && this.options.useSystemFonts) {
-      const standardFontName = getStandardFontName(fontName.name);
-      const substitution = getFontSubstitution(this.systemFontCache, this.idFactory, this.options.standardFontDataUrl, fontName.name, standardFontName, type);
-      if (substitution) {
-        if (substitution.guessFallback) {
-          substitution.guessFallback = false;
-          substitution.css += `,${font.fallbackName}`;
-        }
-        font.systemFontInfo = substitution;
-      }
-    }
-    return font;
+    return new Font(fontName.name, fontFile, newProperties, this.options);
   }
   static buildFontPaths(font, glyphs, handler, evaluatorOptions) {
     function buildPath(fontChar) {
       const glyphName = `${font.loadedName}_path_${fontChar}`;
       try {
-        const buffer = font.renderer.getPath(fontChar);
-        if (!buffer) {
+        if (font.renderer.hasBuiltPath(fontChar)) {
           return;
         }
+        const buffer = compileFontPathInfo(font.renderer.getPathJs(fontChar));
         handler.send("commonobj", [glyphName, "FontPath", buffer], [buffer]);
       } catch (reason) {
         if (evaluatorOptions.ignoreErrors) {
@@ -37303,69 +36900,69 @@ class TranslatedFont {
     this.font.disableFontFace = true;
     PartialEvaluator.buildFontPaths(this.font, this.font.glyphCacheValues, handler, evaluatorOptions);
   }
-  async loadType3Data(evaluator, resources, task, seenRefs = null) {
+  loadType3Data(evaluator, resources, task) {
     if (this.#type3Loaded) {
       return this.#type3Loaded;
     }
     const {
-      dict,
       font,
       type3Dependencies
     } = this;
     assert(font.isType3Font, "Must be a Type3 font.");
-    const {
-      promise,
-      resolve
-    } = Promise.withResolvers();
-    this.#type3Loaded = promise;
     const type3Evaluator = evaluator.clone({
       ignoreErrors: false
     });
     const type3FontRefs = new RefSet(evaluator.type3FontRefs);
-    if (dict.objId) {
-      type3FontRefs.put(dict.objId);
+    if (this.dict.objId && !type3FontRefs.has(this.dict.objId)) {
+      type3FontRefs.put(this.dict.objId);
     }
     type3Evaluator.type3FontRefs = type3FontRefs;
-    const charProcs = dict.get("CharProcs");
-    const fontResources = dict.get("Resources") || resources;
-    const charProcOperatorList = new Map();
-    const [x0, y0, x1, y1] = font.bbox;
-    const fontBBoxSize = Math.hypot(x1 - x0, y1 - y0);
+    let loadCharProcsPromise = Promise.resolve();
+    const charProcs = this.dict.get("CharProcs");
+    const fontResources = this.dict.get("Resources") || resources;
+    const charProcOperatorList = Object.create(null);
+    const [x0, y0, x1, y1] = font.bbox,
+      width = x1 - x0,
+      height = y1 - y0;
+    const fontBBoxSize = Math.hypot(width, height);
     for (const key of charProcs.getKeys()) {
-      try {
+      loadCharProcsPromise = loadCharProcsPromise.then(() => {
+        const glyphStream = charProcs.get(key);
         const operatorList = new OperatorList();
-        await type3Evaluator.getOperatorList({
-          stream: charProcs.get(key),
+        return type3Evaluator.getOperatorList({
+          stream: glyphStream,
           task,
           resources: fontResources,
-          operatorList,
-          prevRefs: seenRefs
+          operatorList
+        }).then(() => {
+          switch (operatorList.fnArray[0]) {
+            case OPS.setCharWidthAndBounds:
+              this.#removeType3ColorOperators(operatorList, fontBBoxSize);
+              break;
+            case OPS.setCharWidth:
+              if (!fontBBoxSize) {
+                this.#guessType3FontBBox(operatorList);
+              }
+              break;
+          }
+          charProcOperatorList[key] = operatorList.getIR();
+          for (const dependency of operatorList.dependencies) {
+            type3Dependencies.add(dependency);
+          }
+        }).catch(function (reason) {
+          warn(`Type3 font resource "${key}" is not available.`);
+          const dummyOperatorList = new OperatorList();
+          charProcOperatorList[key] = dummyOperatorList.getIR();
         });
-        switch (operatorList.fnArray[0]) {
-          case OPS.setCharWidthAndBounds:
-            this.#removeType3ColorOperators(operatorList, fontBBoxSize);
-            break;
-          case OPS.setCharWidth:
-            if (!fontBBoxSize) {
-              this.#guessType3FontBBox(operatorList);
-            }
-            break;
-        }
-        charProcOperatorList.set(key, operatorList.getIR());
-        for (const dependency of operatorList.dependencies) {
-          type3Dependencies.add(dependency);
-        }
-      } catch {
-        warn(`Type3 font resource "${key}" is not available.`);
-        charProcOperatorList.set(key, new OperatorList().getIR());
+      });
+    }
+    this.#type3Loaded = loadCharProcsPromise.then(() => {
+      font.charProcOperatorList = charProcOperatorList;
+      if (this._bbox) {
+        font.isCharBBox = true;
+        font.bbox = this._bbox;
       }
-    }
-    font.charProcOperatorList = charProcOperatorList;
-    if (this._bbox) {
-      font.isCharBBox = true;
-      font.bbox = this._bbox;
-    }
-    resolve();
+    });
     return this.#type3Loaded;
   }
   #removeType3ColorOperators(operatorList, fontBBoxSize = NaN) {
@@ -38037,7 +37634,6 @@ class EvaluatorPreprocessor {
 
 
 
-
 class DefaultAppearanceEvaluator extends EvaluatorPreprocessor {
   constructor(str) {
     super(new StringStream(str));
@@ -38141,8 +37737,7 @@ class AppearanceStreamEvaluator extends EvaluatorPreprocessor {
             result = stack.pop() || result;
             break;
           case OPS.setTextMatrix:
-            const tm = Util.transform(this.stateManager.state.ctm, args);
-            result.scaleFactor *= Math.hypot(tm[0], tm[1]);
+            result.scaleFactor *= Math.hypot(args[0], args[1]);
             break;
           case OPS.setFont:
             const [fontName, fontSize] = args;
@@ -38150,7 +37745,7 @@ class AppearanceStreamEvaluator extends EvaluatorPreprocessor {
               result.fontName = fontName.name;
             }
             if (typeof fontSize === "number" && fontSize > 0) {
-              result.fontSize = fontSize;
+              result.fontSize = fontSize * result.scaleFactor;
             }
             break;
           case OPS.setFillColorSpace:
@@ -38180,7 +37775,6 @@ class AppearanceStreamEvaluator extends EvaluatorPreprocessor {
           case OPS.showSpacedText:
           case OPS.nextLineShowText:
           case OPS.nextLineSetSpacingShowText:
-            result.fontSize *= result.scaleFactor;
             breakLoop = true;
             break;
         }
@@ -38332,8 +37926,8 @@ class FakeUnicodeFont {
     if (rotation % 180 !== 0) {
       [w, h] = [h, w];
     }
-    const lineHeight = (/* inlined export .LINE_FACTOR */1.35) * fontSize;
-    const lineDescent = (/* inlined export .LINE_DESCENT_FACTOR */0.35) * fontSize;
+    const lineHeight = LINE_FACTOR * fontSize;
+    const lineDescent = LINE_DESCENT_FACTOR * fontSize;
     return {
       coords: [0, h + lineDescent - lineHeight],
       bbox: [0, 0, w, h],
@@ -38367,10 +37961,13 @@ class FakeUnicodeFont {
     if (rotation % 180 !== 0) {
       [w, h] = [h, w];
     }
-    const hscale = maxWidth > w ? w / maxWidth : 1;
+    let hscale = 1;
+    if (maxWidth > w) {
+      hscale = w / maxWidth;
+    }
     let vscale = 1;
-    const lineHeight = (/* inlined export .LINE_FACTOR */1.35) * fontSize;
-    const lineDescent = (/* inlined export .LINE_DESCENT_FACTOR */0.35) * fontSize;
+    const lineHeight = LINE_FACTOR * fontSize;
+    const lineDescent = LINE_DESCENT_FACTOR * fontSize;
     const maxHeight = lineHeight * lines.length;
     if (maxHeight > h) {
       vscale = h / maxHeight;
@@ -38408,7 +38005,9 @@ class FakeUnicodeFont {
       const matrix = getRotationMatrix(rotation, w, h);
       appearanceStreamDict.set("Matrix", matrix);
     }
-    return new StringStream(appearance, appearanceStreamDict);
+    const ap = new StringStream(appearance);
+    ap.dict = appearanceStreamDict;
+    return ap;
   }
 }
 
@@ -38495,8 +38094,8 @@ class NameOrNumberTree {
       processed.put(this.root);
     }
     const queue = [this.root];
-    for (const node of queue) {
-      const obj = xref.fetchIfRef(node);
+    while (queue.length > 0) {
+      const obj = xref.fetchIfRef(queue.shift());
       if (!(obj instanceof Dict)) {
         continue;
       }
@@ -38521,7 +38120,7 @@ class NameOrNumberTree {
         continue;
       }
       for (let i = 0, ii = entries.length; i < ii; i += 2) {
-        map.set(isRaw ? entries[i] : xref.fetchIfRef(entries[i]), isRaw ? entries[i + 1] : xref.fetchIfRef(entries[i + 1]));
+        map.set(xref.fetchIfRef(entries[i]), isRaw ? entries[i + 1] : xref.fetchIfRef(entries[i + 1]));
       }
     }
     return map;
@@ -38601,90 +38200,96 @@ class NumberTree extends NameOrNumberTree {
 
 
 
+
 function clearGlobalCaches() {
   clearPatternCaches();
   clearPrimitiveCaches();
   clearUnicodeCaches();
-  WasmImage.cleanup();
+  JBig2CCITTFaxImage.cleanup();
+  JpxImage.cleanup();
 }
 
 ;// ./src/core/file_spec.js
 
 
 
-
+function pickPlatformItem(dict) {
+  if (dict instanceof Dict) {
+    for (const key of ["UF", "F", "Unix", "Mac", "DOS"]) {
+      if (dict.has(key)) {
+        return dict.get(key);
+      }
+    }
+  }
+  return null;
+}
 class FileSpec {
-  constructor(root) {
+  #contentAvailable = false;
+  constructor(root, skipContent = false) {
     if (!(root instanceof Dict)) {
       return;
     }
     this.root = root;
+    if (root.has("FS")) {
+      this.fs = root.get("FS");
+    }
     if (root.has("RF")) {
       warn("Related file specifications are not supported");
     }
+    if (!skipContent) {
+      if (root.has("EF")) {
+        this.#contentAvailable = true;
+      } else {
+        warn("Non-embedded file specifications are not supported");
+      }
+    }
   }
   get filename() {
-    const item = FileSpec.pickPlatformItem(this.root);
+    const item = pickPlatformItem(this.root);
     if (item && typeof item === "string") {
       return stringToPDFString(item, true).replaceAll("\\\\", "\\").replaceAll("\\/", "/").replaceAll("\\", "/");
     }
     return "";
   }
+  get content() {
+    if (!this.#contentAvailable) {
+      return null;
+    }
+    const ef = pickPlatformItem(this.root?.get("EF"));
+    if (ef instanceof BaseStream) {
+      return ef.getBytes();
+    }
+    warn("Embedded file specification points to non-existing/invalid content");
+    return null;
+  }
   get description() {
     const desc = this.root?.get("Desc");
-    return desc && typeof desc === "string" ? stringToPDFString(desc) : "";
+    if (desc && typeof desc === "string") {
+      return stringToPDFString(desc);
+    }
+    return "";
   }
   get serializable() {
     const {
       filename,
+      content,
       description
     } = this;
     return {
       rawFilename: filename,
       filename: stripPath(filename) || "unnamed",
+      content,
       description
     };
-  }
-  static pickPlatformItem(dict, raw = false) {
-    if (dict instanceof Dict) {
-      for (const key of ["UF", "F", "Unix", "Mac", "DOS"]) {
-        if (dict.has(key)) {
-          return raw ? dict.getRaw(key) : dict.get(key);
-        }
-      }
-    }
-    return null;
-  }
-  static hasEmbeddedFile(fileSpecDict) {
-    return this.pickPlatformItem(fileSpecDict.get("EF")) instanceof BaseStream;
-  }
-  static readContent(dict) {
-    if (!(dict instanceof Dict)) {
-      return null;
-    }
-    const ef = this.pickPlatformItem(dict.get("EF"));
-    if (!(ef instanceof BaseStream)) {
-      warn("Embedded file specification points to non-existing/invalid content");
-      return null;
-    }
-    return this.readStreamContent(ef);
-  }
-  static readStreamContent(stream) {
-    const encrypt = stream.dict?.xref?.encrypt;
-    if (encrypt?.encryptionKey === null) {
-      throw new PasswordException("No password given", PasswordResponses.NEED_PASSWORD);
-    }
-    return stream.getBytes();
   }
 }
 
 ;// ./src/core/xml_parser.js
 
-
 const XMLParserErrorCode = {
   NoError: 0,
   EndOfDocument: -1,
-  UnterminatedCdata: -2,
+  UnterminatedCdat: -2,
   UnterminatedXmlDeclaration: -3,
   UnterminatedDoctypeDeclaration: -4,
   UnterminatedComment: -5,
@@ -38707,14 +38312,12 @@ function isWhitespaceString(s) {
   return true;
 }
 class XMLParserBase {
-  static get _entityRegex() {
-    return shadow(this, "_entityRegex", /&(?:#x([^;&]+)|#([^;&]+)|([^;&]+));/g);
-  }
   _resolveEntities(s) {
-    return s.replaceAll(XMLParserBase._entityRegex, (all, hex, dec, entity) => {
-      if (hex || dec) {
-        const code = hex ? parseInt(hex, 16) : parseInt(dec, 10);
-        return code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : all;
+    return s.replaceAll(/&([^;]+);/g, (all, entity) => {
+      if (entity.substring(0, 2) === "#x") {
+        return String.fromCodePoint(parseInt(entity.substring(2), 16));
+      } else if (entity.substring(0, 1) === "#") {
+        return String.fromCodePoint(parseInt(entity.substring(1), 10));
       }
       switch (entity) {
         case "lt":
@@ -38845,7 +38448,7 @@ class XMLParserBase {
             } else if (s.substring(j + 1, j + 8) === "[CDATA[") {
               q = s.indexOf("]]>", j + 8);
               if (q < 0) {
-                this.onError(XMLParserErrorCode.UnterminatedCdata);
+                this.onError(XMLParserErrorCode.UnterminatedCdat);
                 return;
               }
               this.onCdata(s.substring(j + 8, q));
@@ -38931,10 +38534,16 @@ class SimpleDOMNode {
       return undefined;
     }
     const index = childNodes.indexOf(this);
-    return index === -1 ? undefined : childNodes[index + 1];
+    if (index === -1) {
+      return undefined;
+    }
+    return childNodes[index + 1];
   }
   get textContent() {
-    return !this.childNodes ? this.nodeValue || "" : this.childNodes.map(child => child.textContent).join("");
+    if (!this.childNodes) {
+      return this.nodeValue || "";
+    }
+    return this.childNodes.map(child => child.textContent).join("");
   }
   get children() {
     return this.childNodes || [];
@@ -39108,7 +38717,9 @@ class MetadataParser {
   }
   _repair(data) {
     return data.replace(/^[^<]+/, "").replaceAll(/>\\376\\377([^<]+)/g, function (all, codes) {
-      const bytes = codes.replaceAll(/\\([0-3])([0-7])([0-7])/g, (_, d1, d2, d3) => String.fromCharCode(d1 * 64 + d2 * 8 + d3 * 1)).replaceAll(/&(amp|apos|gt|lt|quot);/g, function (str, name) {
+      const bytes = codes.replaceAll(/\\([0-3])([0-7])([0-7])/g, function (code, d1, d2, d3) {
+        return String.fromCharCode(d1 * 64 + d2 * 8 + d3 * 1);
+      }).replaceAll(/&(amp|apos|gt|lt|quot);/g, function (str, name) {
         switch (name) {
           case "amp":
             return "&";
@@ -39137,7 +38748,10 @@ class MetadataParser {
   }
   _getSequence(entry) {
     const name = entry.nodeName;
-    return name !== "rdf:bag" && name !== "rdf:seq" && name !== "rdf:alt" ? null : entry.childNodes.filter(node => node.nodeName === "rdf:li");
+    if (name !== "rdf:bag" && name !== "rdf:seq" && name !== "rdf:alt") {
+      return null;
+    }
+    return entry.childNodes.filter(node => node.nodeName === "rdf:li");
   }
   _parseArray(entry) {
     if (!entry.hasChildNodes()) {
@@ -39184,102 +38798,13 @@ class MetadataParser {
   }
 }
 
-;// ./src/core/sound.js
-
-
-const WAV_HEADER_SIZE = 44;
-function getSoundFormat(dict) {
-  if (!dict || dict.has("CO")) {
-    return null;
-  }
-  const sampleRate = dict.get("R");
-  if (!Number.isInteger(sampleRate) || sampleRate <= 0) {
-    return null;
-  }
-  const channels = dict.get("C") ?? 1;
-  if (!Number.isInteger(channels) || channels < 1 || channels > 2) {
-    return null;
-  }
-  const bitsPerSample = dict.get("B") ?? 8;
-  if (bitsPerSample !== 8 && bitsPerSample !== 16) {
-    return null;
-  }
-  const e = dict.get("E");
-  let encoding = "Raw";
-  if (e !== undefined) {
-    encoding = e instanceof Name ? e.name : null;
-  }
-  return encoding !== "Raw" && encoding !== "Signed" ? null : {
-    channels,
-    sampleRate,
-    bitsPerSample,
-    encoding
-  };
-}
-function soundStreamToWav(stream, samples) {
-  const format = getSoundFormat(stream.dict);
-  if (!format) {
-    return null;
-  }
-  const {
-    channels,
-    sampleRate,
-    bitsPerSample,
-    encoding
-  } = format;
-  const blockAlign = channels * (bitsPerSample >> 3);
-  const dataLength = samples.length - samples.length % blockAlign;
-  if (dataLength === 0) {
-    return null;
-  }
-  const wav = new Uint8Array(WAV_HEADER_SIZE + dataLength);
-  const view = new DataView(wav.buffer);
-  wav.set(stringToBytes("RIFF"), 0);
-  view.setUint32(4, WAV_HEADER_SIZE - 8 + dataLength, true);
-  wav.set(stringToBytes("WAVE"), 8);
-  wav.set(stringToBytes("fmt "), 12);
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, channels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * blockAlign, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, bitsPerSample, true);
-  wav.set(stringToBytes("data"), 36);
-  view.setUint32(40, dataLength, true);
-  if (bitsPerSample === 16) {
-    const signed = encoding === "Signed";
-    for (let i = 0; i < dataLength; i += 2) {
-      let value = samples[i] << 8 | samples[i + 1];
-      if (signed) {
-        if (value >= 0x8000) {
-          value -= 0x10000;
-        }
-      } else {
-        value -= 0x8000;
-      }
-      view.setInt16(WAV_HEADER_SIZE + i, value, true);
-    }
-  } else if (encoding === "Signed") {
-    for (let i = 0; i < dataLength; i++) {
-      wav[WAV_HEADER_SIZE + i] = samples[i] + 128 & 0xff;
-    }
-  } else {
-    wav.set(samples.subarray(0, dataLength), WAV_HEADER_SIZE);
-  }
-  return wav;
-}
-
 ;// ./src/core/struct_tree.js
 
 
 
 
 
-
-
 const MAX_DEPTH = 40;
-const TABLE_SPAN_ATTRIBUTES = [["RowSpan", "rowSpan"], ["ColSpan", "colSpan"]];
 const StructElementType = {
   PAGE_CONTENT: 1,
   STREAM_CONTENT: 2,
@@ -39288,26 +38813,14 @@ const StructElementType = {
   ELEMENT: 5
 };
 class StructTreeRoot {
-  kidRefToPosition = undefined;
-  parentTree = null;
-  roleMap = new Map();
-  structParentIds = null;
   constructor(xref, rootDict, rootRef) {
     this.xref = xref;
     this.dict = rootDict;
     this.ref = rootRef instanceof Ref ? rootRef : null;
-    const roleMap = rootDict.get("RoleMap");
-    if (roleMap instanceof Dict) {
-      for (const [key, value] of roleMap) {
-        if (value instanceof Name) {
-          this.roleMap.set(key, value.name);
-        }
-      }
-    }
-    const parentTree = rootDict.getRaw("ParentTree");
-    if (parentTree) {
-      this.parentTree = new NumberTree(parentTree, xref);
-    }
+    this.roleMap = new Map();
+    this.structParentIds = null;
+    this.kidRefToPosition = undefined;
+    this.parentTree = null;
   }
   getKidPosition(kidRef) {
     if (this.kidRefToPosition === undefined) {
@@ -39330,14 +38843,39 @@ class StructTreeRoot {
     }
     return this.kidRefToPosition ? this.kidRefToPosition.get(kidRef) ?? NaN : -1;
   }
-  #addIdToPage(pageRef, id, type, objId) {
+  init() {
+    this.readRoleMap();
+    const parentTree = this.dict.get("ParentTree");
+    if (!parentTree) {
+      return;
+    }
+    this.parentTree = new NumberTree(parentTree, this.xref);
+  }
+  #addIdToPage(pageRef, id, type) {
     if (!(pageRef instanceof Ref) || id < 0) {
       return;
     }
-    (this.structParentIds ??= new RefMap()).getOrPutComputed(pageRef, makeArr).push([id, type, objId]);
+    this.structParentIds ||= new RefSetCache();
+    let ids = this.structParentIds.get(pageRef);
+    if (!ids) {
+      ids = [];
+      this.structParentIds.put(pageRef, ids);
+    }
+    ids.push([id, type]);
   }
-  addAnnotationIdToPage(pageRef, id, ref) {
-    this.#addIdToPage(pageRef, id, StructElementType.ANNOTATION, ref instanceof Ref ? ref.toString() : null);
+  addAnnotationIdToPage(pageRef, id) {
+    this.#addIdToPage(pageRef, id, StructElementType.ANNOTATION);
+  }
+  readRoleMap() {
+    const roleMapDict = this.dict.get("RoleMap");
+    if (!(roleMapDict instanceof Dict)) {
+      return;
+    }
+    for (const [key, value] of roleMapDict) {
+      if (value instanceof Name) {
+        this.roleMap.set(key, value.name);
+      }
+    }
   }
   static async canCreateStructureTree({
     catalogRef,
@@ -39384,7 +38922,7 @@ class StructTreeRoot {
     changes
   }) {
     const root = await pdfManager.ensureCatalog("cloneDict");
-    const cache = new RefMap();
+    const cache = new RefSetCache();
     cache.put(catalogRef, root);
     const structTreeRootRef = xref.getNewTemporaryRef();
     root.set("StructTreeRoot", structTreeRootRef);
@@ -39495,7 +39033,7 @@ class StructTreeRoot {
       xref
     } = this;
     const structTreeRoot = this.dict.clone();
-    const cache = new RefMap();
+    const cache = new RefSetCache();
     cache.put(structTreeRootRef, structTreeRoot);
     let parentTreeRef = structTreeRoot.getRaw("ParentTree");
     let parentTree;
@@ -39734,7 +39272,11 @@ class StructTreeRoot {
       fallbackKids.push(newTagRef);
       return;
     }
-    const cachedParentDict = cache.getOrPutComputed(parentRef, () => parentDict.clone());
+    let cachedParentDict = cache.get(parentRef);
+    if (!cachedParentDict) {
+      cachedParentDict = parentDict.clone();
+      cache.put(parentRef, cachedParentDict);
+    }
     const parentKidsRaw = cachedParentDict.getRaw("K");
     let cachedParentKids = parentKidsRaw instanceof Ref ? cache.get(parentKidsRaw) : null;
     if (!cachedParentKids) {
@@ -39771,128 +39313,40 @@ class StructElementNode {
     }
     for (let af of AFs) {
       af = this.xref.fetchIfRef(af);
-      if (!isDict(af, "Filespec") || !isName(af.get("AFRelationship"), "Supplement")) {
+      if (!(af instanceof Dict)) {
         continue;
       }
-      const fileStream = FileSpec.pickPlatformItem(af.get("EF"));
-      if (!(fileStream instanceof BaseStream) || !isDict(fileStream.dict, "EmbeddedFile") || !isName(fileStream.dict.get("Subtype"), "application/mathml+xml")) {
+      if (!isName(af.get("Type"), "Filespec")) {
+        continue;
+      }
+      if (!isName(af.get("AFRelationship"), "Supplement")) {
+        continue;
+      }
+      const ef = af.get("EF");
+      if (!(ef instanceof Dict)) {
+        continue;
+      }
+      const fileStream = ef.get("UF") || ef.get("F");
+      if (!(fileStream instanceof BaseStream)) {
+        continue;
+      }
+      if (!isName(fileStream.dict.get("Type"), "EmbeddedFile")) {
+        continue;
+      }
+      if (!isName(fileStream.dict.get("Subtype"), "application/mathml+xml")) {
         continue;
       }
       return stringToUTF8String(fileStream.getString());
     }
-    for (const attributes of this.attributes) {
-      if (isName(attributes.get("O"), "MSFT_Office")) {
-        const mathml = attributes.get("MSFT_MathML");
+    const A = this.dict.get("A");
+    if (A instanceof Dict) {
+      const O = A.get("O");
+      if (isName(O, "MSFT_Office")) {
+        const mathml = A.get("MSFT_MathML");
         return mathml ? stringToPDFString(mathml) : null;
       }
     }
     return null;
-  }
-  #collectAttributes(value, attributes) {
-    const pending = [value];
-    const visited = new RefSet();
-    while (pending.length > 0) {
-      value = pending.pop();
-      if (value instanceof Ref) {
-        if (visited.has(value)) {
-          continue;
-        }
-        visited.put(value);
-        value = this.xref.fetch(value);
-      }
-      if (value instanceof BaseStream) {
-        value = value.dict;
-      }
-      if (value instanceof Dict) {
-        attributes.push(value);
-        continue;
-      }
-      if (!Array.isArray(value)) {
-        continue;
-      }
-      for (let i = value.length - 1; i >= 0; i--) {
-        if (!Number.isInteger(value[i])) {
-          pending.push(value[i]);
-        }
-      }
-    }
-  }
-  get attributes() {
-    const attributes = [];
-    const classes = this.dict.getArray("C");
-    if (classes !== undefined) {
-      const classMap = this.tree.rootDict?.get("ClassMap");
-      if (classMap instanceof Dict) {
-        for (const className of Array.isArray(classes) ? classes : [classes]) {
-          if (className instanceof Name) {
-            this.#collectAttributes(classMap.getRaw(className.name), attributes);
-          }
-        }
-      }
-    }
-    this.#collectAttributes(this.dict.getRaw("A"), attributes);
-    return shadow(this, "attributes", attributes);
-  }
-  get tableAttributes() {
-    const {
-      role
-    } = this;
-    if (role !== "Table" && role !== "TH" && role !== "TD") {
-      return null;
-    }
-    const map = new Map();
-    for (const attributes of this.attributes) {
-      if (!isName(attributes.get("O"), "Table")) {
-        continue;
-      }
-      if (role === "Table") {
-        if (attributes.has("Summary")) {
-          const summary = attributes.get("Summary");
-          if (typeof summary === "string" && summary) {
-            map.set("summary", stringToPDFString(summary));
-          } else {
-            map.delete("summary");
-          }
-        }
-        continue;
-      }
-      for (const [key, name] of TABLE_SPAN_ATTRIBUTES) {
-        if (!attributes.has(key)) {
-          continue;
-        }
-        const value = attributes.get(key);
-        if (Number.isInteger(value) && value > 1) {
-          map.set(name, value);
-        } else {
-          map.delete(name);
-        }
-      }
-      if (attributes.has("Headers")) {
-        map.delete("headers");
-        const headers = attributes.getArray("Headers");
-        if (Array.isArray(headers)) {
-          const ids = headers.filter(header => typeof header === "string").map(stringToPDFString);
-          if (ids.length > 0) {
-            map.set("headers", ids);
-          }
-        }
-      }
-      if (role === "TH" && attributes.has("Scope")) {
-        map.delete("scope");
-        const scope = attributes.get("Scope");
-        if (scope instanceof Name && ["Row", "Column", "Both"].includes(scope.name)) {
-          map.set("scope", scope.name);
-        }
-      }
-      if (role === "TH" && attributes.has("Short")) {
-        map.delete("short");
-        const short = attributes.get("Short");
-        if (typeof short === "string" && short) {
-          map.set("short", stringToPDFString(short));
-        }
-      }
-    }
-    return map.size ? map : null;
   }
   parseKids() {
     let pageObjId = null;
@@ -40038,18 +39492,12 @@ class StructTreePage {
     if (!ids) {
       return;
     }
-    for (const [elemId, type, objId] of ids) {
+    for (const [elemId, type] of ids) {
       const obj = parentTree.get(elemId);
-      if (!obj) {
-        continue;
-      }
-      const elem = this.addNode(this.xref.fetchIfRef(obj), map);
-      if (!elem || !objId) {
-        continue;
-      }
-      for (const kid of elem.kids) {
-        if (kid.type === StructElementType.OBJECT && kid.refObjId === objId) {
-          kid.type = type;
+      if (obj) {
+        const elem = this.addNode(this.xref.fetchIfRef(obj), map);
+        if (elem?.kids?.length === 1 && elem.kids[0].type === StructElementType.OBJECT) {
+          elem.kids[0].type = type;
         }
       }
     }
@@ -40134,40 +39582,26 @@ class StructTreePage {
       if (typeof alt === "string") {
         obj.alt = stringToPDFString(alt);
       }
-      const structId = node.dict.get("ID");
-      if (obj.role === "TH" && typeof structId === "string" && structId) {
-        obj.structId = stringToPDFString(structId);
-      }
-      node.tableAttributes?.forEach((val, key) => {
-        obj[key] = val;
-      });
       if (obj.role === "Formula") {
-        try {
-          const {
-            mathML
-          } = node;
-          if (mathML) {
-            obj.mathML = mathML;
-          }
-        } catch (ex) {
-          if (ex instanceof MissingDataException) {
-            throw ex;
-          }
-          warn(`Ignoring mathML: "${ex}".`);
+        const {
+          mathML
+        } = node;
+        if (mathML) {
+          obj.mathML = mathML;
         }
       }
-      let bbox = null,
-        size = null;
-      for (const a of node.attributes) {
-        bbox = lookupNormalRect(a.getArray("BBox"), bbox);
-        const width = a.get("Width");
-        const height = a.get("Height");
-        if (typeof width === "number" && width > 0 && typeof height === "number" && height > 0) {
-          size = [0, 0, width, height];
+      const a = node.dict.get("A");
+      if (a instanceof Dict) {
+        const bbox = lookupNormalRect(a.getArray("BBox"), null);
+        if (bbox) {
+          obj.bbox = bbox;
+        } else {
+          const width = a.get("Width");
+          const height = a.get("Height");
+          if (typeof width === "number" && width > 0 && typeof height === "number" && height > 0) {
+            obj.bbox = [0, 0, width, height];
+          }
         }
-      }
-      if (bbox || size) {
-        obj.bbox = bbox ?? size;
       }
       const lang = node.dict.get("Lang");
       if (typeof lang === "string") {
@@ -40221,8 +39655,6 @@ class StructTreePage {
 
 
 
-
-
 const isRef = v => v instanceof Ref;
 const isValidExplicitDest = _isValidExplicitDest.bind(null, isRef, isName);
 function fetchDest(dest) {
@@ -40247,18 +39679,15 @@ function fetchRemoteDest(action) {
 }
 class Catalog {
   #actualNumPages = null;
-  #annotationAttachmentIdByRef = new RefMap();
-  #annotationAttachmentRefById = new Map();
-  #soundAttachmentIds = new Set();
   #catDict = null;
   builtInCMapCache = new Map();
-  fontCache = new RefMap();
+  fontCache = new RefSetCache();
   globalColorSpaceCache = new GlobalColorSpaceCache();
   globalImageCache = new GlobalImageCache();
   nonBlendModesSet = new RefSet();
-  pageDictCache = new RefMap();
-  pageIndexCache = new RefMap();
-  pageKidsCountCache = new RefMap();
+  pageDictCache = new RefSetCache();
+  pageIndexCache = new RefSetCache();
+  pageKidsCountCache = new RefSetCache();
   standardFontDataCache = new Map();
   systemFontCache = new Map();
   constructor(pdfManager, xref) {
@@ -40272,23 +39701,6 @@ class Catalog {
   }
   cloneDict() {
     return this.#catDict.clone();
-  }
-  getAttachmentIdForAnnotation(ref, isSound = false) {
-    let id = this.#annotationAttachmentIdByRef.get(ref);
-    if (!id) {
-      const baseId = `attachmentRef:${ref.toString()}`;
-      id = baseId;
-      let i = 1;
-      while (this.#annotationAttachmentRefById.has(id) || this.attachments?.has(id)) {
-        id = `${baseId}-${i++}`;
-      }
-      this.#annotationAttachmentIdByRef.put(ref, id);
-      this.#annotationAttachmentRefById.set(id, ref);
-    }
-    if (isSound) {
-      this.#soundAttachmentIds.add(id);
-    }
-    return id;
   }
   get version() {
     const version = this.#catDict.get("Version");
@@ -40306,7 +39718,7 @@ class Catalog {
   }
   get needsRendering() {
     const needsRendering = this.#catDict.get("NeedsRendering");
-    return shadow(this, "needsRendering", needsRendering === true);
+    return shadow(this, "needsRendering", typeof needsRendering === "boolean" ? needsRendering : false);
   }
   get collection() {
     let collection = null;
@@ -40350,10 +39762,14 @@ class Catalog {
     let metadata = null;
     try {
       const stream = this.xref.fetch(streamRef, !this.xref.encrypt?.encryptMetadata);
-      if (stream instanceof BaseStream && isDict(stream.dict, "Metadata") && isName(stream.dict.get("Subtype"), "XML")) {
-        const data = stringToUTF8String(stream.getString());
-        if (data) {
-          metadata = new MetadataParser(data).serializable;
+      if (stream instanceof BaseStream && stream.dict instanceof Dict) {
+        const type = stream.dict.get("Type");
+        const subtype = stream.dict.get("Subtype");
+        if (isName(type, "Metadata") && isName(subtype, "XML")) {
+          const data = stringToUTF8String(stream.getString());
+          if (data) {
+            metadata = new MetadataParser(data).serializable;
+          }
         }
       }
     } catch (ex) {
@@ -40381,10 +39797,16 @@ class Catalog {
     if (!(obj instanceof Dict)) {
       return null;
     }
-    const markInfo = new Map();
-    for (const key of ["Marked", "UserProperties", "Suspects"]) {
-      const val = obj.get(key);
-      markInfo.set(key, val === true);
+    const markInfo = {
+      Marked: false,
+      UserProperties: false,
+      Suspects: false
+    };
+    for (const key in markInfo) {
+      const value = obj.get(key);
+      if (typeof value === "boolean") {
+        markInfo[key] = value;
+      }
     }
     return markInfo;
   }
@@ -40404,9 +39826,14 @@ class Catalog {
     return shadow(this, "structTreeRoot", structTree);
   }
   #readStructTreeRoot() {
-    const rawObj = this.#catDict.getRaw("StructTreeRoot"),
-      obj = this.xref.fetchIfRef(rawObj);
-    return obj instanceof Dict ? new StructTreeRoot(this.xref, obj, rawObj) : null;
+    const rawObj = this.#catDict.getRaw("StructTreeRoot");
+    const obj = this.xref.fetchIfRef(rawObj);
+    if (!(obj instanceof Dict)) {
+      return null;
+    }
+    const root = new StructTreeRoot(this.xref, obj, rawObj);
+    root.init();
+    return root;
   }
   get toplevelPagesDict() {
     const pagesObj = this.#catDict.get("Pages");
@@ -40477,7 +39904,6 @@ class Catalog {
       }
       const outlineItem = {
         action: data.action,
-        attachmentId: data.attachmentId,
         attachment: data.attachment,
         dest: data.dest,
         url: data.url,
@@ -40550,10 +39976,11 @@ class Catalog {
       return null;
     }
     flags += 2 ** 32;
-    const permissions = new Set();
-    for (const value of Object.values(PermissionFlag)) {
+    const permissions = [];
+    for (const key in PermissionFlag) {
+      const value = PermissionFlag[key];
       if (flags & value) {
-        permissions.add(value);
+        permissions.push(value);
       }
     }
     return permissions;
@@ -40573,7 +40000,7 @@ class Catalog {
       if (!Array.isArray(groupsData)) {
         return shadow(this, "optionalContentConfig", null);
       }
-      const groupRefCache = new RefMap();
+      const groupRefCache = new RefSetCache();
       for (const groupRef of groupsData) {
         if (!(groupRef instanceof Ref) || groupRefCache.has(groupRef)) {
           continue;
@@ -40705,7 +40132,10 @@ class Catalog {
         return null;
       }
       const nestedOrder = parseOrder(value.slice(1), nestedLevels);
-      return !nestedOrder?.length ? null : {
+      if (!nestedOrder?.length) {
+        return null;
+      }
+      return {
         name: stringToPDFString(nestedName),
         order: nestedOrder
       };
@@ -40759,20 +40189,21 @@ class Catalog {
     return this.#actualNumPages ?? this._pagesCount;
   }
   get destinations() {
-    const dests = new Map();
-    for (const obj of this.#readDests()) {
+    const rawDests = this.#readDests(),
+      dests = Object.create(null);
+    for (const obj of rawDests) {
       if (obj instanceof NameTree) {
         for (const [key, value] of obj.getAll()) {
           const dest = fetchDest(value);
           if (dest) {
-            dests.set(stringToPDFString(key, true), dest);
+            dests[stringToPDFString(key, true)] = dest;
           }
         }
       } else if (obj instanceof Dict) {
         for (const [key, value] of obj) {
           const dest = fetchDest(value);
           if (dest) {
-            dests.getOrInsert(stringToPDFString(key, true), dest);
+            dests[stringToPDFString(key, true)] ||= dest;
           }
         }
       }
@@ -40781,9 +40212,10 @@ class Catalog {
   }
   getDestination(id) {
     if (Object.hasOwn(this, "destinations")) {
-      return this.destinations.get(id) ?? null;
+      return this.destinations[id] ?? null;
     }
-    for (const obj of this.#readDests()) {
+    const rawDests = this.#readDests();
+    for (const obj of rawDests) {
       if (obj instanceof NameTree || obj instanceof Dict) {
         const dest = fetchDest(obj.get(id));
         if (dest) {
@@ -40791,7 +40223,13 @@ class Catalog {
         }
       }
     }
-    return this.destinations.get(id) ?? null;
+    if (rawDests.length) {
+      const dest = this.destinations[id];
+      if (dest) {
+        return dest;
+      }
+    }
+    return null;
   }
   #readDests() {
     const obj = this.#catDict.get("Names");
@@ -40882,8 +40320,11 @@ class Catalog {
         case "A":
         case "a":
           const LIMIT = 26;
+          const A_UPPER_CASE = 0x41,
+            A_LOWER_CASE = 0x61;
+          const baseCharCode = style === "a" ? A_LOWER_CASE : A_UPPER_CASE;
           const letterIndex = currentIndex - 1;
-          const character = String.fromCharCode(style.charCodeAt(0) + letterIndex % LIMIT);
+          const character = String.fromCharCode(baseCharCode + letterIndex % LIMIT);
           currentLabel = character.repeat(Math.floor(letterIndex / LIMIT) + 1);
           break;
         default:
@@ -41019,8 +40460,11 @@ class Catalog {
           }
           break;
         case "PrintPageRange":
-          if (Array.isArray(value) && value.length % 2 === 0 && value.every((page, i, arr) => Number.isInteger(page) && page > 0 && (i === 0 || page >= arr[i - 1]) && page <= this.numPages)) {
-            prefValue = value;
+          if (Array.isArray(value) && value.length % 2 === 0) {
+            const isValid = value.every((page, i, arr) => Number.isInteger(page) && page > 0 && (i === 0 || page >= arr[i - 1]) && page <= this.numPages);
+            if (isValid) {
+              prefValue = value;
+            }
           }
           break;
         case "NumCopies":
@@ -41036,13 +40480,14 @@ class Catalog {
         warn(`Bad value, for key "${key}", in ViewerPreferences: ${value}.`);
         continue;
       }
-      (prefs ??= new Map()).set(key, prefValue);
+      prefs ??= Object.create(null);
+      prefs[key] = prefValue;
     }
     return shadow(this, "viewerPreferences", prefs);
   }
   get openAction() {
     const obj = this.#catDict.get("OpenAction");
-    const openAction = new Map();
+    const openAction = Object.create(null);
     if (obj instanceof Dict) {
       const destDict = new Dict(this.xref);
       destDict.set("A", obj);
@@ -41056,14 +40501,14 @@ class Catalog {
         resultObj
       });
       if (Array.isArray(resultObj.dest)) {
-        openAction.set("dest", resultObj.dest);
+        openAction.dest = resultObj.dest;
       } else if (resultObj.action) {
-        openAction.set("action", resultObj.action);
+        openAction.action = resultObj.action;
       }
     } else if (isValidExplicitDest(obj)) {
-      openAction.set("dest", obj);
+      openAction.dest = obj;
     }
-    return shadow(this, "openAction", openAction.size ? openAction : null);
+    return shadow(this, "openAction", objectSize(openAction) > 0 ? openAction : null);
   }
   get attachments() {
     const obj = this.#catDict.get("Names");
@@ -41071,38 +40516,12 @@ class Catalog {
     if (obj instanceof Dict && obj.has("EmbeddedFiles")) {
       const nameTree = new NameTree(obj.getRaw("EmbeddedFiles"), this.xref);
       for (const [key, value] of nameTree.getAll()) {
-        (attachments ??= new Map()).set(stringToPDFString(key, true), new FileSpec(value).serializable);
+        const fs = new FileSpec(value);
+        attachments ??= Object.create(null);
+        attachments[stringToPDFString(key, true)] = fs.serializable;
       }
     }
     return shadow(this, "attachments", attachments);
-  }
-  #attachmentContentByName(id) {
-    const obj = this.#catDict.get("Names");
-    if (obj instanceof Dict && obj.has("EmbeddedFiles")) {
-      const nameTree = new NameTree(obj.getRaw("EmbeddedFiles"), this.xref);
-      for (const [key, value] of nameTree.getAll()) {
-        if (stringToPDFString(key, true) === id) {
-          return FileSpec.readContent(value);
-        }
-      }
-    }
-    return undefined;
-  }
-  attachmentContent(id) {
-    const namedContent = this.#attachmentContentByName(id);
-    if (namedContent !== undefined) {
-      return namedContent;
-    }
-    const ref = this.#annotationAttachmentRefById.get(id);
-    if (ref) {
-      const target = this.xref.fetch(ref);
-      if (target instanceof BaseStream) {
-        const content = FileSpec.readStreamContent(target);
-        return this.#soundAttachmentIds.has(id) ? soundStreamToWav(target, content) ?? content : content;
-      }
-      return target instanceof Dict ? FileSpec.readContent(target) : null;
-    }
-    return null;
   }
   get rawEmbeddedFiles() {
     const obj = this.#catDict.get("Names");
@@ -41130,7 +40549,10 @@ class Catalog {
     const obj = this.#catDict.get("Names");
     let javaScript = null;
     function appendIfJavaScriptDict(name, jsDict) {
-      if (!(jsDict instanceof Dict) || !isName(jsDict.get("S"), "JavaScript")) {
+      if (!(jsDict instanceof Dict)) {
+        return;
+      }
+      if (!isName(jsDict.get("S"), "JavaScript")) {
         return;
       }
       let js = jsDict.get("JS");
@@ -41141,7 +40563,7 @@ class Catalog {
       }
       js = stringToPDFString(js, true).replaceAll("\x00", "");
       if (js) {
-        (javaScript ??= new Map()).set(name, js);
+        (javaScript ||= new Map()).set(name, js);
       }
     }
     if (obj instanceof Dict && obj.has("JavaScript")) {
@@ -41160,9 +40582,13 @@ class Catalog {
     const javaScript = this.#collectJavaScript();
     let actions = collectActions(this.xref, this.#catDict, DocumentActionEventType);
     if (javaScript) {
-      actions ??= new Map();
+      actions ||= Object.create(null);
       for (const [key, val] of javaScript) {
-        actions.getOrInsertComputed(key, makeArr).push(val);
+        if (key in actions) {
+          actions[key].push(val);
+        } else {
+          actions[key] = [val];
+        }
       }
     }
     return shadow(this, "jsActions", actions);
@@ -41328,19 +40754,6 @@ class Catalog {
         }
       }
       if (!Array.isArray(kids)) {
-        let type = currentNode.getRaw("Type");
-        if (type instanceof Ref) {
-          try {
-            type = await xref.fetchAsync(type);
-          } catch (ex) {
-            addPageError(ex);
-            break;
-          }
-        }
-        if (isName(type, "Page") || !currentNode.has("Kids")) {
-          addPageDict(currentNode, null);
-          break;
-        }
         addPageError(new FormatError("Page dictionary kids object is not an array."));
         break;
       }
@@ -41390,81 +40803,77 @@ class Catalog {
     }
     return map;
   }
-  async getPageIndex(pageRef) {
+  getPageIndex(pageRef) {
     const cachedPageIndex = this.pageIndexCache.get(pageRef);
     if (cachedPageIndex !== undefined) {
-      return cachedPageIndex;
+      return Promise.resolve(cachedPageIndex);
     }
     const xref = this.xref;
-    let total = 0,
-      ref = pageRef;
-    const visited = new RefSet();
-    visited.put(pageRef);
-    while (true) {
-      const node = await xref.fetchAsync(ref);
-      if (isRefsEqual(ref, pageRef) && !isDict(node, "Page") && !(node instanceof Dict && !node.has("Type") && node.has("Contents"))) {
-        throw new FormatError("The reference does not point to a /Page dictionary.");
-      }
-      if (!node) {
-        break;
-      }
-      if (!(node instanceof Dict)) {
-        throw new FormatError("Node must be a dictionary.");
-      }
-      const parentRef = node.getRaw("Parent");
-      if (parentRef instanceof Ref) {
-        if (visited.has(parentRef)) {
-          throw new FormatError("Pages tree contains circular reference.");
+    function pagesBeforeRef(kidRef) {
+      let total = 0,
+        parentRef;
+      return xref.fetchAsync(kidRef).then(function (node) {
+        if (isRefsEqual(kidRef, pageRef) && !isDict(node, "Page") && !(node instanceof Dict && !node.has("Type") && node.has("Contents"))) {
+          throw new FormatError("The reference does not point to a /Page dictionary.");
         }
-        visited.put(parentRef);
-      }
-      const parent = await node.getAsync("Parent");
-      if (!parent) {
-        break;
-      }
-      if (!(parent instanceof Dict)) {
-        throw new FormatError("Parent must be a dictionary.");
-      }
-      const kids = await parent.getAsync("Kids");
-      if (!kids) {
-        break;
-      }
-      if (!Array.isArray(kids)) {
-        throw new FormatError("Kids must be an array.");
-      }
-      const kidPromises = [];
-      let found = false;
-      for (const kid of kids) {
-        if (!(kid instanceof Ref)) {
-          throw new FormatError("Kid must be a reference.");
+        if (!node) {
+          return null;
         }
-        if (isRefsEqual(kid, ref)) {
-          found = true;
-          break;
+        if (!(node instanceof Dict)) {
+          throw new FormatError("Node must be a dictionary.");
         }
-        kidPromises.push(xref.fetchAsync(kid).then(obj => {
-          if (!(obj instanceof Dict)) {
-            throw new FormatError("Kid node must be a dictionary.");
+        parentRef = node.getRaw("Parent");
+        return node.getAsync("Parent");
+      }).then(function (parent) {
+        if (!parent) {
+          return null;
+        }
+        if (!(parent instanceof Dict)) {
+          throw new FormatError("Parent must be a dictionary.");
+        }
+        return parent.getAsync("Kids");
+      }).then(function (kids) {
+        if (!kids) {
+          return null;
+        }
+        const kidPromises = [];
+        let found = false;
+        for (const kid of kids) {
+          if (!(kid instanceof Ref)) {
+            throw new FormatError("Kid must be a reference.");
           }
-          if (obj.has("Count")) {
-            const count = obj.get("Count");
-            if (Number.isInteger(count) && count >= 0) {
-              total += count;
-              return;
+          if (isRefsEqual(kid, kidRef)) {
+            found = true;
+            break;
+          }
+          kidPromises.push(xref.fetchAsync(kid).then(function (obj) {
+            if (!(obj instanceof Dict)) {
+              throw new FormatError("Kid node must be a dictionary.");
             }
-            throw new FormatError("Count must be a (positive) integer.");
-          }
-          total++;
-        }));
-      }
-      if (!found) {
-        throw new FormatError("Kid reference not found in parent's kids.");
-      }
-      await Promise.all(kidPromises);
-      ref = parentRef;
+            if (obj.has("Count")) {
+              total += obj.get("Count");
+            } else {
+              total++;
+            }
+          }));
+        }
+        if (!found) {
+          throw new FormatError("Kid reference not found in parent's kids.");
+        }
+        return Promise.all(kidPromises).then(() => [total, parentRef]);
+      });
     }
-    this.pageIndexCache.put(pageRef, total);
-    return total;
+    let total = 0;
+    const next = ref => pagesBeforeRef(ref).then(args => {
+      if (!args) {
+        this.pageIndexCache.put(pageRef, total);
+        return total;
+      }
+      const [count, parentRef] = args;
+      total += count;
+      return next(parentRef);
+    });
+    return next(pageRef);
   }
   get baseUrl() {
     const uri = this.#catDict.get("URI");
@@ -41493,18 +40902,9 @@ class Catalog {
     }
     if (!pageRef) {
       const queue = [seDict];
-      const visited = new RefSet();
-      visited.put(seRef);
       while (queue.length > 0 && !pageRef) {
         const node = queue.shift();
-        let kids = node.getRaw("K");
-        if (kids instanceof Ref) {
-          if (visited.has(kids)) {
-            continue;
-          }
-          visited.put(kids);
-          kids = xref.fetch(kids);
-        }
+        const kids = node.get("K");
         let kidsArr;
         if (Array.isArray(kids)) {
           kidsArr = kids;
@@ -41514,12 +40914,6 @@ class Catalog {
           continue;
         }
         for (const kid of kidsArr) {
-          if (kid instanceof Ref) {
-            if (visited.has(kid)) {
-              continue;
-            }
-            visited.put(kid);
-          }
           const kidObj = xref.fetchIfRef(kid);
           if (!(kidObj instanceof Dict)) {
             continue;
@@ -41542,7 +40936,10 @@ class Catalog {
           break;
         }
         const parentDict = xref.fetch(parentRaw);
-        if (!(parentDict instanceof Dict) || isName(parentDict.get("Type"), "StructTreeRoot")) {
+        if (!(parentDict instanceof Dict)) {
+          break;
+        }
+        if (isName(parentDict.get("Type"), "StructTreeRoot")) {
           break;
         }
         const pg = parentDict.getRaw("Pg");
@@ -41636,7 +41033,10 @@ class Catalog {
         case "GoToR":
           const urlDict = action.get("F");
           if (urlDict instanceof Dict) {
-            url = new FileSpec(urlDict).filename;
+            const fs = new FileSpec(urlDict, true);
+            ({
+              rawFilename: url
+            } = fs.serializable);
           } else if (typeof urlDict === "string") {
             url = urlDict;
           } else {
@@ -41653,17 +41053,16 @@ class Catalog {
           break;
         case "GoToE":
           const target = action.get("T");
-          let id = null;
-          if (target instanceof Dict) {
+          let attachment;
+          if (docAttachments && target instanceof Dict) {
             const relationship = target.get("R");
             const name = target.get("N");
             if (isName(relationship, "C") && typeof name === "string") {
-              id = stringToPDFString(name, true);
+              attachment = docAttachments[stringToPDFString(name, true)];
             }
           }
-          if (docAttachments && id) {
-            resultObj.attachmentId = id;
-            resultObj.attachment = docAttachments.get(id);
+          if (attachment) {
+            resultObj.attachment = attachment;
             const attachmentDest = fetchRemoteDest(action);
             if (attachmentDest) {
               resultObj.attachmentDest = attachmentDest;
@@ -41703,7 +41102,7 @@ class Catalog {
           }
           resultObj.setOCGState = {
             state: stateArr,
-            preserveRB: preserveRB !== false
+            preserveRB: typeof preserveRB === "boolean" ? preserveRB : true
           };
           break;
         case "JavaScript":
@@ -41767,205 +41166,6 @@ class Catalog {
       }
     }
   }
-}
-
-;// ./src/core/editor/pdf_images.js
-
-
-
-const FLATE_COLOR_COUNT_THRESHOLD = 16384;
-function createImageDict(xref, width, height, colorSpace) {
-  const image = new Dict(xref);
-  image.set("Type", Name.get("XObject"));
-  image.set("Subtype", Name.get("Image"));
-  image.set("BitsPerComponent", 8);
-  image.setIfName("ColorSpace", colorSpace);
-  image.set("Width", width);
-  image.set("Height", height);
-  return image;
-}
-function createRawImage(buffer, dict) {
-  return new Stream(buffer, 0, buffer.length, dict);
-}
-function paethPredictor(left, above, upperLeft) {
-  const p = left + above - upperLeft;
-  const pa = Math.abs(p - left);
-  const pb = Math.abs(p - above);
-  const pc = Math.abs(p - upperLeft);
-  if (pa <= pb && pa <= pc) {
-    return left;
-  }
-  return pb <= pc ? above : upperLeft;
-}
-function applyPNGOptimumFilter(data, width, height, bytesPerPixel) {
-  const rowSize = width * bytesPerPixel;
-  const out = new Uint8Array(height * (rowSize + 1));
-  const candidates = [new Uint8Array(rowSize), new Uint8Array(rowSize), new Uint8Array(rowSize), new Uint8Array(rowSize), new Uint8Array(rowSize)];
-  for (let y = 0; y < height; y++) {
-    const rowOffset = y * rowSize;
-    const prevRowOffset = rowOffset - rowSize;
-    const scores = [0, 0, 0, 0, 0];
-    for (let x = 0; x < rowSize; x++) {
-      const offset = rowOffset + x;
-      const cur = data[offset];
-      const left = x >= bytesPerPixel ? data[offset - bytesPerPixel] : 0;
-      const above = y > 0 ? data[prevRowOffset + x] : 0;
-      const upperLeft = y > 0 && x >= bytesPerPixel ? data[prevRowOffset + x - bytesPerPixel] : 0;
-      candidates[0][x] = cur;
-      candidates[1][x] = cur - left & 0xff;
-      candidates[2][x] = cur - above & 0xff;
-      candidates[3][x] = cur - (left + above >> 1) & 0xff;
-      candidates[4][x] = cur - paethPredictor(left, above, upperLeft) & 0xff;
-      for (let f = 0; f < 5; f++) {
-        const v = candidates[f][x];
-        scores[f] += v < 128 ? v : 256 - v;
-      }
-    }
-    let bestFilter = 0;
-    for (let f = 1; f < 5; f++) {
-      if (scores[f] < scores[bestFilter]) {
-        bestFilter = f;
-      }
-    }
-    const outOffset = y * (rowSize + 1);
-    out[outOffset] = bestFilter;
-    out.set(candidates[bestFilter], outOffset + 1);
-  }
-  return out;
-}
-async function deflate(bytes) {
-  const cs = new CompressionStream("deflate");
-  const writer = cs.writable.getWriter();
-  const writePromise = (async () => {
-    try {
-      await writer.ready;
-      await writer.write(bytes);
-      await writer.ready;
-      await writer.close();
-    } catch (reason) {
-      await writer.abort(reason).catch(() => {});
-      throw reason;
-    }
-  })();
-  const [compressed] = await Promise.all([new Response(cs.readable).bytes(), writePromise.then(() => null)]);
-  return compressed;
-}
-async function createPNGLikeImage(buffer, width, height, dict) {
-  const bytesPerPixel = buffer.length / (width * height);
-  let compressed;
-  if (typeof CompressionStream === "function") {
-    try {
-      const filtered = applyPNGOptimumFilter(buffer, width, height, bytesPerPixel);
-      compressed = await deflate(filtered);
-    } catch {}
-  }
-  if (!compressed) {
-    return createRawImage(buffer, dict);
-  }
-  dict.setIfName("Filter", "FlateDecode");
-  const decodeParms = new Dict(dict.xref);
-  decodeParms.set("Predictor", 15);
-  decodeParms.set("Columns", width);
-  decodeParms.set("Colors", bytesPerPixel);
-  decodeParms.set("BitsPerComponent", 8);
-  dict.set("DecodeParms", decodeParms);
-  return createRawImage(compressed, dict);
-}
-async function createImage(bitmap, xref, {
-  closeBitmap = false
-} = {}) {
-  const {
-    width,
-    height
-  } = bitmap;
-  if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
-    if (closeBitmap) {
-      bitmap.close?.();
-    }
-    throw new Error(`createImage: invalid bitmap dimensions ${width}x${height}`);
-  }
-  const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext("2d", {
-    alpha: true,
-    willReadFrequently: true
-  });
-  let data;
-  try {
-    ctx.drawImage(bitmap, 0, 0);
-    data = ctx.getImageData(0, 0, width, height).data;
-  } finally {
-    if (closeBitmap) {
-      bitmap.close?.();
-    }
-  }
-  const buf32 = new Uint32Array(data.buffer, data.byteOffset, data.byteLength >> 2);
-  const isLE = FeatureTest.isLittleEndian;
-  const rgbMask = isLE ? 0x00ffffff : 0xffffff00;
-  const colorCounter = new Set();
-  let hasAlpha = false;
-  let useFlate = true;
-  for (const v of buf32) {
-    if ((isLE ? v >>> 24 : v & 0xff) !== 0xff) {
-      hasAlpha = true;
-      break;
-    }
-    if (useFlate) {
-      colorCounter.add((v & rgbMask) >>> 0);
-      if (colorCounter.size > FLATE_COLOR_COUNT_THRESHOLD) {
-        useFlate = false;
-        colorCounter.clear();
-      }
-    }
-  }
-  if (hasAlpha) {
-    useFlate = true;
-  }
-  const image = createImageDict(xref, width, height, "DeviceRGB");
-  let imageStreamPromise;
-  let imageRenderStream = null;
-  if (useFlate) {
-    const rgbBuffer = new Uint8Array(width * height * 3);
-    for (let i = 0, j = 0, ii = data.length; i < ii; i += 4, j += 3) {
-      rgbBuffer[j] = data[i];
-      rgbBuffer[j + 1] = data[i + 1];
-      rgbBuffer[j + 2] = data[i + 2];
-    }
-    imageStreamPromise = createPNGLikeImage(rgbBuffer, width, height, image);
-    imageRenderStream = createRawImage(rgbBuffer, createImageDict(xref, width, height, "DeviceRGB"));
-  } else {
-    image.setIfName("Filter", "DCTDecode");
-    imageStreamPromise = canvas.convertToBlob({
-      type: "image/jpeg",
-      quality: 1
-    }).then(blob => blob.bytes()).then(bytes => createRawImage(bytes, image));
-  }
-  let smaskStreamPromise = Promise.resolve(null);
-  let smaskRenderStream = null;
-  if (hasAlpha) {
-    const alphaBuffer = new Uint8Array(buf32.length);
-    if (isLE) {
-      for (let i = 0, ii = buf32.length; i < ii; i++) {
-        alphaBuffer[i] = buf32[i] >>> 24;
-      }
-    } else {
-      for (let i = 0, ii = buf32.length; i < ii; i++) {
-        alphaBuffer[i] = buf32[i] & 0xff;
-      }
-    }
-    const smask = createImageDict(xref, width, height, "DeviceGray");
-    const smaskRenderDict = createImageDict(xref, width, height, "DeviceGray");
-    smaskStreamPromise = createPNGLikeImage(alphaBuffer, width, height, smask);
-    smaskRenderStream = createRawImage(alphaBuffer, smaskRenderDict);
-  }
-  const [imageStream, smaskStream] = await Promise.all([imageStreamPromise, smaskStreamPromise]);
-  return {
-    imageStream,
-    imageRenderStream,
-    smaskStream,
-    smaskRenderStream,
-    width,
-    height
-  };
 }
 
 ;// ./src/core/object_loader.js
@@ -42224,7 +41424,10 @@ const dimConverters = {
 };
 const measurementPattern = /([+-]?\d+\.?\d*)(.*)/;
 function stripQuotes(str) {
-  return str.startsWith("'") || str.startsWith('"') ? str.slice(1, -1) : str;
+  if (str.startsWith("'") || str.startsWith('"')) {
+    return str.slice(1, -1);
+  }
+  return str;
 }
 function getInteger({
   data,
@@ -42236,7 +41439,10 @@ function getInteger({
   }
   data = data.trim();
   const n = parseInt(data, 10);
-  return !isNaN(n) && validate(n) ? n : defaultValue;
+  if (!isNaN(n) && validate(n)) {
+    return n;
+  }
+  return defaultValue;
 }
 function getFloat({
   data,
@@ -42248,7 +41454,10 @@ function getFloat({
   }
   data = data.trim();
   const n = parseFloat(data);
-  return !isNaN(n) && validate(n) ? n : defaultValue;
+  if (!isNaN(n) && validate(n)) {
+    return n;
+  }
+  return defaultValue;
 }
 function getKeyword({
   data,
@@ -42259,7 +41468,10 @@ function getKeyword({
     return defaultValue;
   }
   data = data.trim();
-  return validate(data) ? data : defaultValue;
+  if (validate(data)) {
+    return data;
+  }
+  return defaultValue;
 }
 function getStringOption(data, options) {
   return getKeyword({
@@ -42286,7 +41498,10 @@ function getMeasurement(str, def = "0") {
     return 0;
   }
   const conv = dimConverters[unit];
-  return conv ? conv(value) : value;
+  if (conv) {
+    return conv(value);
+  }
+  return value;
 }
 function getRatio(data) {
   if (!data) {
@@ -42329,10 +41544,7 @@ function getColor(data, def = [0, 0, 0]) {
       b
     };
   }
-  const color = data.split(",", 3).map(c => {
-    c = parseInt(c.trim(), 10);
-    return isNaN(c) ? 0 : MathClamp(c, 0, 255);
-  });
+  const color = data.split(",", 3).map(c => MathClamp(parseInt(c.trim(), 10), 0, 255)).map(c => isNaN(c) ? 0 : c);
   if (color.length < 3) {
     return {
       r,
@@ -42415,7 +41627,9 @@ class FontFinder {
       this.addPdfFont(pdfFont);
     }
     for (const pdfFont of this.fonts.values()) {
-      pdfFont.regular ||= pdfFont.italic || pdfFont.bold || pdfFont.bolditalic;
+      if (!pdfFont.regular) {
+        pdfFont.regular = pdfFont.italic || pdfFont.bold || pdfFont.bolditalic;
+      }
     }
     if (!reallyMissingFonts || reallyMissingFonts.size === 0) {
       return;
@@ -42445,7 +41659,9 @@ class FontFinder {
         property += "italic";
       }
     }
-    property ||= "regular";
+    if (!property) {
+      property = "regular";
+    }
     font[property] = pdfFont;
   }
   getDefault() {
@@ -42456,7 +41672,7 @@ class FontFinder {
     if (font) {
       return font;
     }
-    const pattern = /[,\-_ ]|bolditalic|bold|italic|regular|it/gi;
+    const pattern = /,|-|_| |bolditalic|bold|italic|regular|it/gi;
     let name = fontName.replaceAll(pattern, "");
     font = this.fonts.get(name);
     if (font) {
@@ -42508,7 +41724,10 @@ class FontFinder {
 }
 function selectFont(xfaFont, typeface) {
   if (xfaFont.posture === "italic") {
-    return xfaFont.weight === "bold" ? typeface.bolditalic : typeface.italic;
+    if (xfaFont.weight === "bold") {
+      return typeface.bolditalic;
+    }
+    return typeface.italic;
   } else if (xfaFont.weight === "bold") {
     return typeface.bold;
   }
@@ -42760,7 +41979,10 @@ const shortcuts = new Map([["$data", (root, current) => root.datasets ? root.dat
 const somCache = new WeakMap();
 function parseIndex(index) {
   index = index.trim();
-  return index === "*" ? Infinity : parseInt(index, 10) || 0;
+  if (index === "*") {
+    return Infinity;
+  }
+  return parseInt(index, 10) || 0;
 }
 function parseExpression(expr, dotDotAllowed, noExpr = true) {
   let match = expr.match(namePattern);
@@ -42906,11 +42128,17 @@ function searchNode(root, container, expr, dotDotAllowed = true, useCache = true
     }
     root = isFinite(index) ? nodes.filter(node => index < node.length).map(node => node[index]) : nodes.flat();
   }
-  return root.length === 0 ? null : root;
+  if (root.length === 0) {
+    return null;
+  }
+  return root;
 }
 function createDataNode(root, container, expr) {
   const parsed = parseExpression(expr);
-  if (!parsed || parsed.some(x => x.operator === operators.dotDot)) {
+  if (!parsed) {
+    return null;
+  }
+  if (parsed.some(x => x.operator === operators.dotDot)) {
     return null;
   }
   const fn = shortcuts.get(parsed[0].name);
@@ -43128,7 +42356,10 @@ class XFAObject {
     return "";
   }
   [$text]() {
-    return this[_children].length === 0 ? this[$content] : this[_children].map(c => c[$text]()).join("");
+    if (this[_children].length === 0) {
+      return this[$content];
+    }
+    return this[_children].map(c => c[$text]()).join("");
   }
   get [_attributeNames]() {
     const proto = Object.getPrototypeOf(this);
@@ -43158,6 +42389,12 @@ class XFAObject {
   }
   [$getSubformParent]() {
     return this[$getParent]();
+  }
+  [$getChildren](name = null) {
+    if (!name) {
+      return this[_children];
+    }
+    return this[name];
   }
   [$dump]() {
     const dumped = Object.create(null);
@@ -43250,7 +42487,7 @@ class XFAObject {
   [_getUnsetAttributes](protoAttributes) {
     const allAttr = this[_attributeNames];
     const setAttr = this[_setAttributes];
-    return protoAttributes.keys().filter(x => allAttr.has(x) && !setAttr.has(x)).toArray();
+    return [...protoAttributes].filter(x => allAttr.has(x) && !setAttr.has(x));
   }
   [$resolvePrototypes](ids, ancestors = new Set()) {
     for (const child of this[_children]) {
@@ -43298,7 +42535,9 @@ class XFAObject {
       proto = ids.get(id);
     } else {
       proto = searchNode(ids.get($root), this, somExpression, true, false);
-      proto &&= proto[0];
+      if (proto) {
+        proto = proto[0];
+      }
     }
     if (!proto) {
       warn(`XFA - Invalid prototype reference: ${ref}.`);
@@ -43379,7 +42618,10 @@ class XFAObject {
     if (Array.isArray(obj)) {
       return obj.map(x => XFAObject[_cloneAttribute](x));
     }
-    return typeof obj === "object" && obj !== null ? Object.assign({}, obj) : obj;
+    if (typeof obj === "object" && obj !== null) {
+      return Object.assign({}, obj);
+    }
+    return obj;
   }
   [$clone]() {
     const clone = Object.create(Object.getPrototypeOf(this));
@@ -43414,7 +42656,10 @@ class XFAObject {
     return clone;
   }
   [$getChildren](name = null) {
-    return !name ? this[_children] : this[_children].filter(c => c[$nodeName] === name);
+    if (!name) {
+      return this[_children];
+    }
+    return this[_children].filter(c => c[$nodeName] === name);
   }
   [$getChildrenByClass](name) {
     return this[name];
@@ -43601,12 +42846,21 @@ class XmlObject extends XFAObject {
     }
     return HTMLResult.EMPTY;
   }
+  [$getChildren](name = null) {
+    if (!name) {
+      return this[_children];
+    }
+    return this[_children].filter(c => c[$nodeName] === name);
+  }
   [$getAttributes]() {
     return this[_attributes];
   }
   [$getChildrenByClass](name) {
     const value = this[_attributes].get(name);
-    return value !== undefined ? value : this[$getChildren](name);
+    if (value !== undefined) {
+      return value;
+    }
+    return this[$getChildren](name);
   }
   *[$getChildrenByNameIt](name, allTransparent) {
     const value = this[_attributes].get(name);
@@ -43652,7 +42906,10 @@ class XmlObject extends XFAObject {
       if (this[_children].length === 0) {
         return this[$content].trim();
       }
-      return this[_children][0][$namespaceId] === NamespaceIds.xhtml.id ? this[_children][0][$text]().trim() : null;
+      if (this[_children][0][$namespaceId] === NamespaceIds.xhtml.id) {
+        return this[_children][0][$text]().trim();
+      }
+      return null;
     }
     return this[$content].trim();
   }
@@ -43743,7 +43000,6 @@ class Option10 extends IntegerObject {
 }
 
 ;// ./src/core/xfa/html_utils.js
-
 
 
 
@@ -44217,14 +43473,14 @@ function setFontFamily(xfaFont, node, fontFinder, style) {
     return;
   }
   const name = stripQuotes(xfaFont.typeface);
-  style.fontFamily = serializeFontFamily(name);
+  style.fontFamily = `"${name}"`;
   const typeface = fontFinder.find(name);
   if (typeface) {
     const {
       fontFamily
     } = typeface.regular.cssFontInfo;
     if (fontFamily !== name) {
-      style.fontFamily = serializeFontFamily(fontFamily);
+      style.fontFamily = `"${fontFamily}"`;
     }
     const para = getCurrentPara(node);
     if (para && para.lineHeight !== "") {
@@ -44280,7 +43536,10 @@ function flushHTML(node) {
       }
     }
   }
-  return html.children.length === 0 ? null : html;
+  if (html.children.length === 0) {
+    return null;
+  }
+  return html;
 }
 function addHTML(node, html, bbox) {
   const extra = node[$extra];
@@ -44428,7 +43687,10 @@ function getTransformedBBox(node) {
   return [node.x + x + Math.min(0, w), node.y + y + Math.min(0, h), Math.abs(w), Math.abs(h)];
 }
 function checkDimensions(node, space) {
-  if (node[$getTemplateRoot]()[$extra].firstUnsplittable === null || node.w === 0 || node.h === 0) {
+  if (node[$getTemplateRoot]()[$extra].firstUnsplittable === null) {
+    return true;
+  }
+  if (node.w === 0 || node.h === 0) {
     return true;
   }
   const ERROR = 2;
@@ -44488,7 +43750,10 @@ function checkDimensions(node, space) {
       }
       return space.height > ERROR;
     case "position":
-      if (node[$getTemplateRoot]()[$extra].noLayoutFailure || node.h === "" || Math.round(h + y - space.height) <= ERROR) {
+      if (node[$getTemplateRoot]()[$extra].noLayoutFailure) {
+        return true;
+      }
+      if (node.h === "" || Math.round(h + y - space.height) <= ERROR) {
         return true;
       }
       const area = node[$getTemplateRoot]()[$extra].currentContentArea;
@@ -44519,6 +43784,7 @@ function checkDimensions(node, space) {
 
 
 const TEMPLATE_NS_ID = NamespaceIds.template.id;
+const SVG_NS = "http://www.w3.org/2000/svg";
 const MAX_ATTEMPTS_FOR_LRTB_LAYOUT = 2;
 const MAX_EMPTY_PAGES = 3;
 const DEFAULT_TAB_INDEX = 5000;
@@ -46611,9 +45877,10 @@ class Field extends XFAObject {
       }
     }
     if (!this.ui.imageEdit && ui.children?.[0] && this.h) {
-      borderDims ||= getBorderDims(this.ui[$getExtra]());
+      borderDims = borderDims || getBorderDims(this.ui[$getExtra]());
+      let captionHeight = 0;
       if (this.caption && ["top", "bottom"].includes(this.caption.placement)) {
-        let captionHeight = this.caption.reserve;
+        captionHeight = this.caption.reserve;
         if (captionHeight <= 0) {
           captionHeight = this.caption[$getExtra](availableSpace).h;
         }
@@ -47578,7 +46845,10 @@ class PageSet extends XFAObject {
       return page;
     }
     page = this.pageArea.children.find(p => p.oddOrEven === "any" && p.pagePosition === "any");
-    return page ?? this.pageArea.children[0];
+    if (page) {
+      return page;
+    }
+    return this.pageArea.children[0];
   }
 }
 class Para extends XFAObject {
@@ -48094,7 +47364,10 @@ class Subform extends XFAObject {
   }
   [$getSubformParent]() {
     const parent = this[$getParent]();
-    return parent instanceof SubformSet ? parent[$getSubformParent]() : parent;
+    if (parent instanceof SubformSet) {
+      return parent[$getSubformParent]();
+    }
+    return parent;
   }
   [$isBindable]() {
     return true;
@@ -48667,7 +47940,7 @@ class Text extends ContentObject {
   }
   [$getExtra]() {
     if (typeof this[$content] === "string") {
-      return this[$content].split(/[\u2029\u2028\n]/).filter(Boolean).join("\n");
+      return this[$content].split(/[\u2029\u2028\n]/).filter(line => !!line).join("\n");
     }
     return this[$content][$text]();
   }
@@ -48876,7 +48149,10 @@ class Ui extends XFAObject {
   }
   [$toHTML](availableSpace) {
     const obj = this[$getExtra]();
-    return obj ? obj[$toHTML](availableSpace) : HTMLResult.EMPTY;
+    if (obj) {
+      return obj[$toHTML](availableSpace);
+    }
+    return HTMLResult.EMPTY;
   }
 }
 class Validate extends XFAObject {
@@ -48949,7 +48225,10 @@ class Value extends XFAObject {
   }
   [$text]() {
     if (this.exData) {
-      return typeof this.exData[$content] === "string" ? this.exData[$content].trim() : this.exData[$content][$text]().trim();
+      if (typeof this.exData[$content] === "string") {
+        return this.exData[$content].trim();
+      }
+      return this.exData[$content][$text]().trim();
     }
     for (const name of Object.getOwnPropertyNames(this)) {
       if (name === "image") {
@@ -49363,7 +48642,7 @@ class Binder {
   constructor(root) {
     this.root = root;
     this.datasets = root.datasets;
-    this.data = root.datasets?.data || new XmlObject(bind_NS_DATASETS, "data");
+    this.data = root.datasets?.data || new XmlObject(NamespaceIds.datasets.id, "data");
     this.emptyMerge = this.data[$getChildren]().length === 0;
     this.root.form = this.form = root.template[$clone]();
   }
@@ -49414,7 +48693,7 @@ class Binder {
           return match;
         }
       }
-      if (dataNode[$namespaceId] === bind_NS_DATASETS && dataNode[$nodeName] === "data") {
+      if (dataNode[$namespaceId] === NamespaceIds.datasets.id && dataNode[$nodeName] === "data") {
         break;
       }
       dataNode = dataNode[$getParent]();
@@ -49429,7 +48708,10 @@ class Binder {
     }
     generator = this.data[$getAttributeIt](name, true);
     match = generator.next().value;
-    return match?.[$isDataValue]() ? match : null;
+    if (match?.[$isDataValue]()) {
+      return match;
+    }
+    return null;
   }
   _setProperties(formNode, dataNode) {
     if (!Object.hasOwn(formNode, "setProperty")) {
@@ -50116,10 +49398,13 @@ class EquateRange extends XFAObject {
     const ranges = [];
     const unicodeRegex = /U\+([0-9a-fA-F]+)/;
     const unicodeRange = this._unicodeRange;
-    for (let range of unicodeRange.split(",").map(x => x.trim()).filter(Boolean)) {
+    for (let range of unicodeRange.split(",").map(x => x.trim()).filter(x => !!x)) {
       range = range.split("-", 2).map(x => {
         const found = x.match(unicodeRegex);
-        return !found ? 0 : parseInt(found[1], 16);
+        if (!found) {
+          return 0;
+        }
+        return parseInt(found[1], 16);
       });
       if (range.length === 1) {
         range.push(range[0]);
@@ -50568,7 +49853,7 @@ class Rename extends ContentObject {
   }
   [$finalize]() {
     this[$content] = this[$content].trim();
-    if (this[$content].toLowerCase().startsWith("xml") || /[\p{L}_][\p{L}\d._\p{M}-]*/u.test(this[$content])) {
+    if (this[$content].toLowerCase().startsWith("xml") || new RegExp("[\\p{L}_][\\p{L}\\d._\\p{M}-]*", "u").test(this[$content])) {
       warn("XFA - Rename: invalid XFA name");
     }
   }
@@ -50813,7 +50098,10 @@ class Zpl extends XFAObject {
 }
 class ConfigNamespace {
   static [$buildXFAObject](name, attributes) {
-    return Object.hasOwn(ConfigNamespace, name) ? ConfigNamespace[name](attributes) : undefined;
+    if (Object.hasOwn(ConfigNamespace, name)) {
+      return ConfigNamespace[name](attributes);
+    }
+    return undefined;
   }
   static acrobat(attrs) {
     return new Acrobat(attrs);
@@ -51352,7 +50640,10 @@ class XsdConnection extends XFAObject {
 }
 class ConnectionSetNamespace {
   static [$buildXFAObject](name, attributes) {
-    return Object.hasOwn(ConnectionSetNamespace, name) ? ConnectionSetNamespace[name](attributes) : undefined;
+    if (Object.hasOwn(ConnectionSetNamespace, name)) {
+      return ConnectionSetNamespace[name](attributes);
+    }
+    return undefined;
   }
   static connectionSet(attrs) {
     return new ConnectionSet(attrs);
@@ -51421,7 +50712,10 @@ class Datasets extends XFAObject {
 }
 class DatasetsNamespace {
   static [$buildXFAObject](name, attributes) {
-    return Object.hasOwn(DatasetsNamespace, name) ? DatasetsNamespace[name](attributes) : undefined;
+    if (Object.hasOwn(DatasetsNamespace, name)) {
+      return DatasetsNamespace[name](attributes);
+    }
+    return undefined;
   }
   static datasets(attributes) {
     return new Datasets(attributes);
@@ -51600,7 +50894,10 @@ class TypeFaces extends XFAObject {
 }
 class LocaleSetNamespace {
   static [$buildXFAObject](name, attributes) {
-    return Object.hasOwn(LocaleSetNamespace, name) ? LocaleSetNamespace[name](attributes) : undefined;
+    if (Object.hasOwn(LocaleSetNamespace, name)) {
+      return LocaleSetNamespace[name](attributes);
+    }
+    return undefined;
   }
   static calendarSymbols(attrs) {
     return new CalendarSymbols(attrs);
@@ -51687,7 +50984,10 @@ class signature_Signature extends XFAObject {
 }
 class SignatureNamespace {
   static [$buildXFAObject](name, attributes) {
-    return Object.hasOwn(SignatureNamespace, name) ? SignatureNamespace[name](attributes) : undefined;
+    if (Object.hasOwn(SignatureNamespace, name)) {
+      return SignatureNamespace[name](attributes);
+    }
+    return undefined;
   }
   static signature(attributes) {
     return new signature_Signature(attributes);
@@ -51705,7 +51005,10 @@ class Stylesheet extends XFAObject {
 }
 class StylesheetNamespace {
   static [$buildXFAObject](name, attributes) {
-    return Object.hasOwn(StylesheetNamespace, name) ? StylesheetNamespace[name](attributes) : undefined;
+    if (Object.hasOwn(StylesheetNamespace, name)) {
+      return StylesheetNamespace[name](attributes);
+    }
+    return undefined;
   }
   static stylesheet(attributes) {
     return new Stylesheet(attributes);
@@ -51736,7 +51039,10 @@ class xdp_Xdp extends XFAObject {
 }
 class XdpNamespace {
   static [$buildXFAObject](name, attributes) {
-    return Object.hasOwn(XdpNamespace, name) ? XdpNamespace[name](attributes) : undefined;
+    if (Object.hasOwn(XdpNamespace, name)) {
+      return XdpNamespace[name](attributes);
+    }
+    return undefined;
   }
   static xdp(attributes) {
     return new xdp_Xdp(attributes);
@@ -51777,7 +51083,7 @@ function mapStyle(styleStr, node, richText) {
     if (key.endsWith("scale")) {
       style.transform = style.transform ? `${style[key]} ${newValue}` : newValue;
     } else {
-      style[key.replaceAll(/-([a-z])/gi, (_, x) => x.toUpperCase())] = newValue;
+      style[key.replaceAll(/-([a-zA-Z])/g, (_, x) => x.toUpperCase())] = newValue;
     }
   }
   if (style.fontFamily) {
@@ -51866,7 +51172,7 @@ class XhtmlObject extends XmlObject {
           xfaFont.letterSpacing = getMeasurement(value);
           break;
         case "margin":
-          const values = value.split(/ \t/).map(getMeasurement);
+          const values = value.split(/ \t/).map(x => getMeasurement(x));
           switch (values.length) {
             case 1:
               margin.top = margin.bottom = margin.left = margin.right = values[0];
@@ -52068,7 +51374,10 @@ class P extends XhtmlObject {
   }
   [$text]() {
     const siblings = this[$getParent]()[$getChildren]();
-    return siblings.at(-1) === this ? super[$text]() : super[$text]() + "\n";
+    if (siblings.at(-1) === this) {
+      return super[$text]();
+    }
+    return super[$text]() + "\n";
   }
 }
 class Span extends XhtmlObject {
@@ -52093,7 +51402,10 @@ class Ul extends XhtmlObject {
 }
 class XhtmlNamespace {
   static [$buildXFAObject](name, attributes) {
-    return Object.hasOwn(XhtmlNamespace, name) ? XhtmlNamespace[name](attributes) : undefined;
+    if (Object.hasOwn(XhtmlNamespace, name)) {
+      return XhtmlNamespace[name](attributes);
+    }
+    return undefined;
   }
   static a(attributes) {
     return new A(attributes);
@@ -52320,11 +51632,13 @@ class Builder {
     if (hasNamespace) {
       this._currentNamespace = this._namespaceStack.pop();
     }
-    prefixes?.forEach(({
-      prefix
-    }) => {
-      this._namespacePrefixes.get(prefix).pop();
-    });
+    if (prefixes) {
+      prefixes.forEach(({
+        prefix
+      }) => {
+        this._namespacePrefixes.get(prefix).pop();
+      });
+    }
     if (nsAgnostic) {
       this._nsAgnosticLevel--;
     }
@@ -52536,7 +51850,10 @@ class XFAFactory {
         missingFonts.push(typeface);
       }
     }
-    return missingFonts.length > 0 ? missingFonts : null;
+    if (missingFonts.length > 0) {
+      return missingFonts;
+    }
+    return null;
   }
   appendFonts(fonts, reallyMissingFonts) {
     this.form[$globalData].fontFinder.add(fonts, reallyMissingFonts);
@@ -52553,7 +51870,10 @@ class XFAFactory {
     return this.dataHandler.serialize(storage);
   }
   static _createDocument(data) {
-    return !data.get("/xdp:xdp") ? data.get("xdp:xdp") : data.values().join("");
+    if (!data["/xdp:xdp"]) {
+      return data["xdp:xdp"];
+    }
+    return Object.values(data).join("");
   }
   static getRichTextAsHtml(rc) {
     if (!rc || typeof rc !== "string") {
@@ -52577,7 +51897,9 @@ class XFAFactory {
         attributes
       } = html;
       if (attributes) {
-        attributes.class &&= attributes.class.filter(attr => !attr.startsWith("xfa"));
+        if (attributes.class) {
+          attributes.class = attributes.class.filter(attr => !attr.startsWith("xfa"));
+        }
         attributes.dir = "auto";
       }
       return {
@@ -52607,16 +51929,10 @@ class XFAFactory {
 
 
 
-
-
-
-
-
 class AnnotationFactory {
   static createGlobals(pdfManager) {
     return Promise.all([pdfManager.ensureCatalog("acroForm"), pdfManager.ensureDoc("xfaDatasets"), pdfManager.ensureCatalog("structTreeRoot"), pdfManager.ensureCatalog("baseUrl"), pdfManager.ensureCatalog("attachments"), pdfManager.ensureCatalog("globalColorSpaceCache")]).then(([acroForm, xfaDatasets, structTreeRoot, baseUrl, attachments, globalColorSpaceCache]) => ({
       pdfManager,
-      catalog: pdfManager.pdfDocument.catalog,
       acroForm: acroForm instanceof Dict ? acroForm : Dict.empty,
       xfaDatasets,
       structTreeRoot,
@@ -52714,12 +52030,6 @@ class AnnotationFactory {
         return new StampAnnotation(parameters);
       case "FileAttachment":
         return new FileAttachmentAnnotation(parameters);
-      case "RichMedia":
-        return new RichMediaAnnotation(parameters);
-      case "Screen":
-        return new ScreenAnnotation(parameters);
-      case "Sound":
-        return new SoundAnnotation(parameters);
       default:
         if (!collectFields) {
           if (!subtype) {
@@ -52740,7 +52050,8 @@ class AnnotationFactory {
       const pageRef = annotDict.getRaw("P");
       if (pageRef instanceof Ref) {
         try {
-          return await pdfManager.ensureCatalog("getPageIndex", [pageRef]);
+          const pageIndex = await pdfManager.ensureCatalog("getPageIndex", [pageRef]);
+          return pageIndex;
         } catch (ex) {
           info(`_getPageIndex -- not a valid page reference: "${ex}".`);
         }
@@ -52777,12 +52088,9 @@ class AnnotationFactory {
         continue;
       }
       imagePromises ||= new Map();
-      imagePromises.set(bitmapId, createImage(bitmap, xref));
+      imagePromises.set(bitmapId, StampAnnotation.createImage(bitmap, xref));
     }
     return imagePromises;
-  }
-  static getPrintData(annotation) {
-    throw new Error("Not implemented: getPrintData");
   }
   static async saveNewAnnotations(evaluator, xref, task, annotations, imagePromises, changes) {
     let baseFontRef;
@@ -52796,7 +52104,7 @@ class AnnotationFactory {
       }
       switch (annotation.annotationType) {
         case AnnotationEditorType.FREETEXT:
-          if (!annotation.appearanceRef && !baseFontRef) {
+          if (!baseFontRef) {
             const baseFont = new Dict(xref);
             baseFont.setIfName("BaseFont", "Helvetica");
             baseFont.setIfName("Type", "Font");
@@ -52841,10 +52149,7 @@ class AnnotationFactory {
             changes.put(imageRef, {
               data: imageStream
             });
-            image.imageStream = null;
-            image.imageRenderStream = null;
-            image.smaskStream = null;
-            image.smaskRenderStream = null;
+            image.imageStream = image.smaskStream = null;
           }
           promises.push(StampAnnotation.createNewAnnotation(xref, annotation, changes, {
             image
@@ -52901,19 +52206,13 @@ class AnnotationFactory {
           if (image?.imageStream) {
             const {
               imageStream,
-              imageRenderStream,
-              smaskStream,
-              smaskRenderStream
+              smaskStream
             } = image;
-            const imageRef = imageRenderStream || new JpegStream(imageStream, imageStream.length);
-            if (smaskStream || smaskRenderStream) {
-              imageRef.dict.set("SMask", smaskRenderStream || smaskStream);
+            if (smaskStream) {
+              imageStream.dict.set("SMask", smaskStream);
             }
-            image.imageRef = imageRef;
-            image.imageStream = null;
-            image.imageRenderStream = null;
-            image.smaskStream = null;
-            image.smaskRenderStream = null;
+            image.imageRef = new JpegStream(imageStream, imageStream.length);
+            image.imageStream = image.smaskStream = null;
           }
           promises.push(StampAnnotation.createNewPrintAnnotation(annotationGlobals, xref, annotation, {
             image,
@@ -52984,23 +52283,7 @@ function getTransformMatrix(rect, bbox, matrix) {
   const yRatio = (rect[3] - rect[1]) / (maxY - minY);
   return [xRatio, 0, 0, yRatio, rect[0] - minX * xRatio, rect[1] - minY * yRatio];
 }
-function writeLineToCurveToAppearance(data, buffer, maybeClose = false) {
-  buffer.push(`${numberToString(data[4])} ${numberToString(data[5])} m`);
-  for (let i = 6, ii = data.length; i < ii; i += 6) {
-    if (isNaN(data[i])) {
-      buffer.push(`${numberToString(data[i + 4])} ${numberToString(data[i + 5])} l`);
-    } else {
-      const curve = data.slice(i, i + 6);
-      buffer.push(`${curve.map(numberToString).join(" ")} c`);
-    }
-  }
-  if (maybeClose && data.length === 6) {
-    buffer.push(`${numberToString(data[4])} ${numberToString(data[5])} l`);
-  }
-}
 class Annotation {
-  appearance = null;
-  _oc = undefined;
   constructor(params) {
     const {
       annotationGlobals,
@@ -53022,7 +52305,7 @@ class Annotation {
     this.setColor(dict.getArray("C"));
     this.setBorderStyle(dict);
     this.setAppearance(dict);
-    this.#setOptionalContent(xref, dict);
+    this.setOptionalContent(dict);
     const MK = dict.get("MK");
     this.setBorderAndBackgroundColors(MK);
     this.setRotation(MK, dict);
@@ -53045,7 +52328,6 @@ class Annotation {
       hasAppearance: !!this.appearance,
       id: params.id,
       modificationDate: this.modificationDate,
-      oc: this._oc,
       rect: this.rectangle,
       subtype,
       hasOwnCanvas: false,
@@ -53057,7 +52339,7 @@ class Annotation {
     if (annotationGlobals.structTreeRoot) {
       let structParent = dict.get("StructParent");
       this.data.structParent = structParent = Number.isInteger(structParent) && structParent >= 0 ? structParent : -1;
-      annotationGlobals.structTreeRoot.addAnnotationIdToPage(params.pageRef, structParent, this.ref);
+      annotationGlobals.structTreeRoot.addAnnotationIdToPage(params.pageRef, structParent);
     }
     if (params.collectFields) {
       const kids = dict.get("Kids");
@@ -53084,13 +52366,6 @@ class Annotation {
     this._fallbackFontDict = null;
     this._needAppearances = false;
   }
-  _getOperatorListNoAppearance() {
-    return {
-      opList: new OperatorList(),
-      separateForm: false,
-      separateCanvas: false
-    };
-  }
   _hasFlag(flags, flag) {
     return !!(flags & flag);
   }
@@ -53102,7 +52377,10 @@ class Annotation {
       if (noPrint === undefined) {
         return undefined;
       }
-      return noPrint ? flags & ~AnnotationFlag.PRINT : flags & ~AnnotationFlag.HIDDEN | AnnotationFlag.PRINT;
+      if (noPrint) {
+        return flags & ~AnnotationFlag.PRINT;
+      }
+      return flags & ~AnnotationFlag.HIDDEN | AnnotationFlag.PRINT;
     }
     if (noView) {
       flags |= AnnotationFlag.PRINT;
@@ -53125,20 +52403,38 @@ class Annotation {
   }
   mustBeViewed(annotationStorage, _renderForms) {
     const noView = annotationStorage?.get(this.data.id)?.noView;
-    return noView !== undefined ? !noView : this.viewable && !this._hasFlag(this.flags, AnnotationFlag.HIDDEN);
+    if (noView !== undefined) {
+      return !noView;
+    }
+    return this.viewable && !this._hasFlag(this.flags, AnnotationFlag.HIDDEN);
   }
   mustBePrinted(annotationStorage) {
     const noPrint = annotationStorage?.get(this.data.id)?.noPrint;
-    return noPrint !== undefined ? !noPrint : this.printable;
+    if (noPrint !== undefined) {
+      return !noPrint;
+    }
+    return this.printable;
   }
   mustBeViewedWhenEditing(isEditing, modifiedIds = null) {
     return isEditing ? !this.data.isEditable : !modifiedIds?.has(this.data.id);
   }
   get viewable() {
-    return this.data.quadPoints !== null && (this.flags === 0 || this._isViewable(this.flags));
+    if (this.data.quadPoints === null) {
+      return false;
+    }
+    if (this.flags === 0) {
+      return true;
+    }
+    return this._isViewable(this.flags);
   }
   get printable() {
-    return this.data.quadPoints !== null && this.flags !== 0 && this._isPrintable(this.flags);
+    if (this.data.quadPoints === null) {
+      return false;
+    }
+    if (this.flags === 0) {
+      return false;
+    }
+    return this._isPrintable(this.flags);
   }
   _parseStringHelper(data) {
     const str = typeof data === "string" ? stringToPDFString(data) : "";
@@ -53265,6 +52561,7 @@ class Annotation {
     }
   }
   setAppearance(dict) {
+    this.appearance = null;
     const appearanceStates = dict.get("AP");
     if (!(appearanceStates instanceof Dict)) {
       return;
@@ -53278,7 +52575,7 @@ class Annotation {
       return;
     }
     const as = dict.get("AS");
-    if (!(as instanceof Name)) {
+    if (!(as instanceof Name) || !normalAppearanceState.has(as.name)) {
       return;
     }
     const appearance = normalAppearanceState.get(as.name);
@@ -53286,16 +52583,13 @@ class Annotation {
       this.appearance = appearance;
     }
   }
-  #setOptionalContent(xref, dict) {
-    if (dict.has("OC")) {
-      try {
-        this._oc = parseMarkedContentProps(xref, dict.get("OC"), null);
-      } catch (ex) {
-        if (ex instanceof MissingDataException) {
-          throw ex;
-        }
-        warn(`#setOptionalContent: ${ex}`);
-      }
+  setOptionalContent(dict) {
+    this.oc = null;
+    const oc = dict.get("OC");
+    if (oc instanceof Name) {
+      warn("setOptionalContent: Support for /Name-entry is not implemented.");
+    } else if (oc instanceof Dict) {
+      this.oc = oc;
     }
   }
   async loadResources(keys, appearance) {
@@ -53305,9 +52599,6 @@ class Annotation {
     }
     return resources;
   }
-  get _ownCanvasRequiresForms() {
-    return false;
-  }
   async getOperatorList(evaluator, task, intent, annotationStorage) {
     const {
       hasOwnCanvas,
@@ -53315,24 +52606,36 @@ class Annotation {
       rect
     } = this.data;
     let appearance = this.appearance;
-    const isUsingOwnCanvas = !!(hasOwnCanvas && intent & RenderingIntentFlag.DISPLAY && (!this._ownCanvasRequiresForms || intent & RenderingIntentFlag.ANNOTATIONS_FORMS));
+    const isUsingOwnCanvas = !!(hasOwnCanvas && intent & RenderingIntentFlag.DISPLAY);
     if (isUsingOwnCanvas && (this.width === 0 || this.height === 0)) {
       this.data.hasOwnCanvas = false;
-      return this._getOperatorListNoAppearance();
+      return {
+        opList: new OperatorList(),
+        separateForm: false,
+        separateCanvas: false
+      };
     }
     if (!appearance) {
       if (!isUsingOwnCanvas) {
-        return this._getOperatorListNoAppearance();
+        return {
+          opList: new OperatorList(),
+          separateForm: false,
+          separateCanvas: false
+        };
       }
-      appearance = new StringStream("", new Dict());
+      appearance = new StringStream("");
+      appearance.dict = new Dict();
     }
     const appearanceDict = appearance.dict;
     const resources = await this.loadResources(RESOURCES_KEYS_OPERATOR_LIST, appearance);
-    const bbox = lookupRect(appearanceDict.getArray("BBox"), [0, 0, this.width, this.height]);
+    const bbox = lookupRect(appearanceDict.getArray("BBox"), [0, 0, 1, 1]);
     const matrix = lookupMatrix(appearanceDict.getArray("Matrix"), IDENTITY_MATRIX);
     const transform = getTransformMatrix(rect, bbox, matrix);
     const opList = new OperatorList();
-    const optionalContent = this._oc;
+    let optionalContent;
+    if (this.oc) {
+      optionalContent = await evaluator.parseMarkedContentProps(this.oc, null);
+    }
     if (optionalContent !== undefined) {
       opList.addOp(OPS.beginMarkedContentProps, ["OC", optionalContent]);
     }
@@ -53371,8 +52674,6 @@ class Annotation {
     const resources = await this.loadResources(RESOURCES_KEYS_TEXT_CONTENT, this.appearance);
     const text = [];
     const buffer = [];
-    let firstPositionX = Infinity;
-    let firstPositionY = Infinity;
     let firstPosition = null;
     const sink = {
       desiredSize: Math.Infinity,
@@ -53382,8 +52683,7 @@ class Annotation {
           if (item.str === undefined) {
             continue;
           }
-          firstPositionX = Math.min(firstPositionX, item.transform[4]);
-          firstPositionY = Math.min(firstPositionY, item.transform[5]);
+          firstPosition ||= item.transform.slice(-2);
           buffer.push(item.str);
           if (item.hasEOL) {
             text.push(buffer.join("").trimEnd());
@@ -53402,9 +52702,6 @@ class Annotation {
       viewBox
     });
     this.reset();
-    if (firstPositionX !== Infinity) {
-      firstPosition = [firstPositionX, firstPositionY];
-    }
     if (buffer.length) {
       text.push(buffer.join("").trimEnd());
     }
@@ -53481,15 +52778,6 @@ class Annotation {
       }
     }
     return fieldName.join(".");
-  }
-  _getAttachmentId(fsDict, fsRef, annotationGlobals, isSound = false) {
-    if (!(fsDict instanceof Dict)) {
-      return undefined;
-    }
-    if (!(fsRef instanceof Ref)) {
-      fsRef = FileSpec.pickPlatformItem(fsDict.get("EF"), true);
-    }
-    return fsRef instanceof Ref ? annotationGlobals.catalog.getAttachmentIdForAnnotation(fsRef, isSound) : undefined;
   }
   get width() {
     return this.data.rect[2] - this.data.rect[0];
@@ -53668,7 +52956,8 @@ class MarkupAnnotation extends Annotation {
     const formDict = new Dict(xref);
     const appearanceStreamDict = new Dict(xref);
     appearanceStreamDict.setIfName("Subtype", "Form");
-    const appearanceStream = new StringStream(buffer.join(" "), appearanceStreamDict);
+    const appearanceStream = new StringStream(buffer.join(" "));
+    appearanceStream.dict = appearanceStreamDict;
     formDict.set("Fm0", appearanceStream);
     const gsDict = new Dict(xref);
     if (blendMode) {
@@ -53684,21 +52973,25 @@ class MarkupAnnotation extends Annotation {
     const appearanceDict = new Dict(xref);
     appearanceDict.set("Resources", resources);
     appearanceDict.set("BBox", bbox);
-    this.appearance = new StringStream("/GS0 gs /Fm0 Do", appearanceDict);
+    this.appearance = new StringStream("/GS0 gs /Fm0 Do");
+    this.appearance.dict = appearanceDict;
     this._streams.push(this.appearance, appearanceStream);
   }
   static async createNewAnnotation(xref, annotation, changes, params) {
     const annotationRef = annotation.ref ||= xref.getNewTemporaryRef();
     const ap = await this.createNewAppearanceStream(annotation, xref, params);
-    let apRef = annotation.appearanceRef ?? null;
+    let annotationDict;
     if (ap) {
-      changes.put(apRef = xref.getNewTemporaryRef(), {
+      const apRef = xref.getNewTemporaryRef();
+      annotationDict = this.createNewDict(annotation, xref, {
+        apRef
+      });
+      changes.put(apRef, {
         data: ap
       });
+    } else {
+      annotationDict = this.createNewDict(annotation, xref, {});
     }
-    const annotationDict = this.createNewDict(annotation, xref, {
-      apRef
-    });
     if (Number.isInteger(annotation.parentTreeId)) {
       annotationDict.set("StructParent", annotation.parentTreeId);
     }
@@ -53874,17 +53167,14 @@ class WidgetAnnotation extends Annotation {
   }
   async getOperatorList(evaluator, task, intent, annotationStorage) {
     if (intent & RenderingIntentFlag.ANNOTATIONS_FORMS && !(this instanceof SignatureWidgetAnnotation) && !this.data.noHTML && !this.data.hasOwnCanvas) {
-      const list = this._getOperatorListNoAppearance();
-      list.separateForm = true;
-      return list;
+      return {
+        opList: new OperatorList(),
+        separateForm: true,
+        separateCanvas: false
+      };
     }
     if (!this._hasText) {
       return super.getOperatorList(evaluator, task, intent, annotationStorage);
-    }
-    const isUsingOwnCanvas = !!(this.data.hasOwnCanvas && intent & RenderingIntentFlag.DISPLAY);
-    if (isUsingOwnCanvas && (this.width === 0 || this.height === 0)) {
-      this.data.hasOwnCanvas = false;
-      return this._getOperatorListNoAppearance();
     }
     const content = await this._getAppearance(evaluator, task, intent, annotationStorage);
     if (this.appearance && content === null) {
@@ -53898,10 +53188,14 @@ class WidgetAnnotation extends Annotation {
         separateCanvas: false
       };
     }
+    const isUsingOwnCanvas = !!(this.data.hasOwnCanvas && intent & RenderingIntentFlag.DISPLAY);
     const matrix = [1, 0, 0, 1, 0, 0];
     const bbox = [0, 0, this.width, this.height];
     const transform = getTransformMatrix(this.data.rect, bbox, matrix);
-    const optionalContent = this._oc;
+    let optionalContent;
+    if (this.oc) {
+      optionalContent = await evaluator.parseMarkedContentProps(this.oc, null);
+    }
     if (optionalContent !== undefined) {
       opList.addOp(OPS.beginMarkedContentProps, ["OC", optionalContent]);
     }
@@ -54021,13 +53315,13 @@ class WidgetAnnotation extends Annotation {
       const AP = new Dict(xref);
       dict.set("AP", AP);
       AP.set("N", newRef);
-      const resources = this._getSaveFieldResources(xref),
-        appearanceDict = new Dict(xref);
+      const resources = this._getSaveFieldResources(xref);
+      const appearanceStream = new StringStream(appearance);
+      const appearanceDict = appearanceStream.dict = new Dict(xref);
       appearanceDict.setIfName("Subtype", "Form");
       appearanceDict.set("Resources", resources);
       const bbox = rotation % 180 === 0 ? [0, 0, this.width, this.height] : [0, 0, this.height, this.width];
       appearanceDict.set("BBox", bbox);
-      const appearanceStream = new StringStream(appearance, appearanceDict);
       const rotationMatrix = this.getRotationMatrix(annotationStorage);
       if (rotationMatrix !== IDENTITY_MATRIX) {
         appearanceDict.set("Matrix", rotationMatrix);
@@ -54099,9 +53393,6 @@ class WidgetAnnotation extends Annotation {
     if (!this._defaultAppearance) {
       this.data.defaultAppearanceData = parseDefaultAppearance(this._defaultAppearance = "/Helvetica 0 Tf 0 g");
     }
-    if (!this.data.defaultAppearanceData.fontSize && (totalWidth <= 2 * defaultHPadding || totalHeight <= 2 * defaultPadding)) {
-      return `/Tx BMC q ${colors}Q EMC`;
-    }
     let font = await WidgetAnnotation._getFontData(evaluator, task, this.data.defaultAppearanceData, this._fieldResources.mergedResources);
     let defaultAppearance, fontSize, lineHeight;
     const encodedLines = [];
@@ -54158,24 +53449,13 @@ class WidgetAnnotation extends Annotation {
     }
     const defaultVPadding = Math.min(Math.floor((totalHeight - fontSize) / 2), defaultPadding);
     const alignment = this.data.textAlignment;
-    let {
-      ascent: fontAscent,
-      descent: fontDescent
-    } = font;
-    if (isNaN(fontAscent) || isNaN(fontDescent) || !fontAscent && !fontDescent) {
-      fontAscent = (/* inlined export .LINE_FACTOR */1.35) - (/* inlined export .LINE_DESCENT_FACTOR */0.35);
-      fontDescent = (/* inlined export .LINE_DESCENT_FACTOR */0.35);
-    } else {
-      fontDescent = Math.abs(fontDescent);
-    }
-    const vShift = (totalHeight - (fontAscent + fontDescent) * fontSize) / 2 + fontDescent * fontSize;
     if (this.data.multiLine) {
       return this._getMultilineAppearance(defaultAppearance, encodedLines, font, fontSize, totalWidth, totalHeight, alignment, defaultHPadding, defaultVPadding, descent, lineHeight, annotationStorage);
     }
     if (this.data.comb) {
-      return this._getCombAppearance(defaultAppearance, font, encodedLines[0], fontSize, totalWidth, vShift, alignment, bidi(lines[0]).dir === "rtl", annotationStorage);
+      return this._getCombAppearance(defaultAppearance, font, encodedLines[0], fontSize, totalWidth, totalHeight, defaultHPadding, defaultVPadding, descent, lineHeight, alignment, bidi(lines[0]).dir === "rtl", annotationStorage);
     }
-    const bottomPadding = vShift;
+    const bottomPadding = defaultVPadding + descent;
     if (alignment === 0 || alignment > 2) {
       return `/Tx BMC q ${colors}BT ` + defaultAppearance + ` 1 0 0 1 ${numberToString(defaultHPadding)} ${numberToString(bottomPadding)} Tm (${escapeString(encodedLines[0])}) Tj` + " ET Q EMC";
     }
@@ -54207,13 +53487,13 @@ class WidgetAnnotation extends Annotation {
     let {
       fontSize
     } = this.data.defaultAppearanceData;
-    const lineHeight = (fontSize || 12) * (/* inlined export .LINE_FACTOR */1.35);
-    let numberOfLines = Math.round(height / lineHeight);
+    let lineHeight = (fontSize || 12) * LINE_FACTOR,
+      numberOfLines = Math.round(height / lineHeight);
     if (!fontSize) {
       const roundWithTwoDigits = x => Math.floor(x * 100) / 100;
       if (lineCount === -1) {
         const textWidth = this._getTextWidth(text, font);
-        fontSize = roundWithTwoDigits(Math.min(height / (/* inlined export .LINE_FACTOR */1.35), width / textWidth));
+        fontSize = roundWithTwoDigits(Math.min(height / LINE_FACTOR, width / textWidth));
         numberOfLines = 1;
       } else {
         const lines = text.split(/\r\n?|\n/);
@@ -54240,25 +53520,15 @@ class WidgetAnnotation extends Annotation {
           return false;
         };
         numberOfLines = Math.max(numberOfLines, lineCount);
-        const getFontSize = n => roundWithTwoDigits(height / n / (/* inlined export .LINE_FACTOR */1.35));
-        if (height > 0 && isTooBig(getFontSize(numberOfLines))) {
-          let low = numberOfLines,
-            high = 2 * numberOfLines;
-          while (isTooBig(getFontSize(high))) {
-            low = high;
-            high *= 2;
+        while (true) {
+          lineHeight = height / numberOfLines;
+          fontSize = roundWithTwoDigits(lineHeight / LINE_FACTOR);
+          if (isTooBig(fontSize)) {
+            numberOfLines++;
+            continue;
           }
-          while (high - low > 1) {
-            const mid = Math.floor((low + high) / 2);
-            if (isTooBig(getFontSize(mid))) {
-              low = mid;
-            } else {
-              high = mid;
-            }
-          }
-          numberOfLines = high;
+          break;
         }
-        fontSize = getFontSize(numberOfLines);
       }
       const {
         fontName,
@@ -54330,7 +53600,6 @@ class TextWidgetAnnotation extends WidgetAnnotation {
   constructor(params) {
     super(params);
     const {
-      annotationGlobals,
       dict
     } = params;
     if (dict.has("PMD")) {
@@ -54343,11 +53612,14 @@ class TextWidgetAnnotation extends WidgetAnnotation {
     if (typeof this.data.fieldValue !== "string") {
       this.data.fieldValue = "";
     }
-    const getAlignment = q => Number.isInteger(q) && q >= 0 && q <= 2 ? q : null;
-    this.data.textAlignment = getAlignment(getInheritableProperty({
+    let alignment = getInheritableProperty({
       dict,
       key: "Q"
-    })) ?? getAlignment(annotationGlobals.acroForm.get("Q")) ?? null;
+    });
+    if (!Number.isInteger(alignment) || alignment < 0 || alignment > 2) {
+      alignment = null;
+    }
+    this.data.textAlignment = alignment;
     let maximumLength = getInheritableProperty({
       dict,
       key: "MaxLen"
@@ -54360,28 +53632,28 @@ class TextWidgetAnnotation extends WidgetAnnotation {
     this.data.comb = this.hasFieldFlag(AnnotationFieldFlag.COMB) && !this.data.multiLine && !this.data.password && !this.hasFieldFlag(AnnotationFieldFlag.FILESELECT) && this.data.maxLen !== 0;
     this.data.doNotScroll = this.hasFieldFlag(AnnotationFieldFlag.DONOTSCROLL);
     const {
-      actions
-    } = this.data;
+      data: {
+        actions
+      }
+    } = this;
     if (!actions) {
       return;
     }
     const AFDateTime = /^AF(Date|Time)_(?:Keystroke|Format)(?:Ex)?\(['"]?([^'"]+)['"]?\);$/;
     let canUseHTMLDateTime = false;
-    const aFormat = actions.get("Format"),
-      aKeystroke = actions.get("Keystroke");
-    if (aFormat?.length === 1 && aKeystroke?.length === 1 && AFDateTime.test(aFormat[0]) && AFDateTime.test(aKeystroke[0]) || aFormat?.length === 0 && aKeystroke?.length === 1 && AFDateTime.test(aKeystroke[0]) || aKeystroke?.length === 0 && aFormat?.length === 1 && AFDateTime.test(aFormat[0])) {
+    if (actions.Format?.length === 1 && actions.Keystroke?.length === 1 && AFDateTime.test(actions.Format[0]) && AFDateTime.test(actions.Keystroke[0]) || actions.Format?.length === 0 && actions.Keystroke?.length === 1 && AFDateTime.test(actions.Keystroke[0]) || actions.Keystroke?.length === 0 && actions.Format?.length === 1 && AFDateTime.test(actions.Format[0])) {
       canUseHTMLDateTime = true;
     }
     const actionsToVisit = [];
-    if (aFormat) {
-      actionsToVisit.push(...aFormat);
+    if (actions.Format) {
+      actionsToVisit.push(...actions.Format);
     }
-    if (aKeystroke) {
-      actionsToVisit.push(...aKeystroke);
+    if (actions.Keystroke) {
+      actionsToVisit.push(...actions.Keystroke);
     }
     if (canUseHTMLDateTime) {
-      actions.delete("Keystroke");
-      actions.set("Format", actionsToVisit);
+      delete actions.Keystroke;
+      actions.Format = actionsToVisit;
     }
     for (const formatAction of actionsToVisit) {
       const m = formatAction.match(AFDateTime);
@@ -54415,39 +53687,26 @@ class TextWidgetAnnotation extends WidgetAnnotation {
   get hasTextContent() {
     return !!this.appearance && !this._needAppearances;
   }
-  _getCombAppearance(defaultAppearance, font, text, fontSize, width, vShift, alignment, isRTL, annotationStorage) {
+  _getCombAppearance(defaultAppearance, font, text, fontSize, width, height, hPadding, vPadding, descent, lineHeight, alignment, isRTL, annotationStorage) {
     const combWidth = width / this.data.maxLen;
     const colors = this.getBorderAndBackgroundAppearances(annotationStorage);
-    const cells = font.getCharPositions(text).map(([start, end]) => {
-      const glyph = text.substring(start, end);
-      return {
-        glyph,
-        width: this._getTextWidth(glyph, font) * fontSize
-      };
-    });
-    if (isRTL) {
-      cells.reverse();
+    const buf = [];
+    const positions = font.getCharPositions(text);
+    for (const [start, end] of positions) {
+      buf.push(`(${escapeString(text.substring(start, end))}) Tj`);
     }
-    const textWidth = combWidth * cells.length;
-    let hShift = 0;
+    if (isRTL) {
+      buf.reverse();
+    }
+    const textWidth = combWidth * positions.length;
+    let hShift = hPadding;
     if (alignment === 1) {
       hShift += Math.floor((width - textWidth) / (2 * combWidth)) * combWidth;
     } else if (alignment === 2) {
       hShift += width - textWidth;
     }
-    const buf = [];
-    let previousWidth = 0;
-    for (let i = 0, ii = cells.length; i < ii; i++) {
-      const {
-        glyph,
-        width: glyphWidth
-      } = cells[i];
-      const shift = i === 0 ? (combWidth - glyphWidth) / 2 : combWidth + (previousWidth - glyphWidth) / 2;
-      buf.push(`${numberToString(shift)} 0 Td (${escapeString(glyph)}) Tj`);
-      previousWidth = glyphWidth;
-    }
-    const renderedComb = buf.join(" ");
-    return `/Tx BMC q ${colors}BT ` + defaultAppearance + ` 1 0 0 1 ${numberToString(hShift)} ${numberToString(vShift)} Tm ${renderedComb}` + " ET Q EMC";
+    const renderedComb = buf.join(` ${numberToString(combWidth)} 0 Td `);
+    return `/Tx BMC q ${colors}BT ` + defaultAppearance + ` 1 0 0 1 ${numberToString(hShift)} ${numberToString(vPadding + descent)} Tm ${renderedComb}` + " ET Q EMC";
   }
   _getMultilineAppearance(defaultAppearance, lines, font, fontSize, width, height, alignment, hPadding, vPadding, descent, lineHeight, annotationStorage) {
     const buf = [];
@@ -54516,7 +53775,7 @@ class TextWidgetAnnotation extends WidgetAnnotation {
       }
     }
     if (startChunk < line.length) {
-      chunks.push(line.substring(startChunk));
+      chunks.push(line.substring(startChunk, line.length));
     }
     return chunks;
   }
@@ -54570,55 +53829,21 @@ class ButtonWidgetAnnotation extends WidgetAnnotation {
     this.data.radioButton = isRadio && !isPushButton;
     this.data.pushButton = isPushButton;
     this.data.isTooltipOnly = false;
-    this.data.hasOwnCanvas = true;
-    this.data.noHTML = false;
     if (this.data.checkBox) {
       this._processCheckBox(params);
     } else if (this.data.radioButton) {
       this._processRadioButton(params);
     } else if (this.data.pushButton) {
+      this.data.hasOwnCanvas = true;
+      this.data.noHTML = false;
       this._processPushButton(params);
     } else {
       warn("Invalid field flags for button widget annotation");
     }
   }
-  get _ownCanvasRequiresForms() {
-    return this.data.checkBox || this.data.radioButton;
-  }
-  #getOperatorListForAppearance(evaluator, task, intent, annotationStorage, rotation, appearance) {
-    if (!appearance) {
-      return this._getOperatorListNoAppearance();
-    }
-    const savedAppearance = this.appearance;
-    const savedMatrix = lookupMatrix(appearance.dict.getArray("Matrix"), IDENTITY_MATRIX);
-    if (rotation) {
-      appearance.dict.set("Matrix", this.getRotationMatrix(annotationStorage));
-    }
-    this.appearance = appearance;
-    const operatorList = super.getOperatorList(evaluator, task, intent, annotationStorage);
-    this.appearance = savedAppearance;
-    appearance.dict.set("Matrix", savedMatrix);
-    return operatorList;
-  }
   async getOperatorList(evaluator, task, intent, annotationStorage) {
     if (this.data.pushButton) {
       return super.getOperatorList(evaluator, task, intent, false, annotationStorage);
-    }
-    if (intent & RenderingIntentFlag.DISPLAY && intent & RenderingIntentFlag.ANNOTATIONS_FORMS && (this.data.checkBox || this.data.radioButton)) {
-      const setCanvasName = (operatorList, name) => {
-        const index = operatorList.fnArray.indexOf(OPS.beginAnnotation);
-        if (index !== -1) {
-          operatorList.argsArray[index].push(name);
-        }
-      };
-      const checked = await this.#getOperatorListForAppearance(evaluator, task, intent, annotationStorage, null, this.checkedAppearance);
-      setCanvasName(checked.opList, "checked");
-      const unchecked = await this.#getOperatorListForAppearance(evaluator, task, intent, annotationStorage, null, this.uncheckedAppearance);
-      setCanvasName(unchecked.opList, "unchecked");
-      checked.opList.addOpList(unchecked.opList);
-      checked.separateForm ||= unchecked.separateForm;
-      checked.separateCanvas ||= unchecked.separateCanvas;
-      return checked;
     }
     let value = null;
     let rotation = null;
@@ -54630,8 +53855,27 @@ class ButtonWidgetAnnotation extends WidgetAnnotation {
     if (value === null && this.appearance) {
       return super.getOperatorList(evaluator, task, intent, annotationStorage);
     }
-    value ??= this.data.checkBox ? this.data.fieldValue === this.data.exportValue : this.data.fieldValue === this.data.buttonValue;
-    return this.#getOperatorListForAppearance(evaluator, task, intent, annotationStorage, rotation, value ? this.checkedAppearance : this.uncheckedAppearance);
+    if (value === null || value === undefined) {
+      value = this.data.checkBox ? this.data.fieldValue === this.data.exportValue : this.data.fieldValue === this.data.buttonValue;
+    }
+    const appearance = value ? this.checkedAppearance : this.uncheckedAppearance;
+    if (appearance) {
+      const savedAppearance = this.appearance;
+      const savedMatrix = lookupMatrix(appearance.dict.getArray("Matrix"), IDENTITY_MATRIX);
+      if (rotation) {
+        appearance.dict.set("Matrix", this.getRotationMatrix(annotationStorage));
+      }
+      this.appearance = appearance;
+      const operatorList = super.getOperatorList(evaluator, task, intent, annotationStorage);
+      this.appearance = savedAppearance;
+      appearance.dict.set("Matrix", savedMatrix);
+      return operatorList;
+    }
+    return {
+      opList: new OperatorList(),
+      separateForm: false,
+      separateCanvas: false
+    };
   }
   async save(evaluator, task, annotationStorage, changes) {
     if (this.data.checkBox) {
@@ -54674,7 +53918,7 @@ class ButtonWidgetAnnotation extends WidgetAnnotation {
       path: this.data.fieldName,
       value: value ? this.data.exportValue : ""
     };
-    const name = Name.get(value ? this._onStateName : "Off");
+    const name = Name.get(value ? this.data.exportValue : "Off");
     this.setValue(dict, name, evaluator.xref, changes);
     dict.set("AS", name);
     dict.set("M", `D:${getModificationDate()}`);
@@ -54723,7 +53967,7 @@ class ButtonWidgetAnnotation extends WidgetAnnotation {
       path: this.data.fieldName,
       value: value ? this.data.buttonValue : ""
     };
-    const name = Name.get(value ? this._onStateName : "Off");
+    const name = Name.get(value ? this.data.buttonValue : "Off");
     if (value) {
       this.setValue(dict, name, evaluator.xref, changes);
     }
@@ -54781,101 +54025,25 @@ class ButtonWidgetAnnotation extends WidgetAnnotation {
     font.set("PdfJsZaDb", this.fallbackFontDict);
     resources.set("Font", font);
     appearanceStreamDict.set("Resources", resources);
-    this.checkedAppearance = new StringStream(appearance, appearanceStreamDict);
+    this.checkedAppearance = new StringStream(appearance);
+    this.checkedAppearance.dict = appearanceStreamDict;
     this._streams.push(this.checkedAppearance);
-  }
-  _getOnStateName(dict) {
-    const appearanceStates = dict.get("AP");
-    if (!(appearanceStates instanceof Dict)) {
-      return null;
-    }
-    const normalAppearance = appearanceStates.get("N");
-    if (!(normalAppearance instanceof Dict)) {
-      return null;
-    }
-    for (const key of normalAppearance.getKeys()) {
-      if (key !== "Off") {
-        return key;
-      }
-    }
-    return null;
-  }
-  _getExportValueForOptIndex(index, opt, xref) {
-    if (Number.isInteger(index) && index >= 0 && index < opt.length) {
-      const value = this._decodeFormValue(xref.fetchIfRef(opt[index]));
-      if (typeof value === "string") {
-        return value;
-      }
-    }
-    return null;
-  }
-  _getOptInfo(dict, onState, opt, xref) {
-    if (!Array.isArray(opt)) {
-      return null;
-    }
-    const stateToIndex = new Map();
-    let currentIndex = null;
-    const fieldParent = dict.get("Parent");
-    const kids = fieldParent instanceof Dict ? fieldParent.get("Kids") : null;
-    if (Array.isArray(kids)) {
-      for (let i = 0, ii = Math.min(kids.length, opt.length); i < ii; i++) {
-        const kid = kids[i];
-        if (kid instanceof Ref && isRefsEqual(kid, this.ref)) {
-          currentIndex = i;
-        }
-        const kidDict = xref.fetchIfRef(kid);
-        if (!(kidDict instanceof Dict)) {
-          continue;
-        }
-        if (kidDict === dict) {
-          currentIndex = i;
-        }
-        const kidOnState = this._getOnStateName(kidDict);
-        if (typeof kidOnState === "string" && !stateToIndex.has(kidOnState)) {
-          stateToIndex.set(kidOnState, i);
-        }
-      }
-    } else if (opt.length === 1 && typeof onState === "string") {
-      currentIndex = 0;
-      stateToIndex.set(onState, 0);
-    }
-    return {
-      currentIndex,
-      opt,
-      stateToIndex
-    };
-  }
-  _getExportValue(state, optInfo, xref) {
-    if (!optInfo || typeof state !== "string" || state === "Off") {
-      return state;
-    }
-    if (state === this._onStateName) {
-      const exportValue = this._getExportValueForOptIndex(optInfo.currentIndex, optInfo.opt, xref);
-      if (exportValue !== null) {
-        return exportValue;
-      }
-    }
-    if (optInfo.stateToIndex.has(state)) {
-      const exportValue = this._getExportValueForOptIndex(optInfo.stateToIndex.get(state), optInfo.opt, xref);
-      if (exportValue !== null) {
-        return exportValue;
-      }
-    }
-    const index = parseInt(state, 10);
-    return Number.isInteger(index) && String(index) === state ? this._getExportValueForOptIndex(index, optInfo.opt, xref) || state : state;
   }
   _processCheckBox(params) {
     const customAppearance = params.dict.get("AP");
-    let normalAppearance = customAppearance instanceof Dict ? customAppearance.get("N") : null;
+    if (!(customAppearance instanceof Dict)) {
+      return;
+    }
+    const normalAppearance = customAppearance.get("N");
     if (!(normalAppearance instanceof Dict)) {
-      normalAppearance = null;
+      return;
     }
     const asValue = this._decodeFormValue(params.dict.get("AS"));
     if (typeof asValue === "string") {
       this.data.fieldValue = asValue;
     }
     const yes = this.data.fieldValue !== null && this.data.fieldValue !== "Off" ? this.data.fieldValue : "Yes";
-    const exportValues = normalAppearance ? [...normalAppearance.getKeys()] : [];
+    const exportValues = [...normalAppearance.getKeys()];
     if (exportValues.length === 0) {
       exportValues.push("Off", yes);
     } else if (exportValues.length === 1) {
@@ -54892,22 +54060,13 @@ class ButtonWidgetAnnotation extends WidgetAnnotation {
       exportValues.length = 0;
       exportValues.push("Off", otherYes);
     }
-    const onState = exportValues[1];
-    this._onStateName = onState;
-    const opt = getInheritableProperty({
-      dict: params.dict,
-      key: "Opt"
-    });
-    const optInfo = this._getOptInfo(params.dict, onState, opt, params.xref);
-    this.data.exportValue = this._getExportValue(onState, optInfo, params.xref);
-    if (!exportValues.includes(this.data.fieldValue) && this.data.fieldValue !== this.data.exportValue) {
+    if (!exportValues.includes(this.data.fieldValue)) {
       this.data.fieldValue = "Off";
     }
-    this.data.fieldValue = this._getExportValue(this.data.fieldValue, optInfo, params.xref);
-    this.data.defaultFieldValue = this._getExportValue(this.data.defaultFieldValue, optInfo, params.xref);
-    const checkedAppearance = normalAppearance?.get(onState);
+    this.data.exportValue = exportValues[1];
+    const checkedAppearance = normalAppearance.get(this.data.exportValue);
     this.checkedAppearance = checkedAppearance instanceof BaseStream ? checkedAppearance : null;
-    const uncheckedAppearance = normalAppearance?.get("Off");
+    const uncheckedAppearance = normalAppearance.get("Off");
     this.uncheckedAppearance = uncheckedAppearance instanceof BaseStream ? uncheckedAppearance : null;
     if (this.checkedAppearance) {
       this._streams.push(this.checkedAppearance);
@@ -54940,23 +54099,13 @@ class ButtonWidgetAnnotation extends WidgetAnnotation {
     if (!(normalAppearance instanceof Dict)) {
       return;
     }
-    let onState = null;
     for (const key of normalAppearance.getKeys()) {
       if (key !== "Off") {
-        onState = key;
+        this.data.buttonValue = key;
         break;
       }
     }
-    this._onStateName = onState;
-    const opt = getInheritableProperty({
-      dict: params.dict,
-      key: "Opt"
-    });
-    const optInfo = this._getOptInfo(params.dict, onState, opt, params.xref);
-    this.data.buttonValue = this._getExportValue(onState, optInfo, params.xref);
-    this.data.fieldValue = this._getExportValue(this.data.fieldValue, optInfo, params.xref);
-    this.data.defaultFieldValue = this._getExportValue(this.data.defaultFieldValue, optInfo, params.xref);
-    const checkedAppearance = normalAppearance.get(onState);
+    const checkedAppearance = normalAppearance.get(this.data.buttonValue);
     this.checkedAppearance = checkedAppearance instanceof BaseStream ? checkedAppearance : null;
     const uncheckedAppearance = normalAppearance.get("Off");
     this.uncheckedAppearance = uncheckedAppearance instanceof BaseStream ? uncheckedAppearance : null;
@@ -55179,14 +54328,17 @@ class ChoiceWidgetAnnotation extends WidgetAnnotation {
     } else {
       defaultAppearance = this._defaultAppearance;
     }
-    const lineHeight = fontSize * (/* inlined export .LINE_FACTOR */1.35);
+    const lineHeight = fontSize * LINE_FACTOR;
     const vPadding = (lineHeight - fontSize) / 2;
     const numberOfVisibleLines = Math.floor(totalHeight / lineHeight);
     let firstIndex = 0;
     if (valueIndices.length > 0) {
       const minIndex = Math.min(...valueIndices);
       const maxIndex = Math.max(...valueIndices);
-      firstIndex = MathClamp(maxIndex - numberOfVisibleLines + 1, 0, minIndex);
+      firstIndex = Math.max(0, maxIndex - numberOfVisibleLines + 1);
+      if (firstIndex > minIndex) {
+        firstIndex = minIndex;
+      }
     }
     const end = Math.min(firstIndex + numberOfVisibleLines + 1, lineCount);
     const buf = ["/Tx BMC q", `1 1 ${totalWidth} ${totalHeight} re W n`];
@@ -55214,7 +54366,6 @@ class ChoiceWidgetAnnotation extends WidgetAnnotation {
   }
 }
 class SignatureWidgetAnnotation extends WidgetAnnotation {
-  _hasValueFromXFA = false;
   constructor(params) {
     super(params);
     this.data.fieldValue = null;
@@ -55429,15 +54580,6 @@ class FreeTextAnnotation extends MarkupAnnotation {
     }
     return freetext;
   }
-  static getPrintData({
-    color,
-    fontSize,
-    rect,
-    rotation,
-    value
-  }) {
-    throw new Error("Not implemented: getPrintData");
-  }
   static async createNewAppearanceStream(annotation, xref, params) {
     const {
       baseFontRef,
@@ -55495,10 +54637,13 @@ class FreeTextAnnotation extends MarkupAnnotation {
       }
       totalWidth = Math.max(totalWidth, lineWidth);
     }
-    const hscale = totalWidth > w ? w / totalWidth : 1;
+    let hscale = 1;
+    if (totalWidth > w) {
+      hscale = w / totalWidth;
+    }
     let vscale = 1;
-    const lineHeight = (/* inlined export .LINE_FACTOR */1.35) * fontSize;
-    const lineAscent = ((/* inlined export .LINE_FACTOR */1.35) - (/* inlined export .LINE_DESCENT_FACTOR */0.35)) * fontSize;
+    const lineHeight = LINE_FACTOR * fontSize;
+    const lineAscent = (LINE_FACTOR - LINE_DESCENT_FACTOR) * fontSize;
     const totalHeight = lineHeight * lines.length;
     if (totalHeight > h) {
       vscale = h / totalHeight;
@@ -55544,7 +54689,9 @@ class FreeTextAnnotation extends MarkupAnnotation {
     appearanceStreamDict.set("BBox", rect);
     appearanceStreamDict.set("Resources", resources);
     appearanceStreamDict.set("Matrix", [1, 0, 0, 1, -rect[0], -rect[1]]);
-    return new StringStream(appearance, appearanceStreamDict);
+    const ap = new StringStream(appearance);
+    ap.dict = appearanceStreamDict;
+    return ap;
   }
 }
 class LineAnnotation extends MarkupAnnotation {
@@ -55697,7 +54844,9 @@ class PolylineAnnotation extends MarkupAnnotation {
       const strokeColor = getPdfColorArray(this.color, [0, 0, 0]);
       const strokeAlpha = dict.get("CA");
       let fillColor = getRgbColor(dict.getArray("IC"), null);
-      fillColor &&= getPdfColorArray(fillColor);
+      if (fillColor) {
+        fillColor = getPdfColorArray(fillColor);
+      }
       let operator;
       if (fillColor) {
         if (this.color) {
@@ -55754,15 +54903,15 @@ class InkAnnotation extends MarkupAnnotation {
     if (!Array.isArray(rawInkLists)) {
       return;
     }
-    for (const rawInkList of rawInkLists) {
-      if (!Array.isArray(rawInkList)) {
+    for (let i = 0, ii = rawInkLists.length; i < ii; ++i) {
+      if (!Array.isArray(rawInkLists[i])) {
         continue;
       }
-      const inkList = new Float32Array(rawInkList.length);
+      const inkList = new Float32Array(rawInkLists[i].length);
       this.data.inkLists.push(inkList);
-      for (let j = 0, jj = rawInkList.length; j < jj; j += 2) {
-        const x = xref.fetchIfRef(rawInkList[j]),
-          y = xref.fetchIfRef(rawInkList[j + 1]);
+      for (let j = 0, jj = rawInkLists[i].length; j < jj; j += 2) {
+        const x = xref.fetchIfRef(rawInkLists[i][j]),
+          y = xref.fetchIfRef(rawInkLists[i][j + 1]);
         if (typeof x === "number" && typeof y === "number") {
           inkList[j] = x;
           inkList[j + 1] = y;
@@ -55861,7 +55010,18 @@ class InkAnnotation extends MarkupAnnotation {
       appearanceBuffer.push("/R0 gs");
     }
     for (const outline of paths.lines) {
-      writeLineToCurveToAppearance(outline, appearanceBuffer, true);
+      appearanceBuffer.push(`${numberToString(outline[4])} ${numberToString(outline[5])} m`);
+      for (let i = 6, ii = outline.length; i < ii; i += 6) {
+        if (isNaN(outline[i])) {
+          appearanceBuffer.push(`${numberToString(outline[i + 4])} ${numberToString(outline[i + 5])} l`);
+        } else {
+          const [c1x, c1y, c2x, c2y, x, y] = outline.slice(i, i + 6);
+          appearanceBuffer.push([c1x, c1y, c2x, c2y, x, y].map(numberToString).join(" ") + " c");
+        }
+      }
+      if (outline.length === 6) {
+        appearanceBuffer.push(`${numberToString(outline[4])} ${numberToString(outline[5])} l`);
+      }
     }
     appearanceBuffer.push("S");
     const appearance = appearanceBuffer.join("\n");
@@ -55881,7 +55041,9 @@ class InkAnnotation extends MarkupAnnotation {
       resources.set("ExtGState", extGState);
       appearanceStreamDict.set("Resources", resources);
     }
-    return new StringStream(appearance, appearanceStreamDict);
+    const ap = new StringStream(appearance);
+    ap.dict = appearanceStreamDict;
+    return ap;
   }
   static async createNewAppearanceStreamForHighlight(annotation, xref, params) {
     const {
@@ -55896,7 +55058,15 @@ class InkAnnotation extends MarkupAnnotation {
       return null;
     }
     const appearanceBuffer = [`${getPdfColor(color, true)}`, "/R0 gs"];
-    writeLineToCurveToAppearance(outline, appearanceBuffer);
+    appearanceBuffer.push(`${numberToString(outline[4])} ${numberToString(outline[5])} m`);
+    for (let i = 6, ii = outline.length; i < ii; i += 6) {
+      if (isNaN(outline[i])) {
+        appearanceBuffer.push(`${numberToString(outline[i + 4])} ${numberToString(outline[i + 5])} l`);
+      } else {
+        const [c1x, c1y, c2x, c2y, x, y] = outline.slice(i, i + 6);
+        appearanceBuffer.push([c1x, c1y, c2x, c2y, x, y].map(numberToString).join(" ") + " c");
+      }
+    }
     appearanceBuffer.push("h f");
     const appearance = appearanceBuffer.join("\n");
     const appearanceStreamDict = new Dict(xref);
@@ -55916,7 +55086,9 @@ class InkAnnotation extends MarkupAnnotation {
       r0.set("ca", opacity);
       r0.setIfName("Type", "ExtGState");
     }
-    return new StringStream(appearance, appearanceStreamDict);
+    const ap = new StringStream(appearance);
+    ap.dict = appearanceStreamDict;
+    return ap;
   }
 }
 class HighlightAnnotation extends MarkupAnnotation {
@@ -55931,7 +55103,11 @@ class HighlightAnnotation extends MarkupAnnotation {
     this.data.opacity = dict.get("CA") || 1;
     const quadPoints = this.data.quadPoints = getQuadPoints(dict, null);
     if (quadPoints) {
-      if (!this.appearance) {
+      const resources = this.appearance?.dict.get("Resources");
+      if (!this.appearance || !resources?.has("ExtGState")) {
+        if (this.appearance) {
+          warn("HighlightAnnotation - ignoring built-in appearance stream.");
+        }
         const fillColor = getPdfColorArray(this.color, [1, 1, 0]);
         const fillAlpha = dict.get("CA");
         this._setDefaultAppearance({
@@ -56025,7 +55201,9 @@ class HighlightAnnotation extends MarkupAnnotation {
       r0.set("ca", opacity);
       r0.setIfName("Type", "ExtGState");
     }
-    return new StringStream(appearance, appearanceStreamDict);
+    const ap = new StringStream(appearance);
+    ap.dict = appearanceStreamDict;
+    return ap;
   }
 }
 class UnderlineAnnotation extends MarkupAnnotation {
@@ -56155,6 +55333,68 @@ class StampAnnotation extends MarkupAnnotation {
     }
     return !modifiedIds?.has(this.data.id);
   }
+  static async createImage(bitmap, xref) {
+    const {
+      width,
+      height
+    } = bitmap;
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext("2d", {
+      alpha: true
+    });
+    ctx.drawImage(bitmap, 0, 0);
+    const data = ctx.getImageData(0, 0, width, height).data;
+    const buf32 = new Uint32Array(data.buffer);
+    const hasAlpha = buf32.some(FeatureTest.isLittleEndian ? x => x >>> 24 !== 0xff : x => (x & 0xff) !== 0xff);
+    if (hasAlpha) {
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(bitmap, 0, 0);
+    }
+    const jpegBytesPromise = canvas.convertToBlob({
+      type: "image/jpeg",
+      quality: 1
+    }).then(blob => blob.bytes());
+    const xobjectName = Name.get("XObject");
+    const imageName = Name.get("Image");
+    const image = new Dict(xref);
+    image.set("Type", xobjectName);
+    image.set("Subtype", imageName);
+    image.set("BitsPerComponent", 8);
+    image.setIfName("ColorSpace", "DeviceRGB");
+    image.setIfName("Filter", "DCTDecode");
+    image.set("BBox", [0, 0, width, height]);
+    image.set("Width", width);
+    image.set("Height", height);
+    let smaskStream = null;
+    if (hasAlpha) {
+      const alphaBuffer = new Uint8Array(buf32.length);
+      if (FeatureTest.isLittleEndian) {
+        for (let i = 0, ii = buf32.length; i < ii; i++) {
+          alphaBuffer[i] = buf32[i] >>> 24;
+        }
+      } else {
+        for (let i = 0, ii = buf32.length; i < ii; i++) {
+          alphaBuffer[i] = buf32[i] & 0xff;
+        }
+      }
+      const smask = new Dict(xref);
+      smask.set("Type", xobjectName);
+      smask.set("Subtype", imageName);
+      smask.set("BitsPerComponent", 8);
+      smask.setIfName("ColorSpace", "DeviceGray");
+      smask.set("Width", width);
+      smask.set("Height", height);
+      smaskStream = new Stream(alphaBuffer, 0, 0, smask);
+    }
+    const imageStream = new Stream(await jpegBytesPromise, 0, 0, image);
+    return {
+      imageStream,
+      smaskStream,
+      width,
+      height
+    };
+  }
   static createNewDict(annotation, xref, {
     apRef,
     ap
@@ -56195,7 +55435,18 @@ class StampAnnotation extends MarkupAnnotation {
     }
     const appearanceBuffer = [`${thickness} w 1 J 1 j`, `${getPdfColor(color, areContours)}`];
     for (const line of lines) {
-      writeLineToCurveToAppearance(line, appearanceBuffer, true);
+      appearanceBuffer.push(`${numberToString(line[4])} ${numberToString(line[5])} m`);
+      for (let i = 6, ii = line.length; i < ii; i += 6) {
+        if (isNaN(line[i])) {
+          appearanceBuffer.push(`${numberToString(line[i + 4])} ${numberToString(line[i + 5])} l`);
+        } else {
+          const [c1x, c1y, c2x, c2y, x, y] = line.slice(i, i + 6);
+          appearanceBuffer.push([c1x, c1y, c2x, c2y, x, y].map(numberToString).join(" ") + " c");
+        }
+      }
+      if (line.length === 6) {
+        appearanceBuffer.push(`${numberToString(line[4])} ${numberToString(line[5])} l`);
+      }
     }
     appearanceBuffer.push(areContours ? "F" : "S");
     const appearance = appearanceBuffer.join("\n");
@@ -56205,7 +55456,9 @@ class StampAnnotation extends MarkupAnnotation {
     appearanceStreamDict.setIfName("Type", "XObject");
     appearanceStreamDict.set("BBox", rect);
     appearanceStreamDict.set("Length", appearance.length);
-    return new StringStream(appearance, appearanceStreamDict);
+    const ap = new StringStream(appearance);
+    ap.dict = appearanceStreamDict;
+    return ap;
   }
   static async createNewAppearanceStream(annotation, xref, params) {
     if (annotation.oldAnnotation) {
@@ -56237,297 +55490,25 @@ class StampAnnotation extends MarkupAnnotation {
       const matrix = getRotationMatrix(rotation, width, height);
       appearanceStreamDict.set("Matrix", matrix);
     }
-    return new StringStream(appearance, appearanceStreamDict);
+    const ap = new StringStream(appearance);
+    ap.dict = appearanceStreamDict;
+    return ap;
   }
 }
 class FileAttachmentAnnotation extends MarkupAnnotation {
   constructor(params) {
     super(params);
     const {
-      annotationGlobals,
       dict
     } = params;
-    const fsDict = dict.get("FS");
+    const file = new FileSpec(dict.get("FS"));
     this.data.hasOwnCanvas = this.data.noRotate;
     this.data.noHTML = false;
-    this.data.fileId = this._getAttachmentId(fsDict, dict.getRaw("FS"), annotationGlobals);
-    this.data.file = new FileSpec(fsDict).serializable;
+    this.data.file = file.serializable;
     const name = dict.get("Name");
     this.data.name = name instanceof Name ? stringToPDFString(name.name) : "PushPin";
     const fillAlpha = dict.get("ca");
     this.data.fillAlpha = typeof fillAlpha === "number" && fillAlpha >= 0 && fillAlpha <= 1 ? fillAlpha : null;
-  }
-}
-class MediaAnnotation extends Annotation {
-  static #MEDIA_MIME_TYPE_RE = /^(?:video|audio)\/[a-z0-9][\w!#$&^.+-]{0,126}$/i;
-  static #MEDIA_CONTENT_TYPE_RE = /^(?:video|audio)\/[a-z0-9][\w!#$&^.+-]{0,126}(?: *; *[a-z0-9][\w!#$&^.+-]{0,126} *= *(?:[-!#$%&'*+.^\x60{|}~\w]+|"(?:[\x20\x21\x23-\x5b\x5d-\x7e]|\\[\x20-\x7e])*"))* *$/i;
-  constructor(params) {
-    super(params);
-    this.data.noHTML = true;
-  }
-  _setMediaData({
-    assetRef,
-    assetDict,
-    filename,
-    contentType,
-    wrapSound = false
-  }, annotationGlobals) {
-    this.data.noHTML = false;
-    this.data.richMedia = {
-      fileId: this._getAttachmentId(assetDict, assetRef, annotationGlobals, wrapSound),
-      filename,
-      contentType
-    };
-  }
-  static _getContentType(assetDict, filename, contentType = null, contentTypeIsName = false) {
-    if (typeof contentType === "string" && (contentTypeIsName ? MediaAnnotation.#MEDIA_MIME_TYPE_RE : MediaAnnotation.#MEDIA_CONTENT_TYPE_RE).test(contentType)) {
-      return contentType;
-    }
-    const stream = FileSpec.pickPlatformItem(assetDict.get("EF"));
-    const subtype = stream instanceof BaseStream ? stream.dict?.get("Subtype") : null;
-    if (subtype instanceof Name && MediaAnnotation.#MEDIA_MIME_TYPE_RE.test(subtype.name)) {
-      return subtype.name;
-    }
-    const extPos = filename.lastIndexOf(".") + 1,
-      ext = extPos > 0 && filename.substring(extPos).toLowerCase();
-    switch (ext) {
-      case "mp4":
-      case "m4v":
-        return "video/mp4";
-      case "webm":
-        return "video/webm";
-      case "ogv":
-        return "video/ogg";
-      case "mov":
-        return "video/quicktime";
-      case "mp3":
-        return "audio/mpeg";
-      case "m4a":
-        return "audio/mp4";
-      case "wav":
-        return "audio/wav";
-      case "oga":
-      case "ogg":
-        return "audio/ogg";
-      default:
-        return null;
-    }
-  }
-}
-class RichMediaAnnotation extends MediaAnnotation {
-  constructor(params) {
-    super(params);
-    const {
-      dict,
-      xref,
-      annotationGlobals
-    } = params;
-    const content = dict.get("RichMediaContent");
-    if (!(content instanceof Dict)) {
-      return;
-    }
-    const asset = RichMediaAnnotation.#findAsset(content, xref);
-    if (!asset) {
-      warn("RichMedia annotation has no playable asset.");
-      return;
-    }
-    this._setMediaData(asset, annotationGlobals);
-  }
-  static #findAsset(content, xref) {
-    const configurations = content.get("Configurations");
-    if (!Array.isArray(configurations)) {
-      return null;
-    }
-    for (const configRef of configurations) {
-      const config = xref.fetchIfRef(configRef);
-      if (!(config instanceof Dict)) {
-        continue;
-      }
-      const instances = config.get("Instances");
-      if (!Array.isArray(instances)) {
-        continue;
-      }
-      for (const instanceRef of instances) {
-        const instance = xref.fetchIfRef(instanceRef);
-        if (!(instance instanceof Dict)) {
-          continue;
-        }
-        if (isName(instance.get("Subtype"), "Flash")) {
-          continue;
-        }
-        const rawAsset = instance.getRaw("Asset");
-        const asset = xref.fetchIfRef(rawAsset);
-        if (!(asset instanceof Dict)) {
-          continue;
-        }
-        if (!FileSpec.hasEmbeddedFile(asset)) {
-          continue;
-        }
-        const {
-          filename
-        } = new FileSpec(asset).serializable;
-        const contentType = MediaAnnotation._getContentType(asset, filename);
-        if (!contentType) {
-          continue;
-        }
-        return {
-          assetRef: rawAsset instanceof Ref ? rawAsset : null,
-          assetDict: asset,
-          filename,
-          contentType
-        };
-      }
-    }
-    return null;
-  }
-}
-class ScreenAnnotation extends MediaAnnotation {
-  constructor(params) {
-    super(params);
-    const {
-      dict,
-      xref,
-      annotationGlobals
-    } = params;
-    const asset = ScreenAnnotation.#findAsset(dict, xref);
-    if (!asset) {
-      return;
-    }
-    this._setMediaData(asset, annotationGlobals);
-  }
-  static #findAsset(dict, xref) {
-    for (const action of this.#renditionActions(dict)) {
-      const asset = this.#findRenditionAsset(action.get("R"), xref, new RefSet());
-      if (asset) {
-        return asset;
-      }
-    }
-    return null;
-  }
-  static *#renditionActions(dict) {
-    const action = dict.get("A");
-    if (this.#isPlayAction(action)) {
-      yield action;
-    }
-    const additionalActions = dict.get("AA");
-    if (additionalActions instanceof Dict) {
-      for (const [, aa] of additionalActions) {
-        if (this.#isPlayAction(aa)) {
-          yield aa;
-        }
-      }
-    }
-  }
-  static #isPlayAction(action) {
-    if (!(action instanceof Dict) || !isName(action.get("S"), "Rendition")) {
-      return false;
-    }
-    const operation = action.get("OP");
-    return operation === undefined || operation === AnnotationRenditionOperation.PLAY_OR_RESUME || operation === AnnotationRenditionOperation.PLAY;
-  }
-  static #findRenditionAsset(rendition, xref, seen) {
-    if (!(rendition instanceof Dict)) {
-      return null;
-    }
-    const subtype = rendition.get("S");
-    if (isName(subtype, "MR")) {
-      return this.#findClipAsset(rendition.get("C"), xref);
-    }
-    if (isName(subtype, "SR")) {
-      const renditions = rendition.get("R");
-      if (Array.isArray(renditions)) {
-        for (const ref of renditions) {
-          if (ref instanceof Ref) {
-            if (seen.has(ref)) {
-              continue;
-            }
-            seen.put(ref);
-          }
-          const asset = this.#findRenditionAsset(xref.fetchIfRef(ref), xref, seen);
-          if (asset) {
-            return asset;
-          }
-        }
-      }
-    }
-    return null;
-  }
-  static #findClipAsset(clip, xref) {
-    if (!(clip instanceof Dict) || !isName(clip.get("S"), "MCD")) {
-      return null;
-    }
-    const rawData = clip.getRaw("D");
-    const data = xref.fetchIfRef(rawData);
-    const contentTypeHint = clip.get("CT");
-    let explicitType = typeof contentTypeHint === "string" ? contentTypeHint : null;
-    let explicitTypeIsName = false;
-    let assetDict, filename;
-    if (data instanceof BaseStream) {
-      assetDict = data.dict;
-      const name = clip.get("N");
-      filename = typeof name === "string" ? stringToPDFString(name) : "";
-      if (!explicitType) {
-        const subtype = data.dict.get("Subtype");
-        if (subtype instanceof Name) {
-          explicitType = subtype.name;
-          explicitTypeIsName = true;
-        }
-      }
-    } else if (data instanceof Dict) {
-      if (!FileSpec.hasEmbeddedFile(data)) {
-        return null;
-      }
-      assetDict = data;
-      ({
-        filename
-      } = new FileSpec(data).serializable);
-    } else {
-      return null;
-    }
-    const contentType = MediaAnnotation._getContentType(assetDict, filename, explicitType, explicitTypeIsName);
-    if (!contentType) {
-      return null;
-    }
-    return {
-      assetRef: rawData instanceof Ref ? rawData : null,
-      assetDict,
-      filename,
-      contentType
-    };
-  }
-}
-class SoundAnnotation extends MediaAnnotation {
-  constructor(params) {
-    super(params);
-    const {
-      dict,
-      xref,
-      annotationGlobals
-    } = params;
-    const soundRef = dict.getRaw("Sound");
-    if (!(soundRef instanceof Ref)) {
-      return;
-    }
-    let sound;
-    try {
-      sound = xref.fetch(soundRef);
-    } catch (ex) {
-      if (ex instanceof MissingDataException) {
-        throw ex;
-      }
-      warn(`SoundAnnotation: "${ex}".`);
-      return;
-    }
-    if (!(sound instanceof BaseStream) || !getSoundFormat(sound.dict)) {
-      return;
-    }
-    this._setMediaData({
-      assetRef: soundRef,
-      assetDict: sound.dict,
-      filename: "sound.wav",
-      contentType: "audio/wav",
-      wrapSound: true
-    }, annotationGlobals);
   }
 }
 
@@ -56655,7 +55636,10 @@ class DatasetReader {
       return "";
     }
     const first = node.firstChild;
-    return first?.nodeName === "value" ? node.children.map(child => decodeString(child.textContent)) : decodeString(node.textContent);
+    if (first?.nodeName === "value") {
+      return node.children.map(child => decodeString(child.textContent));
+    }
+    return decodeString(node.textContent);
   }
 }
 
@@ -56780,7 +55764,11 @@ class Intersector {
       const h = Math.floor((iMax - iMin) / STEPS);
       for (let i = iMin; i <= iMin + h * STEPS; i += STEPS) {
         for (let j = 0; j <= w; j++) {
-          (this.#grid[i + j] ??= []).push(intersector);
+          let existing = this.#grid[i + j];
+          if (!existing) {
+            this.#grid[i + j] = existing = [];
+          }
+          existing.push(intersector);
         }
       }
     }
@@ -56832,8 +55820,13 @@ class Word64 {
     this.low ^= word.low;
   }
   shiftRight(places) {
-    this.low = this.low >>> places | this.high << 32 - places;
-    this.high = this.high >>> places | 0;
+    if (places >= 32) {
+      this.low = this.high >>> places - 32 | 0;
+      this.high = 0;
+    } else {
+      this.low = this.low >>> places | this.high << 32 - places;
+      this.high = this.high >>> places | 0;
+    }
   }
   rotateRight(places) {
     let low, high;
@@ -57182,21 +56175,28 @@ function calculateSHA256(data, offset, length) {
 
 const chunkSize = 512;
 class DecryptStream extends DecodeStream {
-  #nextChunk = null;
   constructor(str, maybeLength, decrypt) {
     super(maybeLength);
     this.stream = str;
     this.dict = str.dict;
     this.decrypt = decrypt;
+    this.nextChunk = null;
+    this.initialized = false;
   }
   readBlock() {
-    let chunk = this.#nextChunk ?? this.stream.getBytes(chunkSize);
-    if (!chunk.length) {
+    let chunk;
+    if (this.initialized) {
+      chunk = this.nextChunk;
+    } else {
+      chunk = this.stream.getBytes(chunkSize);
+      this.initialized = true;
+    }
+    if (!chunk?.length) {
       this.eof = true;
       return;
     }
-    this.#nextChunk = this.stream.getBytes(chunkSize);
-    const hasMoreData = this.#nextChunk.length > 0;
+    this.nextChunk = this.stream.getBytes(chunkSize);
+    const hasMoreData = this.nextChunk?.length > 0;
     const decrypt = this.decrypt;
     chunk = decrypt(chunk, !hasMoreData);
     const bufferLength = this.bufferLength,
@@ -57210,24 +56210,7 @@ class DecryptStream extends DecodeStream {
   }
 }
 
-;// ./src/core/sasl_prep.js
-const NON_ASCII_SPACES = new Set([0x00a0, 0x1680, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a, 0x200b, 0x202f, 0x205f, 0x3000]);
-const COMMONLY_MAPPED_TO_NOTHING = new Set([0x00ad, 0x034f, 0x1806, 0x180b, 0x180c, 0x180d, 0x200b, 0x200c, 0x200d, 0x2060, 0xfe00, 0xfe01, 0xfe02, 0xfe03, 0xfe04, 0xfe05, 0xfe06, 0xfe07, 0xfe08, 0xfe09, 0xfe0a, 0xfe0b, 0xfe0c, 0xfe0d, 0xfe0e, 0xfe0f, 0xfeff]);
-function saslPrep(str) {
-  let mapped = "";
-  for (const char of str) {
-    const code = char.codePointAt(0);
-    if (NON_ASCII_SPACES.has(code)) {
-      mapped += " ";
-    } else if (!COMMONLY_MAPPED_TO_NOTHING.has(code)) {
-      mapped += char;
-    }
-  }
-  return mapped.normalize("NFKC");
-}
-
 ;// ./src/core/crypto.js
-
 
 
 
@@ -57238,10 +56221,11 @@ class ARCFourCipher {
   a = 0;
   b = 0;
   constructor(key) {
-    const s = Uint8Array.from({
-      length: 256
-    }, (_, i) => i);
+    const s = new Uint8Array(256);
     const keyLength = key.length;
+    for (let i = 0; i < 256; ++i) {
+      s[i] = i;
+    }
     for (let i = 0, j = 0; i < 256; ++i) {
       const tmp = s[i];
       j = j + tmp + key[i % keyLength] & 0xff;
@@ -57288,9 +56272,7 @@ class AESBaseCipher {
   _s = new Uint8Array([0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76, 0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0, 0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15, 0x04, 0xc7, 0x23, 0xc3, 0x18, 0x96, 0x05, 0x9a, 0x07, 0x12, 0x80, 0xe2, 0xeb, 0x27, 0xb2, 0x75, 0x09, 0x83, 0x2c, 0x1a, 0x1b, 0x6e, 0x5a, 0xa0, 0x52, 0x3b, 0xd6, 0xb3, 0x29, 0xe3, 0x2f, 0x84, 0x53, 0xd1, 0x00, 0xed, 0x20, 0xfc, 0xb1, 0x5b, 0x6a, 0xcb, 0xbe, 0x39, 0x4a, 0x4c, 0x58, 0xcf, 0xd0, 0xef, 0xaa, 0xfb, 0x43, 0x4d, 0x33, 0x85, 0x45, 0xf9, 0x02, 0x7f, 0x50, 0x3c, 0x9f, 0xa8, 0x51, 0xa3, 0x40, 0x8f, 0x92, 0x9d, 0x38, 0xf5, 0xbc, 0xb6, 0xda, 0x21, 0x10, 0xff, 0xf3, 0xd2, 0xcd, 0x0c, 0x13, 0xec, 0x5f, 0x97, 0x44, 0x17, 0xc4, 0xa7, 0x7e, 0x3d, 0x64, 0x5d, 0x19, 0x73, 0x60, 0x81, 0x4f, 0xdc, 0x22, 0x2a, 0x90, 0x88, 0x46, 0xee, 0xb8, 0x14, 0xde, 0x5e, 0x0b, 0xdb, 0xe0, 0x32, 0x3a, 0x0a, 0x49, 0x06, 0x24, 0x5c, 0xc2, 0xd3, 0xac, 0x62, 0x91, 0x95, 0xe4, 0x79, 0xe7, 0xc8, 0x37, 0x6d, 0x8d, 0xd5, 0x4e, 0xa9, 0x6c, 0x56, 0xf4, 0xea, 0x65, 0x7a, 0xae, 0x08, 0xba, 0x78, 0x25, 0x2e, 0x1c, 0xa6, 0xb4, 0xc6, 0xe8, 0xdd, 0x74, 0x1f, 0x4b, 0xbd, 0x8b, 0x8a, 0x70, 0x3e, 0xb5, 0x66, 0x48, 0x03, 0xf6, 0x0e, 0x61, 0x35, 0x57, 0xb9, 0x86, 0xc1, 0x1d, 0x9e, 0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf, 0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16]);
   _inv_s = new Uint8Array([0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb, 0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb, 0x54, 0x7b, 0x94, 0x32, 0xa6, 0xc2, 0x23, 0x3d, 0xee, 0x4c, 0x95, 0x0b, 0x42, 0xfa, 0xc3, 0x4e, 0x08, 0x2e, 0xa1, 0x66, 0x28, 0xd9, 0x24, 0xb2, 0x76, 0x5b, 0xa2, 0x49, 0x6d, 0x8b, 0xd1, 0x25, 0x72, 0xf8, 0xf6, 0x64, 0x86, 0x68, 0x98, 0x16, 0xd4, 0xa4, 0x5c, 0xcc, 0x5d, 0x65, 0xb6, 0x92, 0x6c, 0x70, 0x48, 0x50, 0xfd, 0xed, 0xb9, 0xda, 0x5e, 0x15, 0x46, 0x57, 0xa7, 0x8d, 0x9d, 0x84, 0x90, 0xd8, 0xab, 0x00, 0x8c, 0xbc, 0xd3, 0x0a, 0xf7, 0xe4, 0x58, 0x05, 0xb8, 0xb3, 0x45, 0x06, 0xd0, 0x2c, 0x1e, 0x8f, 0xca, 0x3f, 0x0f, 0x02, 0xc1, 0xaf, 0xbd, 0x03, 0x01, 0x13, 0x8a, 0x6b, 0x3a, 0x91, 0x11, 0x41, 0x4f, 0x67, 0xdc, 0xea, 0x97, 0xf2, 0xcf, 0xce, 0xf0, 0xb4, 0xe6, 0x73, 0x96, 0xac, 0x74, 0x22, 0xe7, 0xad, 0x35, 0x85, 0xe2, 0xf9, 0x37, 0xe8, 0x1c, 0x75, 0xdf, 0x6e, 0x47, 0xf1, 0x1a, 0x71, 0x1d, 0x29, 0xc5, 0x89, 0x6f, 0xb7, 0x62, 0x0e, 0xaa, 0x18, 0xbe, 0x1b, 0xfc, 0x56, 0x3e, 0x4b, 0xc6, 0xd2, 0x79, 0x20, 0x9a, 0xdb, 0xc0, 0xfe, 0x78, 0xcd, 0x5a, 0xf4, 0x1f, 0xdd, 0xa8, 0x33, 0x88, 0x07, 0xc7, 0x31, 0xb1, 0x12, 0x10, 0x59, 0x27, 0x80, 0xec, 0x5f, 0x60, 0x51, 0x7f, 0xa9, 0x19, 0xb5, 0x4a, 0x0d, 0x2d, 0xe5, 0x7a, 0x9f, 0x93, 0xc9, 0x9c, 0xef, 0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61, 0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d]);
   _mix = new Uint32Array([0x00000000, 0x0e090d0b, 0x1c121a16, 0x121b171d, 0x3824342c, 0x362d3927, 0x24362e3a, 0x2a3f2331, 0x70486858, 0x7e416553, 0x6c5a724e, 0x62537f45, 0x486c5c74, 0x4665517f, 0x547e4662, 0x5a774b69, 0xe090d0b0, 0xee99ddbb, 0xfc82caa6, 0xf28bc7ad, 0xd8b4e49c, 0xd6bde997, 0xc4a6fe8a, 0xcaaff381, 0x90d8b8e8, 0x9ed1b5e3, 0x8ccaa2fe, 0x82c3aff5, 0xa8fc8cc4, 0xa6f581cf, 0xb4ee96d2, 0xbae79bd9, 0xdb3bbb7b, 0xd532b670, 0xc729a16d, 0xc920ac66, 0xe31f8f57, 0xed16825c, 0xff0d9541, 0xf104984a, 0xab73d323, 0xa57ade28, 0xb761c935, 0xb968c43e, 0x9357e70f, 0x9d5eea04, 0x8f45fd19, 0x814cf012, 0x3bab6bcb, 0x35a266c0, 0x27b971dd, 0x29b07cd6, 0x038f5fe7, 0x0d8652ec, 0x1f9d45f1, 0x119448fa, 0x4be30393, 0x45ea0e98, 0x57f11985, 0x59f8148e, 0x73c737bf, 0x7dce3ab4, 0x6fd52da9, 0x61dc20a2, 0xad766df6, 0xa37f60fd, 0xb16477e0, 0xbf6d7aeb, 0x955259da, 0x9b5b54d1, 0x894043cc, 0x87494ec7, 0xdd3e05ae, 0xd33708a5, 0xc12c1fb8, 0xcf2512b3, 0xe51a3182, 0xeb133c89, 0xf9082b94, 0xf701269f, 0x4de6bd46, 0x43efb04d, 0x51f4a750, 0x5ffdaa5b, 0x75c2896a, 0x7bcb8461, 0x69d0937c, 0x67d99e77, 0x3daed51e, 0x33a7d815, 0x21bccf08, 0x2fb5c203, 0x058ae132, 0x0b83ec39, 0x1998fb24, 0x1791f62f, 0x764dd68d, 0x7844db86, 0x6a5fcc9b, 0x6456c190, 0x4e69e2a1, 0x4060efaa, 0x527bf8b7, 0x5c72f5bc, 0x0605bed5, 0x080cb3de, 0x1a17a4c3, 0x141ea9c8, 0x3e218af9, 0x302887f2, 0x223390ef, 0x2c3a9de4, 0x96dd063d, 0x98d40b36, 0x8acf1c2b, 0x84c61120, 0xaef93211, 0xa0f03f1a, 0xb2eb2807, 0xbce2250c, 0xe6956e65, 0xe89c636e, 0xfa877473, 0xf48e7978, 0xdeb15a49, 0xd0b85742, 0xc2a3405f, 0xccaa4d54, 0x41ecdaf7, 0x4fe5d7fc, 0x5dfec0e1, 0x53f7cdea, 0x79c8eedb, 0x77c1e3d0, 0x65daf4cd, 0x6bd3f9c6, 0x31a4b2af, 0x3fadbfa4, 0x2db6a8b9, 0x23bfa5b2, 0x09808683, 0x07898b88, 0x15929c95, 0x1b9b919e, 0xa17c0a47, 0xaf75074c, 0xbd6e1051, 0xb3671d5a, 0x99583e6b, 0x97513360, 0x854a247d, 0x8b432976, 0xd134621f, 0xdf3d6f14, 0xcd267809, 0xc32f7502, 0xe9105633, 0xe7195b38, 0xf5024c25, 0xfb0b412e, 0x9ad7618c, 0x94de6c87, 0x86c57b9a, 0x88cc7691, 0xa2f355a0, 0xacfa58ab, 0xbee14fb6, 0xb0e842bd, 0xea9f09d4, 0xe49604df, 0xf68d13c2, 0xf8841ec9, 0xd2bb3df8, 0xdcb230f3, 0xcea927ee, 0xc0a02ae5, 0x7a47b13c, 0x744ebc37, 0x6655ab2a, 0x685ca621, 0x42638510, 0x4c6a881b, 0x5e719f06, 0x5078920d, 0x0a0fd964, 0x0406d46f, 0x161dc372, 0x1814ce79, 0x322bed48, 0x3c22e043, 0x2e39f75e, 0x2030fa55, 0xec9ab701, 0xe293ba0a, 0xf088ad17, 0xfe81a01c, 0xd4be832d, 0xdab78e26, 0xc8ac993b, 0xc6a59430, 0x9cd2df59, 0x92dbd252, 0x80c0c54f, 0x8ec9c844, 0xa4f6eb75, 0xaaffe67e, 0xb8e4f163, 0xb6edfc68, 0x0c0a67b1, 0x02036aba, 0x10187da7, 0x1e1170ac, 0x342e539d, 0x3a275e96, 0x283c498b, 0x26354480, 0x7c420fe9, 0x724b02e2, 0x605015ff, 0x6e5918f4, 0x44663bc5, 0x4a6f36ce, 0x587421d3, 0x567d2cd8, 0x37a10c7a, 0x39a80171, 0x2bb3166c, 0x25ba1b67, 0x0f853856, 0x018c355d, 0x13972240, 0x1d9e2f4b, 0x47e96422, 0x49e06929, 0x5bfb7e34, 0x55f2733f, 0x7fcd500e, 0x71c45d05, 0x63df4a18, 0x6dd64713, 0xd731dcca, 0xd938d1c1, 0xcb23c6dc, 0xc52acbd7, 0xef15e8e6, 0xe11ce5ed, 0xf307f2f0, 0xfd0efffb, 0xa779b492, 0xa970b999, 0xbb6bae84, 0xb562a38f, 0x9f5d80be, 0x91548db5, 0x834f9aa8, 0x8d4697a3]);
-  _mixCol = Uint8Array.from({
-    length: 256
-  }, (_, i) => i < 128 ? i << 1 : i << 1 ^ 0x1b);
+  _mixCol = new Uint8Array(256).map((_, i) => i < 128 ? i << 1 : i << 1 ^ 0x1b);
   constructor() {
     this.buffer = new Uint8Array(16);
     this.bufferPosition = 0;
@@ -57704,35 +56686,24 @@ class PDF20 extends PDFBase {
   }
 }
 class CipherTransform {
-  #cipherCache = new Map();
-  embeddedFilterName = null;
-  constructor(resolveCipher, stringFilterName = null, streamFilterName = null) {
-    this.resolveCipher = resolveCipher;
-    this.streamFilterName = streamFilterName;
-    this.stringFilterName = stringFilterName;
+  constructor(stringCipherConstructor, streamCipherConstructor) {
+    this.StringCipherConstructor = stringCipherConstructor;
+    this.StreamCipherConstructor = streamCipherConstructor;
   }
-  #getCipher(filterName = null) {
-    const key = filterName instanceof Name ? filterName.name : "__default__";
-    return this.#cipherCache.getOrInsertComputed(key, () => this.resolveCipher(filterName));
-  }
-  createStream(stream, length, cryptFilterName = null) {
-    const defaultFilterName = this.embeddedFilterName && isDict(stream.dict, "EmbeddedFile") ? this.embeddedFilterName : this.streamFilterName;
-    const Cipher = this.#getCipher(cryptFilterName || defaultFilterName);
-    const cipher = new Cipher();
+  createStream(stream, length) {
+    const cipher = new this.StreamCipherConstructor();
     return new DecryptStream(stream, length, function cipherTransformDecryptStream(data, finalize) {
       return cipher.decryptBlock(data, finalize);
     });
   }
   decryptString(s) {
-    const Cipher = this.#getCipher(this.stringFilterName);
-    const cipher = new Cipher();
+    const cipher = new this.StringCipherConstructor();
     let data = stringToBytes(s);
     data = cipher.decryptBlock(data, true);
     return bytesToString(data);
   }
   encryptString(s) {
-    const Cipher = this.#getCipher(this.stringFilterName);
-    const cipher = new Cipher();
+    const cipher = new this.StringCipherConstructor();
     if (cipher instanceof AESBaseCipher) {
       const strLen = s.length;
       const pad = 16 - strLen % 16;
@@ -57751,16 +56722,7 @@ class CipherTransform {
     return bytesToString(data);
   }
 }
-function utf8PasswordToBytes(password) {
-  try {
-    password = utf8StringToString(password);
-  } catch {
-    warn("CipherTransformFactory: Unable to convert UTF8 encoded password.");
-  }
-  return stringToBytes(password);
-}
 class CipherTransformFactory {
-  #fileId;
   static get _defaultPasswordBytes() {
     return shadow(this, "_defaultPasswordBytes", new Uint8Array([0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41, 0x64, 0x00, 0x4e, 0x56, 0xff, 0xfa, 0x01, 0x08, 0x2e, 0x2e, 0x00, 0xb6, 0xd0, 0x68, 0x3e, 0x80, 0x2f, 0x0c, 0xa9, 0xfe, 0x64, 0x53, 0x69, 0x7a]));
   }
@@ -57893,6 +56855,35 @@ class CipherTransformFactory {
     const hash = calculateMD5(key, 0, i);
     return hash.subarray(0, Math.min(n + 5, 16));
   }
+  #buildCipherConstructor(cf, name, num, gen, key) {
+    if (!(name instanceof Name)) {
+      throw new FormatError("Invalid crypt filter name.");
+    }
+    const self = this;
+    const cryptFilter = cf.get(name.name);
+    const cfm = cryptFilter?.get("CFM");
+    if (!cfm || cfm.name === "None") {
+      return function () {
+        return new NullCipher();
+      };
+    }
+    if (cfm.name === "V2") {
+      return function () {
+        return new ARCFourCipher(self.#buildObjectKey(num, gen, key, false));
+      };
+    }
+    if (cfm.name === "AESV2") {
+      return function () {
+        return new AES128Cipher(self.#buildObjectKey(num, gen, key, true));
+      };
+    }
+    if (cfm.name === "AESV3") {
+      return function () {
+        return new AES256Cipher(key);
+      };
+    }
+    throw new FormatError("Unknown crypto method");
+  }
   constructor(dict, fileId, password) {
     const filter = dict.get("Filter");
     if (!isName(filter, "Standard")) {
@@ -57900,7 +56891,6 @@ class CipherTransformFactory {
     }
     this.filterName = filter.name;
     this.dict = dict;
-    this.#fileId = fileId;
     const algorithm = dict.get("V");
     if (!Number.isInteger(algorithm) || algorithm !== 1 && algorithm !== 2 && algorithm !== 4 && algorithm !== 5) {
       throw new FormatError("unsupported encryption algorithm");
@@ -57926,23 +56916,6 @@ class CipherTransformFactory {
     if (!Number.isInteger(keyLength) || keyLength < 40 || keyLength % 8 !== 0) {
       throw new FormatError("invalid key length");
     }
-    let cf = null;
-    let stmf = Name.get("Identity");
-    let strf = Name.get("Identity");
-    let eff = stmf;
-    if (algorithm >= 4) {
-      cf = dict.get("CF");
-      if (cf instanceof Dict) {
-        cf.suppressEncryption = true;
-      }
-      stmf = dict.get("StmF") || Name.get("Identity");
-      strf = dict.get("StrF") || Name.get("Identity");
-      eff = dict.get("EFF") || stmf;
-    }
-    this.cf = cf;
-    this.stmf = stmf;
-    this.strf = strf;
-    this.eff = eff;
     const ownerBytes = stringToBytes(dict.get("O")),
       userBytes = stringToBytes(dict.get("U"));
     const ownerPassword = ownerBytes.subarray(0, 32);
@@ -57952,19 +56925,16 @@ class CipherTransformFactory {
     const encryptMetadata = (algorithm === 4 || algorithm === 5) && dict.get("EncryptMetadata") !== false;
     this.encryptMetadata = encryptMetadata;
     const fileIdBytes = stringToBytes(fileId);
-    let passwordBytes, rawPasswordBytes;
+    let passwordBytes;
     if (password) {
       if (revision === 6) {
-        const preppedPassword = saslPrep(password);
-        passwordBytes = utf8PasswordToBytes(preppedPassword);
-        if (preppedPassword !== password) {
-          rawPasswordBytes = utf8PasswordToBytes(password);
+        try {
+          password = utf8StringToString(password);
+        } catch {
+          warn("CipherTransformFactory: Unable to convert UTF8 encoded password.");
         }
-      } else if (algorithm === 5) {
-        passwordBytes = utf8PasswordToBytes(password);
-      } else {
-        passwordBytes = stringToBytes(password);
       }
+      passwordBytes = stringToBytes(password);
     }
     let encryptionKey;
     if (algorithm !== 5) {
@@ -57978,23 +56948,10 @@ class CipherTransformFactory {
       const ownerEncryption = stringToBytes(dict.get("OE"));
       const userEncryption = stringToBytes(dict.get("UE"));
       const perms = stringToBytes(dict.get("Perms"));
-      for (const candidate of rawPasswordBytes ? [passwordBytes, rawPasswordBytes] : [passwordBytes]) {
-        encryptionKey = this.#createEncryptionKey20(revision, candidate, ownerPassword, ownerValidationSalt, ownerKeySalt, uBytes, userPassword, userValidationSalt, userKeySalt, ownerEncryption, userEncryption, perms);
-        if (encryptionKey) {
-          break;
-        }
-      }
+      encryptionKey = this.#createEncryptionKey20(revision, passwordBytes, ownerPassword, ownerValidationSalt, ownerKeySalt, uBytes, userPassword, userValidationSalt, userKeySalt, ownerEncryption, userEncryption, perms);
     }
     if (!encryptionKey) {
       if (!password) {
-        if (this.algorithm >= 4 && isName(this.stmf, "Identity") && isName(this.strf, "Identity")) {
-          const effCF = this.cf?.get(this.eff.name);
-          const authEvent = effCF?.get("AuthEvent");
-          if (isName(authEvent, "EFOpen")) {
-            this.encryptionKey = null;
-            return;
-          }
-        }
         throw new PasswordException("No password given", PasswordResponses.NEED_PASSWORD);
       }
       const decodedPassword = this.#decodeUserPassword(passwordBytes, ownerPassword, revision, keyLength);
@@ -58009,42 +56966,26 @@ class CipherTransformFactory {
     } else {
       this.encryptionKey = encryptionKey;
     }
-  }
-  setPassword(password) {
-    const transform = new CipherTransformFactory(this.dict, this.#fileId, password);
-    this.encryptionKey = transform.encryptionKey;
+    if (algorithm >= 4) {
+      const cf = dict.get("CF");
+      if (cf instanceof Dict) {
+        cf.suppressEncryption = true;
+      }
+      this.cf = cf;
+      this.stmf = dict.get("StmF") || Name.get("Identity");
+      this.strf = dict.get("StrF") || Name.get("Identity");
+      this.eff = dict.get("EFF") || this.stmf;
+    }
   }
   createCipherTransform(num, gen) {
     if (this.algorithm === 4 || this.algorithm === 5) {
-      const resolveCipher = filterName => {
-        if (!(filterName instanceof Name)) {
-          throw new FormatError("Invalid crypt filter name.");
-        }
-        const cryptFilter = this.cf.get(filterName.name);
-        const cfm = cryptFilter?.get("CFM");
-        if (!cfm || cfm.name === "None") {
-          return NullCipher;
-        }
-        if (!this.encryptionKey) {
-          throw new PasswordException("No password given", PasswordResponses.NEED_PASSWORD);
-        }
-        if (this.algorithm === 5 || cfm.name === "AESV3") {
-          return AES256Cipher.bind(null, this.encryptionKey);
-        }
-        if (cfm.name === "V2") {
-          return ARCFourCipher.bind(null, this.#buildObjectKey(num, gen, this.encryptionKey, false));
-        }
-        if (cfm.name === "AESV2") {
-          return AES128Cipher.bind(null, this.#buildObjectKey(num, gen, this.encryptionKey, true));
-        }
-        throw new FormatError("Unknown crypto method");
-      };
-      const transform = new CipherTransform(resolveCipher, this.strf, this.stmf);
-      transform.embeddedFilterName = this.eff;
-      return transform;
+      return new CipherTransform(this.#buildCipherConstructor(this.cf, this.strf, num, gen, this.encryptionKey), this.#buildCipherConstructor(this.cf, this.stmf, num, gen, this.encryptionKey));
     }
-    const resolveCipher = () => ARCFourCipher.bind(null, this.#buildObjectKey(num, gen, this.encryptionKey, false));
-    return new CipherTransform(resolveCipher);
+    const key = this.#buildObjectKey(num, gen, this.encryptionKey, false);
+    const cipherConstructor = function () {
+      return new ARCFourCipher(key);
+    };
+    return new CipherTransform(cipherConstructor, cipherConstructor);
   }
 }
 
@@ -58056,55 +56997,51 @@ class CipherTransformFactory {
 
 
 class XRef {
-  #cacheMap = new Map();
-  #entries = [];
-  #newPersistentRefNum = null;
-  #newTemporaryRefNum = null;
-  #parsedWithRecovery = false;
-  #pendingRefs = new RefSet();
-  #persistentRefsCache = null;
-  #xrefSectionOffsets = new Set();
-  #xrefSectionsComplete = true;
-  #xrefStms = new Set();
   constructor(stream, pdfManager) {
     this.stream = stream;
     this.pdfManager = pdfManager;
+    this.entries = [];
+    this._xrefStms = new Set();
+    this._cacheMap = new Map();
+    this._pendingRefs = new RefSet();
+    this._newPersistentRefNum = null;
+    this._newTemporaryRefNum = null;
+    this._persistentRefsCache = null;
   }
   getNewPersistentRef(obj) {
-    if (this.#newPersistentRefNum === null) {
-      this.#newPersistentRefNum = this.#entries.length || 1;
+    if (this._newPersistentRefNum === null) {
+      this._newPersistentRefNum = this.entries.length || 1;
     }
-    const num = this.#newPersistentRefNum++;
-    this.#cacheMap.set(num, obj);
+    const num = this._newPersistentRefNum++;
+    this._cacheMap.set(num, obj);
     return Ref.get(num, 0);
   }
   getNewTemporaryRef() {
-    if (this.#newTemporaryRefNum === null) {
-      this.#newTemporaryRefNum = this.#entries.length || 1;
-      if (this.#newPersistentRefNum) {
-        this.#persistentRefsCache = new Map();
-        for (let i = this.#newTemporaryRefNum; i < this.#newPersistentRefNum; i++) {
-          this.#persistentRefsCache.set(i, this.#cacheMap.get(i));
-          this.#cacheMap.delete(i);
+    if (this._newTemporaryRefNum === null) {
+      this._newTemporaryRefNum = this.entries.length || 1;
+      if (this._newPersistentRefNum) {
+        this._persistentRefsCache = new Map();
+        for (let i = this._newTemporaryRefNum; i < this._newPersistentRefNum; i++) {
+          this._persistentRefsCache.set(i, this._cacheMap.get(i));
+          this._cacheMap.delete(i);
         }
       }
     }
-    return Ref.get(this.#newTemporaryRefNum++, 0);
+    return Ref.get(this._newTemporaryRefNum++, 0);
   }
   resetNewTemporaryRef() {
-    this.#newTemporaryRefNum = null;
-    if (this.#persistentRefsCache) {
-      for (const [num, obj] of this.#persistentRefsCache) {
-        this.#cacheMap.set(num, obj);
+    this._newTemporaryRefNum = null;
+    if (this._persistentRefsCache) {
+      for (const [num, obj] of this._persistentRefsCache) {
+        this._cacheMap.set(num, obj);
       }
     }
-    this.#persistentRefsCache = null;
+    this._persistentRefsCache = null;
   }
   setStartXRef(startXRef) {
     this.startXRefQueue = [startXRef];
   }
   parse(recoveryMode = false) {
-    this.#parsedWithRecovery = recoveryMode;
     let trailerDict;
     if (!recoveryMode) {
       trailerDict = this.readXRef();
@@ -58158,29 +57095,31 @@ class XRef {
     throw new InvalidPDFException("Invalid Root reference.");
   }
   processXRefTable(parser) {
-    this._tableState ??= {
-      entryNum: 0,
-      streamPos: parser.lexer.stream.pos,
-      parserBuf1: parser.buf1,
-      parserBuf2: parser.buf2
-    };
+    if (!("tableState" in this)) {
+      this.tableState = {
+        entryNum: 0,
+        streamPos: parser.lexer.stream.pos,
+        parserBuf1: parser.buf1,
+        parserBuf2: parser.buf2
+      };
+    }
     const obj = this.readXRefTable(parser);
     if (!isCmd(obj, "trailer")) {
       throw new FormatError("Invalid XRef table: could not find trailer dictionary");
     }
     let dict = parser.getObj();
-    if (dict instanceof BaseStream) {
+    if (!(dict instanceof Dict) && dict.dict) {
       dict = dict.dict;
     }
     if (!(dict instanceof Dict)) {
       throw new FormatError("Invalid XRef table: could not parse trailer dictionary");
     }
-    delete this._tableState;
+    delete this.tableState;
     return dict;
   }
   readXRefTable(parser) {
     const stream = parser.lexer.stream;
-    const tableState = this._tableState;
+    const tableState = this.tableState;
     stream.pos = tableState.streamPos;
     parser.buf1 = tableState.parserBuf1;
     parser.buf2 = tableState.parserBuf2;
@@ -58203,12 +57142,9 @@ class XRef {
         tableState.entryNum = i;
         tableState.parserBuf1 = parser.buf1;
         tableState.parserBuf2 = parser.buf2;
-        const entry = {
-          offset: parser.getObj(),
-          gen: parser.getObj(),
-          free: false,
-          uncompressed: false
-        };
+        const entry = {};
+        entry.offset = parser.getObj();
+        entry.gen = parser.getObj();
         const type = parser.getObj();
         if (type instanceof Cmd) {
           switch (type.cmd) {
@@ -58226,7 +57162,9 @@ class XRef {
         if (i === 0 && entry.free && first === 1) {
           first = 0;
         }
-        this.#entries[first + i] ??= entry;
+        if (!this.entries[i + first]) {
+          this.entries[i + first] = entry;
+        }
       }
       tableState.entryNum = 0;
       tableState.streamPos = stream.pos;
@@ -58235,7 +57173,7 @@ class XRef {
       delete tableState.firstEntryNum;
       delete tableState.entryCount;
     }
-    if (this.#entries[0] && !this.#entries[0].free) {
+    if (this.entries[0] && !this.entries[0].free) {
       throw new FormatError("Invalid XRef table: unexpected first object");
     }
     return obj;
@@ -58269,7 +57207,7 @@ class XRef {
       if (!Number.isInteger(first) || !Number.isInteger(n)) {
         throw new FormatError(`Invalid XRef range fields: ${first}, ${n}`);
       }
-      if (![typeFieldWidth, offsetFieldWidth, generationFieldWidth].every(width => Number.isInteger(width) && width >= 0) || typeFieldWidth + offsetFieldWidth + generationFieldWidth === 0) {
+      if (!Number.isInteger(typeFieldWidth) || !Number.isInteger(offsetFieldWidth) || !Number.isInteger(generationFieldWidth)) {
         throw new FormatError(`Invalid XRef entry fields length: ${first}, ${n}`);
       }
       for (let i = streamState.entryNum; i < n; ++i) {
@@ -58302,12 +57240,9 @@ class XRef {
           }
           generation = generation << 8 | generationByte;
         }
-        const entry = {
-          offset,
-          gen: generation,
-          free: false,
-          uncompressed: false
-        };
+        const entry = {};
+        entry.offset = offset;
+        entry.gen = generation;
         switch (type) {
           case 0:
             entry.free = true;
@@ -58320,7 +57255,9 @@ class XRef {
           default:
             throw new FormatError(`Invalid XRef entry type: ${type}`);
         }
-        this.#entries[first + i] ??= entry;
+        if (!this.entries[first + i]) {
+          this.entries[first + i] = entry;
+        }
       }
       streamState.entryNum = 0;
       streamState.streamPos = stream.pos;
@@ -58369,8 +57306,8 @@ class XRef {
     const trailerBytes = new Uint8Array([116, 114, 97, 105, 108, 101, 114]);
     const startxrefBytes = new Uint8Array([115, 116, 97, 114, 116, 120, 114, 101, 102]);
     const xrefBytes = new Uint8Array([47, 88, 82, 101, 102]);
-    this.#entries.length = 0;
-    this.#cacheMap.clear();
+    this.entries.length = 0;
+    this._cacheMap.clear();
     const stream = this.stream;
     stream.pos = 0;
     const buffer = stream.getBytes(),
@@ -58407,9 +57344,9 @@ class XRef {
         const startPos = position + token.length;
         let contentLength,
           updateEntries = false;
-        if (!this.#entries[num]) {
+        if (!this.entries[num]) {
           updateEntries = true;
-        } else if (this.#entries[num].gen === gen) {
+        } else if (this.entries[num].gen === gen) {
           try {
             const parser = new Parser({
               lexer: new Lexer(stream.makeSubStream(startPos))
@@ -58425,10 +57362,9 @@ class XRef {
           }
         }
         if (updateEntries) {
-          this.#entries[num] = {
+          this.entries[num] = {
             offset: position - stream.start,
             gen,
-            free: false,
             uncompressed: true
           };
         }
@@ -58448,7 +57384,7 @@ class XRef {
         const xrefTagOffset = skipUntil(content, 0, xrefBytes);
         if (xrefTagOffset < contentLength && content[xrefTagOffset + 5] < 64) {
           xrefStms.push(position - stream.start);
-          this.#xrefStms.add(position - stream.start);
+          this._xrefStms.add(position - stream.start);
         }
         position += contentLength;
       } else if (token.startsWith("trailer") && (token.length === 7 || /\s/.test(token[7]))) {
@@ -58538,8 +57474,8 @@ class XRef {
       return this.topDict;
     }
     if (!trailerDicts.length) {
-      for (const num in this.#entries) {
-        const entry = this.#entries[num];
+      for (const num in this.entries) {
+        const entry = this.entries[num];
         if (!entry) {
           continue;
         }
@@ -58582,10 +57518,12 @@ class XRef {
         let dict;
         if (isCmd(obj, "xref")) {
           dict = this.processXRefTable(parser);
-          this.topDict ||= dict;
+          if (!this.topDict) {
+            this.topDict = dict;
+          }
           obj = dict.get("XRefStm");
-          if (Number.isInteger(obj) && !this.#xrefStms.has(obj)) {
-            this.#xrefStms.add(obj);
+          if (Number.isInteger(obj) && !this._xrefStms.has(obj)) {
+            this._xrefStms.add(obj);
             this.startXRefQueue.push(obj);
           }
         } else if (Number.isInteger(obj)) {
@@ -58593,14 +57531,15 @@ class XRef {
             throw new FormatError("Invalid XRef stream");
           }
           dict = this.processXRefStream(obj);
-          this.topDict ||= dict;
+          if (!this.topDict) {
+            this.topDict = dict;
+          }
           if (!dict) {
             throw new FormatError("Failed to read XRef stream");
           }
         } else {
           throw new FormatError("Invalid XRef stream header");
         }
-        this.#xrefSectionOffsets.add(startXRef);
         obj = dict.get("Prev");
         if (Number.isInteger(obj)) {
           this.startXRefQueue.push(obj);
@@ -58611,7 +57550,6 @@ class XRef {
         if (e instanceof MissingDataException) {
           throw e;
         }
-        this.#xrefSectionsComplete = false;
         info("(while reading XRef): " + e);
       }
       this.startXRefQueue.shift();
@@ -58624,32 +57562,25 @@ class XRef {
     }
     throw new XRefParseException();
   }
-  countUpdatesAfter(offset) {
-    if (this.#parsedWithRecovery || !this.#xrefSectionsComplete) {
-      return null;
-    }
-    const relativeOffset = offset - this.stream.start;
-    let count = 0;
-    for (const sectionOffset of this.#xrefSectionOffsets) {
-      if (sectionOffset >= relativeOffset && !this.#xrefStms.has(sectionOffset)) {
-        count++;
-      }
-    }
-    return count;
-  }
   getEntry(i) {
-    const entry = this.#entries[i];
-    return entry && !entry.free && entry.offset ? entry : null;
+    const xrefEntry = this.entries[i];
+    if (xrefEntry && !xrefEntry.free && xrefEntry.offset) {
+      return xrefEntry;
+    }
+    return null;
   }
   fetchIfRef(obj, suppressEncryption = false) {
-    return obj instanceof Ref ? this.fetch(obj, suppressEncryption) : obj;
+    if (obj instanceof Ref) {
+      return this.fetch(obj, suppressEncryption);
+    }
+    return obj;
   }
   fetch(ref, suppressEncryption = false) {
     if (!(ref instanceof Ref)) {
       throw new Error("ref object is not a reference");
     }
     const num = ref.num;
-    const cacheEntry = this.#cacheMap.get(num);
+    const cacheEntry = this._cacheMap.get(num);
     if (cacheEntry !== undefined) {
       if (cacheEntry instanceof Dict && !cacheEntry.objId) {
         cacheEntry.objId = ref.toString();
@@ -58660,17 +57591,17 @@ class XRef {
     if (xrefEntry === null) {
       return xrefEntry;
     }
-    if (this.#pendingRefs.has(ref)) {
-      this.#pendingRefs.remove(ref);
+    if (this._pendingRefs.has(ref)) {
+      this._pendingRefs.remove(ref);
       warn(`Ignoring circular reference: ${ref}.`);
       return CIRCULAR_REF;
     }
-    this.#pendingRefs.put(ref);
+    this._pendingRefs.put(ref);
     try {
       xrefEntry = xrefEntry.uncompressed ? this.fetchUncompressed(ref, xrefEntry, suppressEncryption) : this.fetchCompressed(ref, xrefEntry, suppressEncryption);
-      this.#pendingRefs.remove(ref);
+      this._pendingRefs.remove(ref);
     } catch (ex) {
-      this.#pendingRefs.remove(ref);
+      this._pendingRefs.remove(ref);
       throw ex;
     }
     if (xrefEntry instanceof Dict) {
@@ -58714,7 +57645,7 @@ class XRef {
     }
     xrefEntry = this.encrypt && !suppressEncryption ? parser.getObj(this.encrypt.createCipherTransform(num, gen)) : parser.getObj();
     if (!(xrefEntry instanceof BaseStream)) {
-      this.#cacheMap.set(num, xrefEntry);
+      this._cacheMap.set(num, xrefEntry);
     }
     return xrefEntry;
   }
@@ -58770,9 +57701,9 @@ class XRef {
         continue;
       }
       const num = nums[i],
-        entry = this.#entries[num];
+        entry = this.entries[num];
       if (entry && entry.offset === tableOffset && entry.gen === i) {
-        this.#cacheMap.set(num, obj);
+        this._cacheMap.set(num, obj);
       }
     }
     xrefEntry = entries[xrefEntry.gen];
@@ -58782,7 +57713,10 @@ class XRef {
     return xrefEntry;
   }
   async fetchIfRefAsync(obj, suppressEncryption) {
-    return obj instanceof Ref ? this.fetchAsync(obj, suppressEncryption) : obj;
+    if (obj instanceof Ref) {
+      return this.fetchAsync(obj, suppressEncryption);
+    }
+    return obj;
   }
   async fetchAsync(ref, suppressEncryption) {
     try {
@@ -58824,9 +57758,7 @@ class XRef {
 
 
 
-
 const LETTER_SIZE_MEDIABOX = [0, 0, 612, 792];
-const SIGNATURE_TAIL_CHUNK_SIZE = 65536;
 class Page {
   #resourcesPromise = null;
   constructor({
@@ -58871,12 +57803,11 @@ class Page {
       }
     };
   }
-  _createPartialEvaluator(handler, pageIndex = this.pageIndex, pageProxyId = null) {
+  #createPartialEvaluator(handler, pageIndex = this.pageIndex) {
     return new PartialEvaluator({
       xref: this.xref,
       handler,
       pageIndex,
-      pageProxyId,
       idFactory: this._localIdFactory,
       fontCache: this.fontCache,
       builtInCMapCache: this.builtInCMapCache,
@@ -58886,6 +57817,9 @@ class Page {
       systemFontCache: this.systemFontCache,
       options: this.evaluatorOptions
     });
+  }
+  createAnnotationEvaluator(handler) {
+    return this.#createPartialEvaluator(handler);
   }
   #getInheritableProperty(key, getArray = false) {
     const value = getInheritableProperty({
@@ -58897,7 +57831,10 @@ class Page {
     if (!Array.isArray(value)) {
       return value;
     }
-    return value.length === 1 || !(value[0] instanceof Dict) ? value[0] : Dict.merge({
+    if (value.length === 1 || !(value[0] instanceof Dict)) {
+      return value[0];
+    }
+    return Dict.merge({
       xref: this.xref,
       dictArray: value
     });
@@ -59002,40 +57939,39 @@ class Page {
   async #replaceIdByRef(annotations, deletedAnnotations, existingAnnotations) {
     const promises = [];
     for (const annotation of annotations) {
-      if (!annotation.id) {
-        continue;
-      }
-      const ref = Ref.fromString(annotation.id);
-      if (!ref) {
-        warn(`A non-linked annotation cannot be modified: ${annotation.id}`);
-        continue;
-      }
-      if (annotation.deleted) {
-        deletedAnnotations.put(ref);
-        if (annotation.popupRef) {
+      if (annotation.id) {
+        const ref = Ref.fromString(annotation.id);
+        if (!ref) {
+          warn(`A non-linked annotation cannot be modified: ${annotation.id}`);
+          continue;
+        }
+        if (annotation.deleted) {
+          deletedAnnotations.put(ref, ref);
+          if (annotation.popupRef) {
+            const popupRef = Ref.fromString(annotation.popupRef);
+            if (popupRef) {
+              deletedAnnotations.put(popupRef, popupRef);
+            }
+          }
+          continue;
+        }
+        if (annotation.popup?.deleted) {
           const popupRef = Ref.fromString(annotation.popupRef);
           if (popupRef) {
-            deletedAnnotations.put(popupRef);
+            deletedAnnotations.put(popupRef, popupRef);
           }
         }
-        continue;
+        existingAnnotations?.put(ref);
+        annotation.ref = ref;
+        promises.push(this.xref.fetchAsync(ref).then(obj => {
+          if (obj instanceof Dict) {
+            annotation.oldAnnotation = obj.clone();
+          }
+        }, () => {
+          warn(`Cannot fetch \`oldAnnotation\` for: ${ref}.`);
+        }));
+        delete annotation.id;
       }
-      if (annotation.popup?.deleted) {
-        const popupRef = Ref.fromString(annotation.popupRef);
-        if (popupRef) {
-          deletedAnnotations.put(popupRef);
-        }
-      }
-      existingAnnotations?.put(ref);
-      annotation.ref = ref;
-      promises.push(this.xref.fetchAsync(ref).then(obj => {
-        if (obj instanceof Dict) {
-          annotation.oldAnnotation = obj.clone();
-        }
-      }, () => {
-        warn(`Cannot fetch \`oldAnnotation\` for: ${ref}.`);
-      }));
-      delete annotation.id;
     }
     await Promise.all(promises);
   }
@@ -59043,8 +57979,8 @@ class Page {
     if (this.xfaFactory) {
       throw new Error("XFA: Cannot save new annotations.");
     }
-    const partialEvaluator = this._createPartialEvaluator(handler);
-    const deletedAnnotations = new RefSet();
+    const partialEvaluator = this.#createPartialEvaluator(handler);
+    const deletedAnnotations = new RefSetCache();
     const existingAnnotations = new RefSet();
     await this.#replaceIdByRef(annotations, deletedAnnotations, existingAnnotations);
     const pageDict = this.pageDict;
@@ -59069,11 +58005,11 @@ class Page {
     }
   }
   async save(handler, task, annotationStorage, changes) {
-    const partialEvaluator = this._createPartialEvaluator(handler);
+    const partialEvaluator = this.#createPartialEvaluator(handler);
     const annotations = await this._parsedAnnotations;
     const promises = [];
     for (const annotation of annotations) {
-      promises.push(annotation.save(partialEvaluator, task, annotationStorage, changes).catch(reason => {
+      promises.push(annotation.save(partialEvaluator, task, annotationStorage, changes).catch(function (reason) {
         warn("save - ignoring annotation data during " + `"${task.name}" task: "${reason}".`);
         return null;
       }));
@@ -59103,13 +58039,12 @@ class Page {
     intent,
     cacheKey,
     pageIndex = this.pageIndex,
-    pageProxyId = null,
     annotationStorage = null,
     modifiedIds = null
   }) {
     const contentStreamPromise = this.getContentStream();
     const resourcesPromise = this.loadResources(RESOURCES_KEYS_OPERATOR_LIST);
-    const partialEvaluator = this._createPartialEvaluator(handler, pageIndex, pageProxyId);
+    const partialEvaluator = this.#createPartialEvaluator(handler, pageIndex);
     const newAnnotsByPage = !this.xfaFactory ? getNewAnnotationsMap(annotationStorage) : null;
     const newAnnots = newAnnotsByPage?.get(this.pageIndex);
     let newAnnotationsPromise = Promise.resolve(null);
@@ -59156,7 +58091,7 @@ class Page {
       const opList = new OperatorList(intent, sink);
       handler.send("StartRenderPage", {
         transparency: partialEvaluator.hasBlendModes(resources, this.nonBlendModesSet),
-        pageProxyId,
+        pageIndex,
         cacheKey
       });
       await partialEvaluator.getOperatorList({
@@ -59185,7 +58120,9 @@ class Page {
     }
     if (annotations.length === 0 || intent & RenderingIntentFlag.ANNOTATIONS_DISABLE) {
       pageOpList.flush(true);
-      return;
+      return {
+        length: pageOpList.totalLength
+      };
     }
     const renderForms = !!(intent & RenderingIntentFlag.ANNOTATIONS_FORMS),
       isEditing = !!(intent & RenderingIntentFlag.IS_EDITING),
@@ -59195,7 +58132,7 @@ class Page {
     const opListPromises = [];
     for (const annotation of annotations) {
       if (intentAny || intentDisplay && annotation.mustBeViewed(annotationStorage, renderForms) && annotation.mustBeViewedWhenEditing(isEditing, modifiedIds) || intentPrint && annotation.mustBePrinted(annotationStorage)) {
-        opListPromises.push(annotation.getOperatorList(partialEvaluator, task, intent, annotationStorage).catch(reason => {
+        opListPromises.push(annotation.getOperatorList(partialEvaluator, task, intent, annotationStorage).catch(function (reason) {
           warn("getOperatorList - ignoring annotation data during " + `"${task.name}" task: "${reason}".`);
           return {
             opList: null,
@@ -59221,6 +58158,9 @@ class Page {
       form,
       canvas
     });
+    return {
+      length: pageOpList.totalLength
+    };
   }
   async extractTextContent({
     handler,
@@ -59235,7 +58175,7 @@ class Page {
     const langPromise = this.pdfManager.ensureCatalog("lang");
     const [contentStream,, lang] = await Promise.all([contentStreamPromise, resourcesPromise, langPromise]);
     const resources = await this.#getMergedResources(contentStream.dict, RESOURCES_KEYS_TEXT_CONTENT);
-    const partialEvaluator = this._createPartialEvaluator(handler);
+    const partialEvaluator = this.#createPartialEvaluator(handler);
     return partialEvaluator.getTextContent({
       stream: contentStream,
       task,
@@ -59256,7 +58196,8 @@ class Page {
     await this._parsedAnnotations;
     try {
       const structTree = await this.pdfManager.ensure(this, "_parseStructTree", [structTreeRoot]);
-      return await this.pdfManager.ensure(structTree, "serializable");
+      const data = await this.pdfManager.ensure(structTree, "serializable");
+      return data;
     } catch (ex) {
       warn(`getStructTree: "${ex}".`);
       return null;
@@ -59285,8 +58226,8 @@ class Page {
         annotationsData.push(annotation.data);
       }
       if (annotation.hasTextContent && isVisible) {
-        partialEvaluator ??= this._createPartialEvaluator(handler);
-        textContentPromises.push(annotation.extractTextContent(partialEvaluator, task, [-Infinity, -Infinity, Infinity, Infinity]).catch(reason => {
+        partialEvaluator ??= this.#createPartialEvaluator(handler);
+        textContentPromises.push(annotation.extractTextContent(partialEvaluator, task, [-Infinity, -Infinity, Infinity, Infinity]).catch(function (reason) {
           warn(`getAnnotationsData - ignoring textContent during "${task.name}" task: "${reason}".`);
         }));
       } else if (annotation.overlaysTextContent && isVisible) {
@@ -59301,6 +58242,8 @@ class Page {
         includeMarkedContent: false,
         disableNormalization: false,
         sink: null,
+        viewBox: this.view,
+        lang: null,
         intersector
       }).then(() => {
         intersector.setText();
@@ -59325,7 +58268,7 @@ class Page {
       const orphanFields = fieldObjects?.orphanFields;
       const annotationPromises = [];
       for (const annotationRef of annots) {
-        annotationPromises.push(AnnotationFactory.create(this.xref, annotationRef, annotationGlobals, this._localIdFactory, false, orphanFields, null, this.ref).catch(reason => {
+        annotationPromises.push(AnnotationFactory.create(this.xref, annotationRef, annotationGlobals, this._localIdFactory, false, orphanFields, null, this.ref).catch(function (reason) {
           warn(`_parsedAnnotations: "${reason}".`);
           return null;
         }));
@@ -59385,11 +58328,11 @@ class Page {
         }
         annotation.data.pageIndex = pageIndex;
         if (annotation.hasTextContent && annotation.viewable) {
-          partialEvaluator ??= this._createPartialEvaluator(handler);
+          partialEvaluator ??= this.#createPartialEvaluator(handler);
           await annotation.extractTextContent(partialEvaluator, task, [-Infinity, -Infinity, Infinity, Infinity]);
         }
         return annotation.data;
-      }).catch(reason => {
+      }).catch(function (reason) {
         warn(`collectAnnotationsByType: "${reason}".`);
         return null;
       }));
@@ -59438,7 +58381,6 @@ function find(stream, signature, limit = 1024, backwards = false) {
 }
 class PDFDocument {
   #pagePromises = new Map();
-  #signatureData = null;
   #version = null;
   constructor(pdfManager, stream) {
     if (stream.length <= 0) {
@@ -59579,10 +58521,7 @@ class PDFDocument {
         }
         return this.#hasOnlyDocumentSignatures(field.get("Kids"), recursionDepth);
       }
-      const isSignature = isName(getInheritableProperty({
-        dict: field,
-        key: "FT"
-      }), "Sig");
+      const isSignature = isName(field.get("FT"), "Sig");
       const rectangle = field.get("Rect");
       const isInvisible = Array.isArray(rectangle) && rectangle.every(value => value === 0);
       return isSignature && isInvisible;
@@ -59652,13 +58591,13 @@ class PDFDocument {
     if (!streams) {
       return null;
     }
-    const data = new Map();
+    const data = Object.create(null);
     for (const [key, stream] of streams) {
       if (!stream) {
         continue;
       }
       try {
-        data.set(key, stringToUTF8String(stream.getString()));
+        data[key] = stringToUTF8String(stream.getString());
       } catch {
         warn("XFA - Invalid utf-8 string.");
         return null;
@@ -59741,7 +58680,8 @@ class PDFDocument {
       if (!(descriptor instanceof Dict)) {
         continue;
       }
-      const fontFamily = normalizeCSSFontFamily(descriptor.get("FontFamily"));
+      let fontFamily = descriptor.get("FontFamily");
+      fontFamily = fontFamily.replaceAll(/[ ]+(\d)/g, "$1");
       const fontWeight = descriptor.get("FontWeight");
       const italicAngle = -descriptor.get("ItalicAngle");
       const cssFontInfo = {
@@ -59906,12 +58846,15 @@ class PDFDocument {
             default:
               if (value instanceof Name) {
                 customValue = value;
-                break;
               }
-              warn(`Bad value, for custom key "${key}", in Info: ${value}.`);
-              continue;
+              break;
           }
-          (docInfo.Custom ??= new Map()).set(key, customValue);
+          if (customValue === undefined) {
+            warn(`Bad value, for custom key "${key}", in Info: ${value}.`);
+            continue;
+          }
+          docInfo.Custom ??= Object.create(null);
+          docInfo.Custom[key] = customValue;
           continue;
       }
       warn(`Bad value, for key "${key}", in Info: ${value}.`);
@@ -60122,14 +59065,12 @@ class PDFDocument {
       name = name === "" ? partName : `${name}.${partName}`;
     } else {
       let obj = field;
-      const walkedRefs = new RefSet();
       while (true) {
         obj = obj.getRaw("Parent") || parentRef;
         if (obj instanceof Ref) {
-          if (visitedRefs.has(obj) || walkedRefs.has(obj)) {
+          if (visitedRefs.has(obj)) {
             break;
           }
-          walkedRefs.put(obj);
           obj = await xref.fetchAsync(obj);
         }
         if (!(obj instanceof Dict)) {
@@ -60145,7 +59086,7 @@ class PDFDocument {
     if (parentRef && !field.has("Parent") && isName(field.get("Subtype"), "Widget")) {
       orphanFields.put(fieldRef, parentRef);
     }
-    promises.getOrInsertComputed(name, makeArr).push(AnnotationFactory.create(xref, fieldRef, annotationGlobals, null, true, orphanFields, null, null).then(annotation => annotation?.getFieldObject()).catch(reason => {
+    promises.getOrInsertComputed(name, makeArr).push(AnnotationFactory.create(xref, fieldRef, annotationGlobals, null, true, orphanFields, null, null).then(annotation => annotation?.getFieldObject()).catch(function (reason) {
       warn(`#collectFieldObjects: "${reason}".`);
       return null;
     }));
@@ -60172,200 +59113,42 @@ class PDFDocument {
         acroForm
       } = annotationGlobals;
       const visitedRefs = new RefSet();
-      const allFields = new Map();
+      const allFields = Object.create(null);
       const fieldPromises = new Map();
-      const orphanFields = new RefMap();
+      const orphanFields = new RefSetCache();
       for (const fieldRef of acroForm.get("Fields")) {
         await this.#collectFieldObjects("", null, fieldRef, fieldPromises, annotationGlobals, visitedRefs, orphanFields);
       }
       const allPromises = [];
       for (const [name, promises] of fieldPromises) {
         allPromises.push(Promise.all(promises).then(fields => {
-          fields = fields.filter(Boolean);
+          fields = fields.filter(field => !!field);
           if (fields.length > 0) {
-            allFields.set(name, fields);
+            allFields[name] = fields;
           }
         }));
       }
       await Promise.all(allPromises);
       return {
-        allFields: allFields.size ? allFields : null,
+        allFields: objectSize(allFields) > 0 ? allFields : null,
         orphanFields
       };
     });
     return shadow(this, "fieldObjects", promise);
   }
-  async #collectSignatureFields(fields, out, visitedRefs) {
-    if (!Array.isArray(fields)) {
-      return;
-    }
-    for (const fieldRef of fields) {
-      if (fieldRef instanceof Ref) {
-        if (visitedRefs.has(fieldRef)) {
-          continue;
-        }
-        visitedRefs.put(fieldRef);
-      }
-      const field = await this.xref.fetchIfRefAsync(fieldRef);
-      if (!(field instanceof Dict)) {
-        continue;
-      }
-      if (isName(await field.getAsync("FT"), "Sig")) {
-        const sigDict = await field.getAsync("V");
-        if (sigDict instanceof Dict) {
-          const parsed = await this.#parseSignatureDict(field, sigDict, fieldRef);
-          if (parsed) {
-            out.push(parsed);
-          }
-        }
-      }
-      if (field.has("Kids")) {
-        await this.#collectSignatureFields(await field.getAsync("Kids"), out, visitedRefs);
-      }
-    }
-  }
-  async #getByteRange(begin, end) {
-    try {
-      return this.stream.getByteRange(begin, end);
-    } catch (ex) {
-      if (!(ex instanceof MissingDataException)) {
-        throw ex;
-      }
-      await this.pdfManager.requestRange(begin, end);
-      return this.#getByteRange(begin, end);
-    }
-  }
-  async #coversWholeDocument(signedEnd, modificationsAfterSignature) {
-    if (modificationsAfterSignature > 0) {
-      return false;
-    }
-    const fileLength = this.stream.end;
-    for (let begin = signedEnd; begin < fileLength; begin += SIGNATURE_TAIL_CHUNK_SIZE) {
-      const end = Math.min(begin + SIGNATURE_TAIL_CHUNK_SIZE, fileLength);
-      const tail = await this.#getByteRange(begin, end);
-      for (const byte of tail) {
-        if (byte !== 0x00 && byte !== 0x09 && byte !== 0x0a && byte !== 0x0c && byte !== 0x0d && byte !== 0x20) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-  async #parseSignatureDict(field, sigDict, fieldRef) {
-    const byteRange = await sigDict.getAsync("ByteRange");
-    if (!Array.isArray(byteRange) || byteRange.length !== 4 || byteRange.some(n => !Number.isInteger(n) || n < 0)) {
-      return null;
-    }
-    const [a, b, c, d] = byteRange;
-    const fileLength = this.stream.end || 0;
-    if (a !== 0 || b <= 0 || a + b > c || c + d > fileLength || fileLength === 0) {
-      return null;
-    }
-    const contents = await sigDict.getAsync("Contents");
-    if (typeof contents !== "string" || contents.length === 0) {
-      return null;
-    }
-    const [filterName, subFilterName, t, name, reason, location, contactInfo, m] = await Promise.all([sigDict.getAsync("Filter"), sigDict.getAsync("SubFilter"), field.getAsync("T"), sigDict.getAsync("Name"), sigDict.getAsync("Reason"), sigDict.getAsync("Location"), sigDict.getAsync("ContactInfo"), sigDict.getAsync("M")]);
-    const filter = filterName instanceof Name ? filterName.name : null,
-      subFilter = subFilterName instanceof Name ? subFilterName.name : null;
-    let signatureType = null;
-    if (subFilter === "adbe.pkcs7.detached") {
-      signatureType = 0;
-    } else if (subFilter === "adbe.pkcs7.sha1") {
-      signatureType = 1;
-    }
-    const refKey = fieldRef instanceof Ref ? fieldRef.toString() : "inline";
-    return {
-      id: `${refKey}:${a}-${b}-${c}-${d}`,
-      fieldName: typeof t === "string" ? stringToPDFString(t) : "",
-      signerName: typeof name === "string" ? stringToPDFString(name) : null,
-      reason: typeof reason === "string" ? stringToPDFString(reason) : null,
-      location: typeof location === "string" ? stringToPDFString(location) : null,
-      contactInfo: typeof contactInfo === "string" ? stringToPDFString(contactInfo) : null,
-      signingTime: typeof m === "string" ? m : null,
-      filter,
-      subFilter,
-      signatureType,
-      byteRange,
-      pkcs7: stringToBytes(contents),
-      revisionIndex: 0,
-      parentId: null
-    };
-  }
-  get signatures() {
-    const promise = this.pdfManager.ensureDoc("formInfo").then(async formInfo => {
-      if (!formInfo.hasSignatures || !formInfo.hasFields) {
-        return null;
-      }
-      const annotationGlobals = await this.annotationGlobals;
-      if (!annotationGlobals) {
-        return null;
-      }
-      const fields = annotationGlobals.acroForm.get("Fields");
-      const collected = [];
-      await this.#collectSignatureFields(fields, collected, new RefSet());
-      await Promise.all(collected.map(async signature => {
-        const signedEnd = signature.byteRange[2] + signature.byteRange[3];
-        signature.modificationsAfterSignature = this.xref.countUpdatesAfter(signedEnd);
-        signature.coversWholeDocument = await this.#coversWholeDocument(signedEnd, signature.modificationsAfterSignature);
-      }));
-      collected.sort((a, b) => b.byteRange[2] + b.byteRange[3] - (a.byteRange[2] + a.byteRange[3]));
-      for (let i = 0, ii = collected.length; i < ii; i++) {
-        const sig = collected[i];
-        sig.revisionIndex = i;
-        for (let j = i - 1; j >= 0; j--) {
-          const candidate = collected[j];
-          if (candidate.byteRange[2] + candidate.byteRange[3] > sig.byteRange[2] + sig.byteRange[3]) {
-            sig.parentId = candidate.id;
-            break;
-          }
-        }
-      }
-      const signatureData = new Map();
-      const metadata = collected.map(sig => {
-        const {
-          pkcs7,
-          ...rest
-        } = sig;
-        signatureData.set(sig.id, {
-          byteRange: sig.byteRange,
-          pkcs7
-        });
-        return rest;
-      });
-      this.#signatureData = signatureData;
-      return metadata.length ? metadata : null;
-    });
-    return shadow(this, "signatures", promise);
-  }
-  async getSignatureData(id) {
-    await this.signatures;
-    const signature = this.#signatureData?.get(id);
-    if (!signature) {
-      return null;
-    }
-    const {
-      byteRange,
-      pkcs7
-    } = signature;
-    const [a, b, c, d] = byteRange;
-    const data = await Promise.all([this.#getByteRange(a, a + b), this.#getByteRange(c, c + d)]);
-    return {
-      data,
-      pkcs7
-    };
-  }
   get hasJSActions() {
-    const promise = Promise.all([this.pdfManager.ensureCatalog("jsActions"), this.pdfManager.ensureDoc("fieldObjects")]).then(([catalogJsActions, fieldObjects]) => {
-      if (catalogJsActions) {
-        return true;
-      }
-      if (fieldObjects?.allFields) {
-        return fieldObjects.allFields.values().some(fieldObj => fieldObj.some(obj => obj.actions !== null));
-      }
-      return false;
-    });
+    const promise = this.pdfManager.ensureDoc("_parseHasJSActions");
     return shadow(this, "hasJSActions", promise);
+  }
+  async _parseHasJSActions() {
+    const [catalogJsActions, fieldObjects] = await Promise.all([this.pdfManager.ensureCatalog("jsActions"), this.pdfManager.ensureDoc("fieldObjects")]);
+    if (catalogJsActions) {
+      return true;
+    }
+    if (fieldObjects?.allFields) {
+      return Object.values(fieldObjects.allFields).some(fieldObject => fieldObject.some(object => object.actions !== null));
+    }
+    return false;
   }
   get calculationOrderIds() {
     const calculationOrder = this.catalog.acroForm?.get("CO");
@@ -60389,6 +59172,7 @@ class PDFDocument {
 }
 
 ;// ./src/core/pdf_manager.js
+
 
 
 
@@ -60434,11 +59218,12 @@ class BasePdfManager {
       ...evaluatorOptions,
       handler
     };
+    JpxImage.setOptions(options);
     IccColorSpace.setOptions(options);
     CmykICCBasedCS.setOptions(options);
+    JBig2CCITTFaxImage.setOptions(options);
     PDFFunctionFactory.setOptions(options);
     Pattern.setOptions(options);
-    WasmImage.setOptions(options);
   }
   get docId() {
     return this._docId;
@@ -60452,15 +59237,11 @@ class BasePdfManager {
   ensureDoc(prop, args) {
     return this.ensure(this.pdfDocument, prop, args);
   }
+  ensureXRef(prop, args) {
+    return this.ensure(this.pdfDocument.xref, prop, args);
+  }
   ensureCatalog(prop, args) {
     return this.ensure(this.pdfDocument.catalog, prop, args);
-  }
-  async initDocument(recoveryMode) {
-    await this.ensureDoc("checkHeader");
-    await this.ensureDoc("parseStartXRef");
-    await this.ensureDoc("parse", [recoveryMode]);
-    await this.ensureDoc("checkFirstPage", [recoveryMode]);
-    await this.ensureDoc("checkLastPage", [recoveryMode]);
   }
   getPage(pageIndex) {
     return this.pdfDocument.getPage(pageIndex);
@@ -60485,7 +59266,6 @@ class BasePdfManager {
   }
   updatePassword(password) {
     this._password = password;
-    this.pdfDocument.xref.encrypt?.setPassword(password);
   }
   terminate(reason) {
     unreachable("Abstract method `terminate` called");
@@ -60500,7 +59280,13 @@ class LocalPdfManager extends BasePdfManager {
   }
   async ensure(obj, prop, args) {
     const value = obj[prop];
-    return typeof value === "function" ? value.apply(obj, args) : value;
+    if (typeof value === "function") {
+      return value.apply(obj, args);
+    }
+    return value;
+  }
+  requestRange(begin, end) {
+    return Promise.resolve();
   }
   requestLoadedStream(noFetch = false) {
     return this._loadedStreamPromise;
@@ -60521,7 +59307,10 @@ class NetworkPdfManager extends BasePdfManager {
   async ensure(obj, prop, args) {
     try {
       const value = obj[prop];
-      return typeof value === "function" ? await value.apply(obj, args) : value;
+      if (typeof value === "function") {
+        return await value.apply(obj, args);
+      }
+      return value;
     } catch (ex) {
       if (!(ex instanceof MissingDataException)) {
         throw ex;
@@ -60585,20 +59374,17 @@ function wrapReason(ex) {
   return new UnknownErrorException(ex.message, ex.toString());
 }
 class MessageHandler {
-  #actions = new Map();
-  #callbackCapabilities = new Map();
-  #callbackId = 1;
-  #comObj;
   #messageAC = new AbortController();
-  #sourceName;
-  #streamControllers = new Map();
-  #streamId = 1;
-  #streamSinks = new Map();
-  #targetName;
   constructor(sourceName, targetName, comObj) {
-    this.#sourceName = sourceName;
-    this.#targetName = targetName;
-    this.#comObj = comObj;
+    this.sourceName = sourceName;
+    this.targetName = targetName;
+    this.comObj = comObj;
+    this.callbackId = 1;
+    this.streamId = 1;
+    this.streamSinks = Object.create(null);
+    this.streamControllers = Object.create(null);
+    this.callbackCapabilities = Object.create(null);
+    this.actionHandler = Object.create(null);
     comObj.addEventListener("message", this.#onMessage.bind(this), {
       signal: this.#messageAC.signal
     });
@@ -60606,7 +59392,7 @@ class MessageHandler {
   #onMessage({
     data
   }) {
-    if (data.targetName !== this.#sourceName) {
+    if (data.targetName !== this.sourceName) {
       return;
     }
     if (data.stream) {
@@ -60614,33 +59400,30 @@ class MessageHandler {
       return;
     }
     if (data.callback) {
-      const {
-        callbackId,
-        callback
-      } = data;
-      const capability = this.#callbackCapabilities.get(callbackId);
+      const callbackId = data.callbackId;
+      const capability = this.callbackCapabilities[callbackId];
       if (!capability) {
         throw new Error(`Cannot resolve callback ${callbackId}`);
       }
-      this.#callbackCapabilities.delete(callbackId);
-      if (callback === CallbackKind.DATA) {
+      delete this.callbackCapabilities[callbackId];
+      if (data.callback === CallbackKind.DATA) {
         capability.resolve(data.data);
-      } else if (callback === CallbackKind.ERROR) {
+      } else if (data.callback === CallbackKind.ERROR) {
         capability.reject(wrapReason(data.reason));
       } else {
         throw new Error("Unexpected callback case");
       }
       return;
     }
-    const action = this.#actions.get(data.action);
+    const action = this.actionHandler[data.action];
     if (!action) {
       throw new Error(`Unknown action from worker: ${data.action}`);
     }
     if (data.callbackId) {
-      const sourceName = this.#sourceName,
+      const sourceName = this.sourceName,
         targetName = data.sourceName,
-        comObj = this.#comObj;
-      Promise.try(action, data.data).then(result => {
+        comObj = this.comObj;
+      Promise.try(action, data.data).then(function (result) {
         comObj.postMessage({
           sourceName,
           targetName,
@@ -60648,7 +59431,7 @@ class MessageHandler {
           callbackId: data.callbackId,
           data: result
         });
-      }, reason => {
+      }, function (reason) {
         comObj.postMessage({
           sourceName,
           targetName,
@@ -60666,28 +59449,28 @@ class MessageHandler {
     action(data.data);
   }
   on(actionName, handler) {
-    const ah = this.#actions;
-    if (ah.has(actionName)) {
-      throw new Error(`There is already a "${actionName}" handler.`);
+    const ah = this.actionHandler;
+    if (ah[actionName]) {
+      throw new Error(`There is already an actionName called "${actionName}"`);
     }
-    ah.set(actionName, handler);
+    ah[actionName] = handler;
   }
   send(actionName, data, transfers) {
-    this.#comObj.postMessage({
-      sourceName: this.#sourceName,
-      targetName: this.#targetName,
+    this.comObj.postMessage({
+      sourceName: this.sourceName,
+      targetName: this.targetName,
       action: actionName,
       data
     }, transfers);
   }
   sendWithPromise(actionName, data, transfers) {
-    const callbackId = this.#callbackId++,
-      capability = Promise.withResolvers();
-    this.#callbackCapabilities.set(callbackId, capability);
+    const callbackId = this.callbackId++;
+    const capability = Promise.withResolvers();
+    this.callbackCapabilities[callbackId] = capability;
     try {
-      this.#comObj.postMessage({
-        sourceName: this.#sourceName,
-        targetName: this.#targetName,
+      this.comObj.postMessage({
+        sourceName: this.sourceName,
+        targetName: this.targetName,
         action: actionName,
         callbackId,
         data
@@ -60698,20 +59481,20 @@ class MessageHandler {
     return capability.promise;
   }
   sendWithStream(actionName, data, queueingStrategy, transfers) {
-    const streamId = this.#streamId++,
-      sourceName = this.#sourceName,
-      targetName = this.#targetName,
-      comObj = this.#comObj;
+    const streamId = this.streamId++,
+      sourceName = this.sourceName,
+      targetName = this.targetName,
+      comObj = this.comObj;
     return new ReadableStream({
       start: controller => {
         const startCapability = Promise.withResolvers();
-        this.#streamControllers.set(streamId, {
+        this.streamControllers[streamId] = {
           controller,
           startCall: startCapability,
           pullCall: null,
           cancelCall: null,
           isClosed: false
-        });
+        };
         comObj.postMessage({
           sourceName,
           targetName,
@@ -60724,7 +59507,7 @@ class MessageHandler {
       },
       pull: controller => {
         const pullCapability = Promise.withResolvers();
-        this.#streamControllers.get(streamId).pullCall = pullCapability;
+        this.streamControllers[streamId].pullCall = pullCapability;
         comObj.postMessage({
           sourceName,
           targetName,
@@ -60737,8 +59520,8 @@ class MessageHandler {
       cancel: reason => {
         assert(reason instanceof Error, "cancel must have a valid reason");
         const cancelCapability = Promise.withResolvers();
-        this.#streamControllers.get(streamId).cancelCall = cancelCapability;
-        this.#streamControllers.get(streamId).isClosed = true;
+        this.streamControllers[streamId].cancelCall = cancelCapability;
+        this.streamControllers[streamId].isClosed = true;
         comObj.postMessage({
           sourceName,
           targetName,
@@ -60752,11 +59535,11 @@ class MessageHandler {
   }
   #createStreamSink(data) {
     const streamId = data.streamId,
-      sourceName = this.#sourceName,
+      sourceName = this.sourceName,
       targetName = data.sourceName,
-      comObj = this.#comObj;
-    const streamSinks = this.#streamSinks,
-      action = this.#actions.get(data.action);
+      comObj = this.comObj;
+    const self = this,
+      action = this.actionHandler[data.action];
     const streamSink = {
       enqueue(chunk, size = 1, transfers) {
         if (this.isCancelled) {
@@ -60787,7 +59570,7 @@ class MessageHandler {
           stream: StreamKind.CLOSE,
           streamId
         });
-        streamSinks.delete(streamId);
+        delete self.streamSinks[streamId];
       },
       error(reason) {
         assert(reason instanceof Error, "error must have a valid reason");
@@ -60812,8 +59595,8 @@ class MessageHandler {
     };
     streamSink.sinkCapability.resolve();
     streamSink.ready = streamSink.sinkCapability.promise;
-    streamSinks.set(streamId, streamSink);
-    Promise.try(action, data.data, streamSink).then(() => {
+    this.streamSinks[streamId] = streamSink;
+    Promise.try(action, data.data, streamSink).then(function () {
       comObj.postMessage({
         sourceName,
         targetName,
@@ -60821,7 +59604,7 @@ class MessageHandler {
         streamId,
         success: true
       });
-    }, reason => {
+    }, function (reason) {
       comObj.postMessage({
         sourceName,
         targetName,
@@ -60833,11 +59616,11 @@ class MessageHandler {
   }
   #processStreamMessage(data) {
     const streamId = data.streamId,
-      sourceName = this.#sourceName,
+      sourceName = this.sourceName,
       targetName = data.sourceName,
-      comObj = this.#comObj;
-    const streamController = this.#streamControllers.get(streamId),
-      streamSink = this.#streamSinks.get(streamId);
+      comObj = this.comObj;
+    const streamController = this.streamControllers[streamId],
+      streamSink = this.streamSinks[streamId];
     switch (data.stream) {
       case StreamKind.START_COMPLETE:
         if (data.success) {
@@ -60868,7 +59651,7 @@ class MessageHandler {
           streamSink.sinkCapability.resolve();
         }
         streamSink.desiredSize = data.desiredSize;
-        Promise.try(streamSink.onPull || onFn).then(() => {
+        Promise.try(streamSink.onPull || onFn).then(function () {
           comObj.postMessage({
             sourceName,
             targetName,
@@ -60876,7 +59659,7 @@ class MessageHandler {
             streamId,
             success: true
           });
-        }, reason => {
+        }, function (reason) {
           comObj.postMessage({
             sourceName,
             targetName,
@@ -60920,7 +59703,7 @@ class MessageHandler {
           break;
         }
         const dataReason = wrapReason(data.reason);
-        Promise.try(streamSink.onCancel || onFn, dataReason).then(() => {
+        Promise.try(streamSink.onCancel || onFn, dataReason).then(function () {
           comObj.postMessage({
             sourceName,
             targetName,
@@ -60928,7 +59711,7 @@ class MessageHandler {
             streamId,
             success: true
           });
-        }, reason => {
+        }, function (reason) {
           comObj.postMessage({
             sourceName,
             targetName,
@@ -60939,7 +59722,7 @@ class MessageHandler {
         });
         streamSink.sinkCapability.reject(dataReason);
         streamSink.isCancelled = true;
-        this.#streamSinks.delete(streamId);
+        delete this.streamSinks[streamId];
         break;
       default:
         throw new Error("Unexpected stream case");
@@ -60947,195 +59730,12 @@ class MessageHandler {
   }
   async #deleteStreamController(streamController, streamId) {
     await Promise.allSettled([streamController.startCall?.promise, streamController.pullCall?.promise, streamController.cancelCall?.promise]);
-    this.#streamControllers.delete(streamId);
+    delete this.streamControllers[streamId];
   }
   destroy() {
     this.#messageAC?.abort();
     this.#messageAC = null;
   }
-}
-
-;// ./src/core/editor/print_appearances.js
-/* unused harmony import specifier */ var print_appearances_Ref;
-/* unused harmony import specifier */ var print_appearances_Dict;
-/* unused harmony import specifier */ var print_appearances_EOF;
-/* unused harmony import specifier */ var print_appearances_Cmd;
-/* unused harmony import specifier */ var print_appearances_RefMap;
-/* unused harmony import specifier */ var print_appearances_stringToBytes;
-/* unused harmony import specifier */ var print_appearances_warn;
-/* unused harmony import specifier */ var print_appearances_BaseStream;
-/* unused harmony import specifier */ var print_appearances_EvaluatorPreprocessor;
-/* unused harmony import specifier */ var print_appearances_Lexer;
-/* unused harmony import specifier */ var print_appearances_LocalPdfManager;
-/* unused harmony import specifier */ var print_appearances_Stream;
-
-
-
-
-
-
-
-const MARKED_CONTENT_OPS = new Set(["BDC", "BMC", "DP", "EMC", "MP"]);
-class ChangesXRefWrapper {
-  #changes;
-  #xref;
-  constructor(changes, xref) {
-    this.#changes = changes;
-    this.#xref = xref;
-  }
-  getNewTemporaryRef() {
-    return this.#xref.getNewTemporaryRef();
-  }
-  fetch(ref) {
-    return this.#changes.has(ref) ? this.#changes.get(ref).data : this.#xref.fetch(ref);
-  }
-  fetchIfRef(obj) {
-    return obj instanceof print_appearances_Ref ? this.fetch(obj) : obj;
-  }
-  async fetchAsync(ref) {
-    return this.fetch(ref);
-  }
-  async fetchIfRefAsync(obj) {
-    return this.fetchIfRef(obj);
-  }
-}
-async function copyObject(obj, sourceXref, target) {
-  const {
-    changes,
-    refs,
-    xref,
-    xrefWrapper
-  } = target;
-  if (obj instanceof print_appearances_Ref) {
-    let newRef = refs.get(obj);
-    if (!newRef) {
-      refs.put(obj, newRef = xref.getNewTemporaryRef());
-      const value = await sourceXref.fetchAsync(obj);
-      changes.put(newRef, {
-        data: await copyObject(value, sourceXref, target)
-      });
-    }
-    return newRef;
-  }
-  if (Array.isArray(obj)) {
-    return Promise.all(obj.map(value => copyObject(value, sourceXref, target)));
-  }
-  let dict, stream;
-  if (obj instanceof print_appearances_BaseStream) {
-    ({
-      dict
-    } = stream = obj.getOriginalStream().clone());
-  } else if (obj instanceof print_appearances_Dict) {
-    dict = obj.clone();
-  } else {
-    return obj;
-  }
-  dict.xref = xrefWrapper;
-  const promises = [];
-  for (const [key, value] of dict.getRawEntries()) {
-    promises.push(copyObject(value, sourceXref, target).then(newValue => dict.set(key, newValue)));
-  }
-  await Promise.all(promises);
-  return stream ?? dict;
-}
-function filterContentStream(bytes, isWidget) {
-  const lexer = new print_appearances_Lexer(new print_appearances_Stream(bytes), print_appearances_EvaluatorPreprocessor.opMap);
-  const parts = isWidget ? [print_appearances_stringToBytes("/Tx BMC\n")] : [];
-  let start = 0;
-  let end = 0;
-  try {
-    while (true) {
-      const obj = lexer.getObj();
-      if (obj === print_appearances_EOF) {
-        break;
-      }
-      if (!(obj instanceof print_appearances_Cmd) || !print_appearances_EvaluatorPreprocessor.opMap[obj.cmd]) {
-        continue;
-      }
-      if (obj.cmd === "BI") {
-        print_appearances_warn("filterContentStream: inline images aren't supported.");
-        return null;
-      }
-      const cmdEnd = lexer.currentChar < 0 ? bytes.length : lexer.stream.pos - 1;
-      if (MARKED_CONTENT_OPS.has(obj.cmd)) {
-        parts.push(bytes.subarray(start, end));
-        start = cmdEnd;
-      }
-      end = cmdEnd;
-    }
-  } catch (reason) {
-    print_appearances_warn(`filterContentStream: "${reason}".`);
-    return null;
-  }
-  parts.push(bytes.subarray(start));
-  if (isWidget) {
-    parts.push(print_appearances_stringToBytes("\nEMC"));
-  }
-  const data = new Uint8Array(parts.reduce((length, part) => length + part.length, 0));
-  let offset = 0;
-  for (const part of parts) {
-    data.set(part, offset);
-    offset += part.length;
-  }
-  return data;
-}
-async function importPrintedAppearances({
-  buffer,
-  changes,
-  docId,
-  entries,
-  evaluatorOptions,
-  handler,
-  xref
-}) {
-  const pdfManager = new print_appearances_LocalPdfManager({
-    source: buffer,
-    docId: `${docId}_printToPDF`,
-    handler,
-    evaluatorOptions
-  });
-  await pdfManager.initDocument(false);
-  const {
-    pdfDocument
-  } = pdfManager;
-  if (pdfDocument.numPages !== entries.length) {
-    throw new Error("The generated PDF must have one page per appearance.");
-  }
-  const appearances = new Map();
-  const target = {
-    changes,
-    refs: new print_appearances_RefMap(),
-    xref,
-    xrefWrapper: new ChangesXRefWrapper(changes, xref)
-  };
-  for (let i = 0, ii = entries.length; i < ii; i++) {
-    const {
-      key,
-      isWidget,
-      matrix,
-      data
-    } = entries[i];
-    const page = await pdfDocument.getPage(i);
-    const contentStream = await page.getContentStream();
-    contentStream.reset();
-    const bytes = filterContentStream(contentStream.getBytes(), isWidget);
-    if (!bytes) {
-      continue;
-    }
-    const dict = new print_appearances_Dict(xref);
-    dict.setIfName("Type", "XObject");
-    dict.setIfName("Subtype", "Form");
-    dict.set("FormType", 1);
-    dict.set("BBox", [0, 0, data.width, data.height]);
-    dict.setIfArray("Matrix", matrix);
-    dict.set("Resources", await copyObject(page.resources, pdfDocument.xref, target));
-    const ref = xref.getNewTemporaryRef();
-    changes.put(ref, {
-      data: new print_appearances_Stream(bytes, 0, bytes.length, dict)
-    });
-    appearances.set(key, ref);
-  }
-  return appearances;
 }
 
 ;// ./src/core/writer.js
@@ -61173,10 +59773,8 @@ async function writeStream(stream, buffer, transform) {
   const [filter, params] = await Promise.all([dict.getAsync("Filter"), dict.getAsync("DecodeParms")]);
   const filterZero = Array.isArray(filter) ? await dict.xref.fetchIfRefAsync(filter[0]) : filter;
   const isFilterZeroFlateDecode = isName(filterZero, "FlateDecode");
-  const isFilterZeroImageDecode = isName(filterZero, "DCTDecode") || isName(filterZero, "JPXDecode") || isName(filterZero, "JBIG2Decode") || isName(filterZero, "CCITTFaxDecode") || isName(filterZero, "LZWDecode");
-  const isFilterZeroCompressedObject = isFilterZeroFlateDecode || isFilterZeroImageDecode || isName(filterZero, "BrotliDecode");
   const MIN_LENGTH_FOR_COMPRESSING = 256;
-  if (!isFilterZeroCompressedObject && bytes.length >= MIN_LENGTH_FOR_COMPRESSING) {
+  if (bytes.length >= MIN_LENGTH_FOR_COMPRESSING && !isFilterZeroFlateDecode) {
     try {
       const cs = new CompressionStream("deflate");
       const writer = cs.writable.getWriter();
@@ -61223,20 +59821,6 @@ async function writeArray(array, buffer, transform) {
   }
   buffer.push("]");
 }
-function numberToPDFString(value) {
-  if (Number.isInteger(value) && Math.abs(value) >= 1e21) {
-    return BigInt(value).toString();
-  }
-  const str = value.toFixed(10);
-  let end = str.length;
-  while (str[end - 1] === "0") {
-    end--;
-  }
-  if (str[end - 1] === ".") {
-    end--;
-  }
-  return str.slice(0, end);
-}
 async function writeValue(value, buffer, transform) {
   if (value instanceof Name) {
     buffer.push(`/${escapePDFName(value.name)}`);
@@ -61250,7 +59834,7 @@ async function writeValue(value, buffer, transform) {
     }
     buffer.push(`(${escapeString(value)})`);
   } else if (typeof value === "number") {
-    buffer.push(numberToPDFString(value));
+    buffer.push(value.toFixed(10).replace(/\.?0+$/, ""));
   } else if (typeof value === "boolean") {
     buffer.push(value.toString());
   } else if (value instanceof Dict) {
@@ -61303,7 +59887,7 @@ function writeXFADataForAcroform(str, changes) {
       path,
       value
     } = xfa;
-    if (!path || value === null) {
+    if (!path) {
       continue;
     }
     const nodePath = parseXFAPath(path);
@@ -61361,7 +59945,8 @@ function updateXFA({
     const datasets = xref.fetchIfRef(xfaDatasetsRef);
     xfaData = writeXFADataForAcroform(datasets.getString(), changes);
   }
-  const xfaDataStream = new StringStream(xfaData, new Dict(xref));
+  const xfaDataStream = new StringStream(xfaData);
+  xfaDataStream.dict = new Dict(xref);
   xfaDataStream.dict.setIfName("Type", "EmbeddedFile");
   changes.put(xfaDatasetsRef, {
     data: xfaDataStream
@@ -61572,10 +60157,6 @@ async function incrementalUpdate({
 
 
 
-
-
-
-
 const MAX_LEAVES_PER_PAGES_NODE = 16;
 const MAX_IN_NAME_TREE_NODE = 64;
 class PageData {
@@ -61584,7 +60165,6 @@ class PageData {
     this.documentData = documentData;
     this.annotations = null;
     this.pointingNamedDestinations = null;
-    this.copyLevel = 0;
     documentData.pagesMap.put(page.ref, this);
   }
 }
@@ -61593,12 +60173,11 @@ class DocumentData {
     this.document = document;
     this.destinations = null;
     this.pageLabels = null;
-    this.pagesMap = new RefMap();
-    this.oldRefMapping = new RefMap();
+    this.pagesMap = new RefSetCache();
+    this.oldRefMapping = new RefSetCache();
     this.dedupNamedDestinations = new Map();
     this.usedNamedDestinations = new Set();
-    this.postponedRefCopies = new RefMap();
-    this.resourceStreamPromises = new Map();
+    this.postponedRefCopies = new RefSetCache();
     this.usedStructParents = new Set();
     this.oldStructParentMapping = new Map();
     this.structTreeRoot = null;
@@ -61614,7 +60193,7 @@ class DocumentData {
     this.acroFormDefaultResources = null;
     this.acroFormQ = 0;
     this.hasSignatureAnnotations = false;
-    this.fieldToParent = new RefMap();
+    this.fieldToParent = new RefSetCache();
     this.outline = null;
     this.embeddedFiles = null;
   }
@@ -61624,33 +60203,26 @@ class XRefWrapper {
     this.entries = entries;
     this._getNewRef = getNewRef;
   }
+  fetch(ref) {
+    return ref instanceof Ref ? this.entries[ref.num] : ref;
+  }
+  fetchIfRefAsync(ref) {
+    return Promise.resolve(this.fetch(ref));
+  }
+  fetchIfRef(ref) {
+    return this.fetch(ref);
+  }
+  fetchAsync(ref) {
+    return Promise.resolve(this.fetch(ref));
+  }
   getNewTemporaryRef() {
     return this._getNewRef();
   }
-  countUpdatesAfter(offset) {
-    return null;
-  }
-  fetchIfRef(obj) {
-    return obj instanceof Ref ? this.fetch(obj) : obj;
-  }
-  fetch(ref) {
-    if (!(ref instanceof Ref)) {
-      throw new Error("ref object is not a reference");
-    }
-    return this.entries[ref.num];
-  }
-  async fetchIfRefAsync(obj) {
-    return obj instanceof Ref ? this.fetchAsync(obj) : obj;
-  }
-  async fetchAsync(ref) {
-    return this.fetch(ref);
-  }
 }
 class PDFEditor {
+  hasSingleFile = false;
   isSingleFile = false;
   #newAnnotationsParams = null;
-  #primaryDocument = null;
-  #resourceStreamCache = new Map();
   currentDocument = null;
   oldPages = [];
   newPages = [];
@@ -61692,7 +60264,8 @@ class PDFEditor {
     this.author = author;
   }
   get newRef() {
-    return Ref.get(this.newRefCount++, 0);
+    const ref = Ref.get(this.newRefCount++, 0);
+    return ref;
   }
   get newDict() {
     const ref = this.newRef;
@@ -61709,39 +60282,25 @@ class PDFEditor {
     newDict.xref = this.xrefWrapper;
     return newDict;
   }
-  async #collectDependencies(obj, mustClone, xref, resourceStreamPath = new RefSet()) {
+  async #collectDependencies(obj, mustClone, xref) {
     if (obj instanceof Ref) {
       const {
         currentDocument: {
-          fieldToParent,
           oldRefMapping
         }
       } = this;
-      const existingRef = oldRefMapping.get(obj);
-      if (existingRef) {
-        return existingRef;
+      let newRef = oldRefMapping.get(obj);
+      if (newRef) {
+        return newRef;
       }
       const oldRef = obj;
       obj = await xref.fetchAsync(oldRef);
-      const mappedRef = oldRefMapping.get(oldRef);
-      if (mappedRef) {
-        return mappedRef;
-      }
       if (typeof obj === "number") {
         return obj;
       }
-      if (obj instanceof BaseStream && this.#isResourceStream(obj.dict)) {
-        return this.#collectResourceStream(oldRef, obj, xref, resourceStreamPath);
-      }
-      const newRef = this.newRef;
+      newRef = this.newRef;
       oldRefMapping.put(oldRef, newRef);
-      let cloneSource = true;
-      if (fieldToParent.has(oldRef) && obj instanceof Dict) {
-        obj = this.cloneDict(obj);
-        obj.delete("Parent");
-        cloneSource = false;
-      }
-      this.xref[newRef.num] = await this.#collectDependencies(obj, cloneSource, xref, resourceStreamPath);
+      this.xref[newRef.num] = await this.#collectDependencies(obj, true, xref);
       return newRef;
     }
     const promises = [];
@@ -61760,7 +60319,7 @@ class PDFEditor {
           postponedActions.push(ref => obj[i] = ref);
           continue;
         }
-        promises.push(this.#collectDependencies(obj[i], true, xref, resourceStreamPath).then(newObj => obj[i] = newObj));
+        promises.push(this.#collectDependencies(obj[i], true, xref).then(newObj => obj[i] = newObj));
       }
       await Promise.all(promises);
       return obj;
@@ -61785,108 +60344,11 @@ class PDFEditor {
           postponedActions.push(ref => dict.set(key, ref));
           continue;
         }
-        promises.push(this.#collectDependencies(rawObj, true, xref, resourceStreamPath).then(newObj => dict.set(key, newObj)));
+        promises.push(this.#collectDependencies(rawObj, true, xref).then(newObj => dict.set(key, newObj)));
       }
       await Promise.all(promises);
     }
     return obj;
-  }
-  #isResourceStream(dict) {
-    const subtype = dict.get("Subtype");
-    return isName(subtype, "Image") || dict.has("Length1") || isName(subtype, "Type1C") || isName(subtype, "CIDFontType0C") || isName(subtype, "OpenType");
-  }
-  #rawStreamBytes(stream) {
-    const original = stream.getOriginalStream();
-    original.reset();
-    return original.getBytes();
-  }
-  async #serializeDict(dict) {
-    const buffer = [];
-    await writeValue(dict, buffer, null);
-    return buffer.join("");
-  }
-  #resourceStreamKey(dictStr, bytes) {
-    const SAMPLE_SIZE = 256;
-    const SAMPLE_COUNT = 4;
-    const {
-      length
-    } = bytes;
-    const hash = new MurmurHash3_64();
-    hash.update(dictStr);
-    hash.update(`#${length}`);
-    if (length <= SAMPLE_SIZE * SAMPLE_COUNT) {
-      hash.update(bytes);
-    } else {
-      const step = Math.floor((length - SAMPLE_SIZE) / (SAMPLE_COUNT - 1));
-      for (let i = 0; i < SAMPLE_COUNT; i++) {
-        const start = Math.min(i * step, length - SAMPLE_SIZE);
-        hash.update(bytes.subarray(start, start + SAMPLE_SIZE));
-      }
-    }
-    return hash.hexdigest();
-  }
-  async #collectResourceStream(oldRef, stream, xref, resourceStreamPath) {
-    const {
-      currentDocument: {
-        oldRefMapping,
-        resourceStreamPromises
-      }
-    } = this;
-    if (resourceStreamPath.has(oldRef)) {
-      return oldRefMapping.getOrPutComputed(oldRef, () => this.newRef);
-    }
-    const key = oldRef.toString();
-    const pending = resourceStreamPromises.get(key);
-    if (pending) {
-      return pending;
-    }
-    const childPath = new RefSet(resourceStreamPath);
-    childPath.put(oldRef);
-    const promise = Promise.resolve().then(async () => {
-      const collected = await this.#collectDependencies(stream, true, xref, childPath);
-      const cycleRef = oldRefMapping.get(oldRef);
-      if (cycleRef) {
-        this.xref[cycleRef.num] = collected;
-        return cycleRef;
-      }
-      const ref = await this.#dedupResourceStream(collected);
-      oldRefMapping.put(oldRef, ref);
-      return ref;
-    });
-    resourceStreamPromises.set(key, promise);
-    try {
-      return await promise;
-    } finally {
-      if (resourceStreamPromises.get(key) === promise) {
-        resourceStreamPromises.delete(key);
-      }
-    }
-  }
-  async #dedupResourceStream(stream) {
-    const dictStr = await this.#serializeDict(stream.dict);
-    const bytes = this.#rawStreamBytes(stream);
-    const key = this.#resourceStreamKey(dictStr, bytes);
-    const bucket = this.#resourceStreamCache.getOrInsertComputed(key, makeArr);
-    for (const entry of bucket) {
-      if (entry.dictStr === dictStr && isArrayEqual(this.#rawStreamBytes(entry.stream), bytes)) {
-        return entry.ref;
-      }
-    }
-    const ref = this.newRef;
-    this.xref[ref.num] = stream;
-    bucket.push({
-      ref,
-      dictStr,
-      stream
-    });
-    return ref;
-  }
-  async #resolveStructKids(rawKids, xref) {
-    if (rawKids instanceof Ref) {
-      const fetched = await xref.fetchAsync(rawKids);
-      return Array.isArray(fetched) ? fetched : [rawKids];
-    }
-    return Array.isArray(rawKids) ? rawKids : [rawKids];
   }
   async #cloneStructTreeNode(parentStructRef, node, xref, removedStructElements, dedupIDs, dedupClasses, dedupRoles, visited = new RefSet()) {
     const {
@@ -61899,11 +60361,18 @@ class PDFEditor {
     if (pg instanceof Ref && !pagesMap.has(pg)) {
       return null;
     }
-    const k = node.getRaw("K");
-    if (k instanceof Ref && visited.has(k)) {
-      return null;
+    let kids;
+    const k = kids = node.getRaw("K");
+    if (k instanceof Ref) {
+      if (visited.has(k)) {
+        return null;
+      }
+      kids = await xref.fetchAsync(k);
+      if (!Array.isArray(kids)) {
+        kids = [k];
+      }
     }
-    const kids = await this.#resolveStructKids(k, xref);
+    kids = Array.isArray(kids) ? kids : [kids];
     const newKids = [];
     const structElemIndices = [];
     for (let kid of kids) {
@@ -61952,11 +60421,10 @@ class PDFEditor {
         if (!kidRef) {
           continue;
         }
-        const oldObjRef = kid.getRaw("Obj");
-        if (oldObjRef instanceof Ref && !oldRefMapping.get(oldObjRef)) {
+        const newKidRef = oldRefMapping.get(kidRef);
+        if (!newKidRef) {
           continue;
         }
-        const newKidRef = oldRefMapping.get(kidRef) || (await this.#collectDependencies(kidRef, true, xref));
         const newKid = this.xref[newKidRef.num];
         const objRef = newKid.getRaw("Obj");
         if (objRef instanceof Ref) {
@@ -61994,13 +60462,21 @@ class PDFEditor {
     const classNames = node.get("C");
     if (classNames instanceof Name) {
       const newClassName = dedupClasses.get(classNames.name);
-      newNode.set("C", newClassName ? Name.get(newClassName) : classNames);
+      if (newClassName) {
+        newNode.set("C", Name.get(newClassName));
+      } else {
+        newNode.set("C", classNames);
+      }
     } else if (Array.isArray(classNames)) {
       const newClassNames = [];
       for (const className of classNames) {
         if (className instanceof Name) {
           const newClassName = dedupClasses.get(className.name);
-          newClassNames.push(newClassName ? Name.get(newClassName) : className);
+          if (newClassName) {
+            newClassNames.push(Name.get(newClassName));
+          } else {
+            newClassNames.push(className);
+          }
         }
       }
       newNode.set("C", newClassNames);
@@ -62008,13 +60484,21 @@ class PDFEditor {
     const roleName = node.get("S");
     if (roleName instanceof Name) {
       const newRoleName = dedupRoles.get(roleName.name);
-      newNode.set("S", newRoleName ? Name.get(newRoleName) : roleName);
+      if (newRoleName) {
+        newNode.set("S", Name.get(newRoleName));
+      } else {
+        newNode.set("S", roleName);
+      }
     }
     const id = node.get("ID");
     if (typeof id === "string") {
       const stringId = stringToPDFString(id, false);
       const newId = dedupIDs.get(stringId);
-      newNode.set("ID", newId ? stringToAsciiOrUTF16BE(newId) : id);
+      if (newId) {
+        newNode.set("ID", stringToAsciiOrUTF16BE(newId));
+      } else {
+        newNode.set("ID", id);
+      }
     }
     let attributes = newNode.get("A");
     if (attributes) {
@@ -62022,19 +60506,12 @@ class PDFEditor {
         attributes = [attributes];
       }
       for (let attr of attributes) {
-        attr = this.xrefWrapper.fetchIfRef(attr);
-        if (!(attr instanceof Dict)) {
-          continue;
-        }
+        attr = this.xrefWrapper.fetch(attr);
         if (isName(attr.get("O"), "Table") && attr.has("Headers")) {
-          const headers = this.xrefWrapper.fetchIfRef(attr.getRaw("Headers"));
+          const headers = this.xrefWrapper.fetch(attr.getRaw("Headers"));
           if (Array.isArray(headers)) {
             for (let i = 0, ii = headers.length; i < ii; i++) {
-              const header = this.xrefWrapper.fetchIfRef(headers[i]);
-              if (typeof header !== "string") {
-                continue;
-              }
-              const newId = dedupIDs.get(stringToPDFString(header, false));
+              const newId = dedupIDs.get(stringToPDFString(headers[i], false));
               if (newId) {
                 headers[i] = newId;
               }
@@ -62063,59 +60540,68 @@ class PDFEditor {
     if (!document) {
       return [];
     }
-    const compile = list => {
-      if (!list?.length) {
-        return null;
-      }
-      const indices = new Set();
-      const ranges = [];
-      for (const item of list) {
-        if (Array.isArray(item)) {
-          ranges.push(item);
-        } else {
-          indices.add(item);
-        }
-      }
-      return {
-        indices,
-        ranges
-      };
-    };
-    const matches = (index, {
-      indices,
-      ranges
-    }) => indices.has(index) || ranges.some(([start, end]) => index >= start && index <= end);
-    const inc = compile(includePages);
-    const exc = compile(excludePages);
-    const result = [];
-    for (let i = 0, ii = document.numPages; i < ii; i++) {
-      if (exc && matches(i, exc)) {
-        continue;
-      }
-      if (!inc || matches(i, inc)) {
-        result.push(i);
+    let keptIndices, keptRanges, deletedIndices, deletedRanges;
+    for (const page of includePages || []) {
+      if (Array.isArray(page)) {
+        (keptRanges ||= []).push(page);
+      } else {
+        (keptIndices ||= new Set()).add(page);
       }
     }
-    return result;
+    for (const page of excludePages || []) {
+      if (Array.isArray(page)) {
+        (deletedRanges ||= []).push(page);
+      } else {
+        (deletedIndices ||= new Set()).add(page);
+      }
+    }
+    const indices = [];
+    for (let i = 0, ii = document.numPages; i < ii; i++) {
+      if (deletedIndices?.has(i)) {
+        continue;
+      }
+      if (deletedRanges) {
+        let isDeleted = false;
+        for (const [start, end] of deletedRanges) {
+          if (i >= start && i <= end) {
+            isDeleted = true;
+            break;
+          }
+        }
+        if (isDeleted) {
+          continue;
+        }
+      }
+      let takePage = false;
+      if (keptIndices) {
+        takePage = keptIndices.has(i);
+      }
+      if (!takePage && keptRanges) {
+        for (const [start, end] of keptRanges) {
+          if (i >= start && i <= end) {
+            takePage = true;
+            break;
+          }
+        }
+      }
+      if (!takePage && !keptIndices && !keptRanges) {
+        takePage = true;
+      }
+      if (takePage) {
+        indices.push(i);
+      }
+    }
+    return indices;
   }
   #resolveInsertAfterIndices(pageInfos) {
-    const counts = new Array(pageInfos.length);
     const sequence = [];
     const insertAfterList = [];
     for (let i = 0; i < pageInfos.length; i++) {
       const info = pageInfos[i];
-      let count;
-      if (info.image) {
-        count = counts[i] = 1;
-      } else if (!info.document) {
-        counts[i] = 0;
-        continue;
-      } else {
-        count = counts[i] = this.#getFilteredPageIndices(info).length;
-      }
-      if (info.pageIndices) {
+      if (!info.document || info.pageIndices) {
         continue;
       }
+      const count = this.#getFilteredPageIndices(info).length;
       if (info.insertAfter === undefined) {
         for (let j = 0; j < count; j++) {
           sequence.push(i);
@@ -62128,27 +60614,28 @@ class PDFEditor {
         });
       }
     }
-    if (insertAfterList.length === 0) {
-      return pageInfos;
-    }
-    const hasContent = info => !!(info.document || info.image);
-    for (let i = 0; i < pageInfos.length; i++) {
-      const info = pageInfos[i];
-      if (hasContent(info) && info.pageIndices && info.pageIndices.length < counts[i]) {
-        throw new Error("extractPages: partial pageIndices cannot be combined with insertAfter entries.");
+    insertAfterList.sort((a, b) => a.insertAfter - b.insertAfter);
+    if (insertAfterList.length > 0) {
+      for (const info of pageInfos) {
+        if (!info.document || !info.pageIndices) {
+          continue;
+        }
+        const filteredCount = this.#getFilteredPageIndices(info).length;
+        if (info.pageIndices.length < filteredCount) {
+          throw new Error("extractPages: partial pageIndices cannot be combined with insertAfter entries.");
+        }
       }
     }
-    insertAfterList.sort((a, b) => a.insertAfter - b.insertAfter || a.i - b.i);
-    if (sequence.length === 0 && pageInfos.some(info => hasContent(info) && info.pageIndices)) {
+    const hasExplicitLayout = insertAfterList.length > 0 && pageInfos.some(info => info.document && info.pageIndices);
+    if (sequence.length === 0 && hasExplicitLayout) {
       const updatedPageInfos = pageInfos.slice();
       let maxExistingPos = -1;
       for (const info of pageInfos) {
-        if (!hasContent(info) || !info.pageIndices) {
-          continue;
-        }
-        for (const idx of info.pageIndices) {
-          if (idx > maxExistingPos) {
-            maxExistingPos = idx;
+        if (info.document && info.pageIndices) {
+          for (const idx of info.pageIndices) {
+            if (idx > maxExistingPos) {
+              maxExistingPos = idx;
+            }
           }
         }
       }
@@ -62161,7 +60648,7 @@ class PDFEditor {
         const threshold = Math.min(Math.max(insertAfter, -1) + offset, maxExistingPos);
         for (let j = 0; j < updatedPageInfos.length; j++) {
           const existingInfo = updatedPageInfos[j];
-          if (!hasContent(existingInfo) || !existingInfo.pageIndices || existingInfo.pageIndices.every(idx => idx <= threshold)) {
+          if (!existingInfo.document || !existingInfo.pageIndices || existingInfo.pageIndices.every(idx => idx <= threshold)) {
             continue;
           }
           updatedPageInfos[j] = {
@@ -62169,16 +60656,16 @@ class PDFEditor {
             pageIndices: existingInfo.pageIndices.map(idx => idx > threshold ? idx + count : idx)
           };
         }
-        const pageIndices = [];
+        const insertedIndices = [];
         for (let k = 0; k < count; k++) {
-          pageIndices.push(threshold + 1 + k);
+          insertedIndices.push(threshold + 1 + k);
         }
-        const result = {
+        const newInfo = {
           ...updatedPageInfos[i],
-          pageIndices
+          pageIndices: insertedIndices
         };
-        delete result.insertAfter;
-        updatedPageInfos[i] = result;
+        delete newInfo.insertAfter;
+        updatedPageInfos[i] = newInfo;
         offset += count;
         maxExistingPos += count;
       }
@@ -62190,7 +60677,7 @@ class PDFEditor {
       insertAfter,
       count
     } of insertAfterList) {
-      const insertPos = Math.max(insertAfter, -1) + 1 + offset;
+      const insertPos = insertAfter + 1 + offset;
       sequence.splice(insertPos, 0, ...new Array(count).fill(i));
       offset += count;
     }
@@ -62200,31 +60687,25 @@ class PDFEditor {
       (pageIndicesArr[infoIdx] ||= []).push(pos);
     }
     return pageInfos.map((info, i) => {
-      if (!hasContent(info) || info.pageIndices) {
+      if (!info.document || info.pageIndices) {
         return info;
       }
-      const result = {
+      const newInfo = {
         ...info,
         pageIndices: pageIndicesArr[i] || []
       };
-      delete result.insertAfter;
-      return result;
+      delete newInfo.insertAfter;
+      return newInfo;
     });
   }
-  async extractPages(pageInfos, annotationStorage, primaryDocument, handler, task) {
-    this.#primaryDocument = primaryDocument;
-    pageInfos = this.#resolveInsertAfterIndices(pageInfos);
+  async extractPages(pageInfos, annotationStorage, handler, task) {
+    if (pageInfos.some(info => info.insertAfter !== undefined)) {
+      pageInfos = this.#resolveInsertAfterIndices(pageInfos);
+    }
     const promises = [];
     let newIndex = 0;
-    const reservePageSlot = newPageIndex => {
-      if (!Number.isInteger(newPageIndex) || newPageIndex < 0) {
-        throw new Error("extractPages: invalid page index.");
-      }
-      if (this.oldPages[newPageIndex] !== undefined) {
-        throw new Error("extractPages: overlapping pageIndices.");
-      }
-      this.oldPages[newPageIndex] = null;
-    };
+    this.isSingleFile = pageInfos.length === 1 || pageInfos.every(info => info.document === pageInfos[0].document);
+    this.hasSingleFile = pageInfos.length === 1;
     const allDocumentData = [];
     if (annotationStorage) {
       this.#newAnnotationsParams = {
@@ -62234,56 +60715,27 @@ class PDFEditor {
         imagesPromises: AnnotationFactory.generateImages(annotationStorage.values(), this.xrefWrapper, true)
       };
     }
-    const imageEntries = [];
-    for (const pageInfo of pageInfos) {
-      const {
-        document,
-        image,
-        includePages,
-        excludePages,
-        pageIndices
-      } = pageInfo;
-      if (image) {
-        if (pageIndices) {
-          newIndex = -1;
-          if (pageIndices.length > 1) {
-            throw new Error("extractPages: too many pageIndices.");
-          }
-        }
-        let newPageIndex;
-        if (pageIndices?.length) {
-          newPageIndex = pageIndices[0];
-        } else if (newIndex !== -1) {
-          newPageIndex = newIndex++;
-        } else {
-          for (newPageIndex = 0; this.oldPages[newPageIndex] !== undefined; newPageIndex++) {}
-        }
-        reservePageSlot(newPageIndex);
-        imageEntries.push({
-          image,
-          slot: newPageIndex
-        });
-        continue;
-      }
+    for (const {
+      document,
+      includePages,
+      excludePages,
+      pageIndices
+    } of pageInfos) {
       if (!document) {
         continue;
       }
       if (pageIndices) {
         newIndex = -1;
       }
-      const filteredPageIndices = this.#getFilteredPageIndices({
-        document,
-        includePages,
-        excludePages
-      });
-      if (pageIndices && pageIndices.length > filteredPageIndices.length) {
-        throw new Error("extractPages: too many pageIndices.");
-      }
       const documentData = new DocumentData(document);
       allDocumentData.push(documentData);
       promises.push(this.#collectDocumentData(documentData));
       let pageIndex = 0;
-      for (const i of filteredPageIndices) {
+      for (const i of this.#getFilteredPageIndices({
+        document,
+        includePages,
+        excludePages
+      })) {
         let newPageIndex;
         if (pageIndices) {
           newPageIndex = pageIndices[pageIndex++];
@@ -62295,58 +60747,25 @@ class PDFEditor {
             for (newPageIndex = 0; this.oldPages[newPageIndex] !== undefined; newPageIndex++) {}
           }
         }
-        reservePageSlot(newPageIndex);
+        this.oldPages[newPageIndex] = null;
         promises.push(document.getPage(i).then(page => {
           this.oldPages[newPageIndex] = new PageData(page, documentData);
         }));
       }
     }
     await Promise.all(promises);
-    if (this.oldPages.length === 0) {
-      throw new Error("extractPages: nothing to extract.");
-    }
-    const copyCounts = new Map();
-    const documents = new Set();
-    for (let i = 0, ii = this.oldPages.length; i < ii; i++) {
-      const pageData = this.oldPages[i];
-      if (pageData === undefined) {
-        throw new Error("extractPages: sparse pageIndices.");
-      }
-      if (pageData) {
-        const {
-          page
-        } = pageData;
-        const copyLevel = copyCounts.get(page) ?? 0;
-        copyCounts.set(page, copyLevel + 1);
-        pageData.copyLevel = copyLevel;
-        documents.add(pageData.documentData.document);
-      }
-    }
-    this.isSingleFile = documents.size === 1;
     promises.length = 0;
     this.#collectValidDestinations(allDocumentData);
     this.#collectOutlineDestinations(allDocumentData);
     this.#collectPageLabels();
     for (const page of this.oldPages) {
-      if (page) {
-        promises.push(this.#postCollectPageData(page));
-      }
+      promises.push(this.#postCollectPageData(page));
     }
     await Promise.all(promises);
     this.#findDuplicateNamedDestinations();
     this.#setPostponedRefCopies(allDocumentData);
-    const imageSlots = new Map();
-    for (const entry of imageEntries) {
-      imageSlots.set(entry.slot, entry);
-    }
-    const modalPageSize = imageSlots.size > 0 ? this.#modalPageSize() : null;
     for (let i = 0, ii = this.oldPages.length; i < ii; i++) {
-      const imageEntry = imageSlots.get(i);
-      if (imageEntry) {
-        this.newPages[i] = await this.#makeImagePage(imageEntry.image, modalPageSize);
-      } else {
-        this.newPages[i] = await this.#makePageCopy(i, null);
-      }
+      this.newPages[i] = await this.#makePageCopy(i, null);
     }
     this.#fixPostponedRefCopies(allDocumentData);
     await this.#mergeStructTrees(allDocumentData);
@@ -62414,26 +60833,20 @@ class PDFEditor {
       promises.push(xref.fetchIfRefAsync(annotationRef).then(async annotationDict => {
         if (!isName(annotationDict.get("Subtype"), "Link")) {
           if (isName(annotationDict.get("Subtype"), "Widget")) {
-            hasSignatureAnnotations ||= isName(getInheritableProperty({
-              dict: annotationDict,
-              key: "FT"
-            }), "Sig");
-            const parentRef = annotationDict.getRaw("Parent") || null;
+            hasSignatureAnnotations ||= isName(annotationDict.get("FT"), "Sig");
+            const parentRef = annotationDict.get("Parent") || null;
+            annotationDict.delete("Parent");
             fieldToParent.put(annotationRef, parentRef);
           }
           newAnnotations[newAnnotationIndex] = annotationRef;
           return;
         }
         const action = annotationDict.get("A");
-        if (action instanceof Dict && !isName(action.get("S"), "GoTo")) {
-          newAnnotations[newAnnotationIndex] = annotationRef;
-          return;
-        }
         const dest = action instanceof Dict ? action.get("D") : annotationDict.get("Dest");
         if (!dest || Array.isArray(dest) && (!(dest[0] instanceof Ref) || pagesMap.has(dest[0]))) {
           newAnnotations[newAnnotationIndex] = annotationRef;
-        } else if (dest instanceof Name || typeof dest === "string") {
-          const destString = stringToPDFString(dest instanceof Name ? dest.name : dest, true);
+        } else if (typeof dest === "string") {
+          const destString = stringToPDFString(dest, true);
           if (destinations.has(destString)) {
             newAnnotations[newAnnotationIndex] = annotationRef;
             usedNamedDestinations.add(destString);
@@ -62442,7 +60855,7 @@ class PDFEditor {
       }));
     }
     await Promise.all(promises);
-    newAnnotations = newAnnotations.filter(Boolean);
+    newAnnotations = newAnnotations.filter(annot => !!annot);
     pageData.annotations = newAnnotations.length > 0 ? newAnnotations : null;
     pageData.documentData.hasSignatureAnnotations ||= hasSignatureAnnotations;
   }
@@ -62505,9 +60918,6 @@ class PDFEditor {
       parentTree: newParentTree
     } = this;
     for (let i = 0, ii = this.newPages.length; i < ii; i++) {
-      if (!this.oldPages[i]) {
-        continue;
-      }
       const {
         documentData: {
           parentTree,
@@ -62674,33 +61084,20 @@ class PDFEditor {
           newStructTreePronunciationLexicon.push(await this.#collectDependencies(lexiconRef, true, xref));
         }
       }
-      const rawKids = structTreeRoot.dict.getRaw("K");
-      if (!rawKids) {
+      let kids = structTreeRoot.dict.get("K");
+      if (!kids) {
         continue;
       }
-      const kids = await this.#resolveStructKids(rawKids, xref);
+      kids = Array.isArray(kids) ? kids : [kids];
       for (let kid of kids) {
         const kidRef = kid instanceof Ref ? kid : null;
-        kid = await xref.fetchIfRefAsync(kid);
-        if (!(kid instanceof Dict)) {
+        if (kidRef && removedStructElements.has(kidRef)) {
           continue;
         }
-        let setAsSpan = false;
-        if (kidRef && removedStructElements.has(kidRef)) {
-          if (!isName(kid.get("S"), "Link")) {
-            continue;
-          }
-          setAsSpan = true;
-        }
+        kid = await xref.fetchIfRefAsync(kid);
         const newKidRef = await this.#cloneStructTreeNode(kidRef, kid, xref, removedStructElements, dedupIDs, dedupClasses, dedupRoles);
         if (newKidRef) {
           structTreeKids.push(newKidRef);
-          if (kidRef) {
-            oldRefMapping.put(kidRef, newKidRef);
-          }
-          if (setAsSpan) {
-            this.xref[newKidRef.num].setIfName("S", "Span");
-          }
         }
       }
       for (const [id, nodeRef] of idTree || []) {
@@ -62746,7 +61143,7 @@ class PDFEditor {
         pagesMap
       } = documentData;
       const newDestinations = documentData.destinations = new Map();
-      for (const [key, dest] of destinations) {
+      for (const [key, dest] of Object.entries(destinations)) {
         const pageRef = dest[0];
         const pageData = pageRef instanceof Ref && pagesMap.get(pageRef);
         if (!pageData) {
@@ -62774,9 +61171,6 @@ class PDFEditor {
     };
     for (let i = 0, ii = this.oldPages.length; i < ii; i++) {
       const page = this.oldPages[i];
-      if (!page) {
-        continue;
-      }
       const {
         documentData: {
           destinations,
@@ -62871,7 +61265,10 @@ class PDFEditor {
       const name = documentData.dedupNamedDestinations.get(dest) || dest;
       return this.namedDestinations.has(name);
     }
-    return Array.isArray(dest) && dest[0] instanceof Ref && !!documentData.oldRefMapping.get(dest[0]);
+    if (Array.isArray(dest) && dest[0] instanceof Ref) {
+      return !!documentData.oldRefMapping.get(dest[0]);
+    }
+    return false;
   }
   #filterOutlineItems(items, documentData) {
     const result = [];
@@ -63137,26 +61534,15 @@ class PDFEditor {
   #fixFields(fieldToParent, xref) {
     const newFields = [];
     const processed = new RefSet();
-    for (const [fieldRef, parentRef] of fieldToParent.items()) {
+    for (const [fieldRef, parentRef] of fieldToParent) {
       if (!parentRef) {
         newFields.push(fieldRef);
         continue;
       }
       let parent = parentRef;
       let lastNonNullParent = parentRef;
-      const visited = new RefSet();
       while (true) {
-        if (parent instanceof Ref) {
-          if (visited.has(parent)) {
-            break;
-          }
-          visited.put(parent);
-        }
-        const parentDict = xref.fetchIfRef(parent);
-        if (!(parentDict instanceof Dict)) {
-          break;
-        }
-        parent = parentDict.getRaw("Parent") || null;
+        parent = xref.fetchIfRef(parent)?.getRaw("Parent") || null;
         if (!parent) {
           break;
         }
@@ -63226,9 +61612,6 @@ class PDFEditor {
       }
       processed.put(oldKidRef);
       const kid = xref.fetchIfRef(oldKidRef);
-      if (!(kid instanceof Dict)) {
-        continue;
-      }
       if (kid.has("Kids")) {
         const kidsArray = kid.get("Kids");
         if (!Array.isArray(kidsArray)) {
@@ -63260,7 +61643,7 @@ class PDFEditor {
       if (data.parentRef) {
         newKid.set("Parent", data.parentRef);
       }
-      if (acroFormDefaultAppearance && !newKid.has("DA")) {
+      if (acroFormDefaultAppearance && isName(newKid.get("FT"), "Tx") && !newKid.has("DA")) {
         daToFix.push(newKid);
       }
       if (acroFormDefaultResources && !newKid.has("Kids") && newKid.get("AP") instanceof Dict) {
@@ -63271,13 +61654,6 @@ class PDFEditor {
       }
     }
     for (const field of daToFix) {
-      const fieldType = getInheritableProperty({
-        dict: field,
-        key: "FT"
-      });
-      if (!isName(fieldType, "Tx")) {
-        continue;
-      }
       const da = getInheritableProperty({
         dict: field,
         key: "DA"
@@ -63287,48 +61663,35 @@ class PDFEditor {
       }
     }
     const resourcesValuesCache = new Map();
-    const fixAppearanceResources = async stream => {
-      let resources = stream.dict.getRaw("Resources");
-      resources &&= this.xrefWrapper.fetchIfRef(resources);
-      if (!(resources instanceof Dict)) {
-        const newResourcesRef = await resourcesValuesCache.getOrInsertComputed(acroFormDefaultResources, () => this.#cloneObject(acroFormDefaultResources, xref));
-        stream.dict.set("Resources", newResourcesRef);
-        return;
-      }
-      for (const [resKey, resValue] of acroFormDefaultResources.getRawEntries()) {
-        if (resources.has(resKey)) {
-          continue;
-        }
-        let newResValue = resValue;
-        if (resValue instanceof Ref) {
-          newResValue = await this.#collectDependencies(resValue, true, xref);
-        } else if (resValue instanceof Dict || resValue instanceof BaseStream || Array.isArray(resValue)) {
-          newResValue = await resourcesValuesCache.getOrInsertComputed(resValue, () => this.#cloneObject(resValue, xref));
-        }
-        resources.set(resKey, newResValue);
-      }
-    };
     for (const field of drToFix) {
       const ap = field.get("AP");
       for (const [, value] of ap) {
-        if (value instanceof BaseStream) {
-          await fixAppearanceResources(value);
-        } else if (value instanceof Dict) {
-          for (const [, stream] of value) {
-            if (stream instanceof BaseStream) {
-              await fixAppearanceResources(stream);
+        if (!(value instanceof BaseStream)) {
+          continue;
+        }
+        let resources = value.dict.getRaw("Resources");
+        if (!resources) {
+          const newResourcesRef = await resourcesValuesCache.getOrInsertComputed(acroFormDefaultResources, () => this.#cloneObject(acroFormDefaultResources, xref));
+          value.dict.set("Resources", newResourcesRef);
+          continue;
+        }
+        resources = xref.fetchIfRef(resources);
+        for (const [resKey, resValue] of acroFormDefaultResources.getRawEntries()) {
+          if (!resources.has(resKey)) {
+            let newResValue = resValue;
+            if (resValue instanceof Ref) {
+              newResValue = await this.#collectDependencies(resValue, true, xref);
+            } else if (resValue instanceof Dict || resValue instanceof BaseStream || Array.isArray(resValue)) {
+              newResValue = await resourcesValuesCache.getOrInsertComputed(resValue, () => this.#cloneObject(resValue, xref));
             }
+            resources.set(resKey, newResValue);
           }
         }
       }
     }
   }
   async #collectPageLabels() {
-    if (!this.isSingleFile) {
-      return;
-    }
-    const firstRealPage = this.oldPages.find(p => !!p);
-    if (!firstRealPage) {
+    if (!this.hasSingleFile) {
       return;
     }
     const {
@@ -63336,13 +61699,13 @@ class PDFEditor {
         document,
         pageLabels
       }
-    } = firstRealPage;
+    } = this.oldPages[0];
     if (!pageLabels) {
       return;
     }
     const numPages = document.numPages;
-    const labelsByPageIndex = new Map();
-    const oldPageIndices = new Set(this.oldPages.filter(Boolean).map(({
+    const oldPageLabels = [];
+    const oldPageIndices = new Set(this.oldPages.map(({
       page: {
         pageIndex
       }
@@ -63364,24 +61727,19 @@ class PDFEditor {
         currentLabel.set("St", st + (i - stFirstIndex));
         stFirstIndex = -1;
       }
-      labelsByPageIndex.set(i, currentLabel);
+      oldPageLabels.push(currentLabel);
     }
-    const defaultLabel = index => {
-      const label = new Dict();
-      label.setIfName("S", "D");
-      label.set("St", index + 1);
-      return label;
-    };
-    currentLabel = null;
-    const newPageLabels = this.pageLabels = [];
-    for (let i = 0, ii = this.oldPages.length; i < ii; i++) {
-      const pageData = this.oldPages[i];
-      const label = pageData ? labelsByPageIndex.get(pageData.page.pageIndex) || defaultLabel(i) : defaultLabel(i);
+    currentLabel = oldPageLabels[0];
+    let currentIndex = 0;
+    const newPageLabels = this.pageLabels = [[0, currentLabel]];
+    for (let i = 0, ii = oldPageLabels.length; i < ii; i++) {
+      const label = oldPageLabels[i];
       if (label === currentLabel) {
         continue;
       }
+      currentIndex = i;
       currentLabel = label;
-      newPageLabels.push([i, currentLabel]);
+      newPageLabels.push([currentIndex, currentLabel]);
     }
   }
   async #makePageCopy(pageIndex) {
@@ -63389,8 +61747,7 @@ class PDFEditor {
       page,
       documentData,
       annotations,
-      pointingNamedDestinations,
-      copyLevel
+      pointingNamedDestinations
     } = this.oldPages[pageIndex];
     this.currentDocument = documentData;
     const {
@@ -63440,17 +61797,15 @@ class PDFEditor {
         newAnnots = newAnnotations;
       }
     }
-    const newAnnotations = documentData.document === this.#primaryDocument ? this.#newAnnotationsParams?.newAnnotationsByPage?.get(page.pageIndex)?.filter(({
-      copyLevel: level
-    }) => (level ?? 0) === copyLevel) : null;
-    if (newAnnotations?.length) {
+    const newAnnotations = this.#newAnnotationsParams?.newAnnotationsByPage?.get(pageIndex);
+    if (newAnnotations) {
       const {
         handler,
         task,
         imagesPromises
       } = this.#newAnnotationsParams;
-      const changes = new RefMap();
-      const newData = await AnnotationFactory.saveNewAnnotations(page._createPartialEvaluator(handler), this.xrefWrapper, task, newAnnotations, imagesPromises, changes);
+      const changes = new RefSetCache();
+      const newData = await AnnotationFactory.saveNewAnnotations(page.createAnnotationEvaluator(handler), this.xrefWrapper, task, newAnnotations, imagesPromises, changes);
       for (const [ref, {
         data
       }] of changes.items()) {
@@ -63483,117 +61838,6 @@ class PDFEditor {
     this.currentDocument = null;
     return pageRef;
   }
-  #modalPageSize() {
-    const counts = new Map();
-    for (const pageData of this.oldPages) {
-      if (!pageData) {
-        continue;
-      }
-      const {
-        page
-      } = pageData;
-      const [x0, y0, x1, y1] = page.view;
-      let width = x1 - x0;
-      let height = y1 - y0;
-      if (width <= 0 || height <= 0) {
-        continue;
-      }
-      if (page.rotate % 180 !== 0) {
-        [width, height] = [height, width];
-      }
-      const key = `${width}x${height}`;
-      const entry = counts.get(key);
-      if (entry) {
-        entry.count++;
-      } else {
-        counts.set(key, {
-          width,
-          height,
-          count: 1
-        });
-      }
-    }
-    if (counts.size === 0) {
-      const [,, width, height] = LETTER_SIZE_MEDIABOX;
-      return {
-        width,
-        height
-      };
-    }
-    let best = null;
-    for (const entry of counts.values()) {
-      if (!best || entry.count > best.count || entry.count === best.count && entry.width * entry.height > best.width * best.height) {
-        best = entry;
-      }
-    }
-    return {
-      width: best.width,
-      height: best.height
-    };
-  }
-  async #makeImagePage(bitmap, pageSize) {
-    const {
-      width: pageW,
-      height: pageH
-    } = pageSize;
-    const DEFAULT_MARGIN_RATIO = 0.1;
-    const margin = pageW * DEFAULT_MARGIN_RATIO;
-    const availW = Math.max(1, pageW - 2 * margin);
-    const availH = Math.max(1, pageH - 2 * margin);
-    const lastRef = this.newRefCount;
-    const {
-      imageStream,
-      smaskStream,
-      width: imgW,
-      height: imgH
-    } = await createImage(bitmap, this.xrefWrapper, {
-      closeBitmap: true
-    });
-    const scale = Math.min(availW / imgW, availH / imgH);
-    const drawW = imgW * scale;
-    const drawH = imgH * scale;
-    const tx = (pageW - drawW) / 2;
-    const ty = (pageH - drawH) / 2;
-    if (smaskStream) {
-      const smaskRef = this.newRef;
-      this.xref[smaskRef.num] = smaskStream;
-      imageStream.dict.set("SMask", smaskRef);
-    }
-    const imageRef = this.newRef;
-    this.xref[imageRef.num] = imageStream;
-    const xobjectDict = new Dict(this.xrefWrapper);
-    xobjectDict.set("Im0", imageRef);
-    const resourcesDict = new Dict(this.xrefWrapper);
-    resourcesDict.set("XObject", xobjectDict);
-    resourcesDict.set("ProcSet", [Name.get("PDF"), Name.get("ImageC")]);
-    const content = `q ${numberToString(drawW)} 0 0 ${numberToString(drawH)} ` + `${numberToString(tx)} ${numberToString(ty)} cm /Im0 Do Q`;
-    const contentsStream = new StringStream(content, new Dict(this.xrefWrapper));
-    const contentsRef = this.newRef;
-    this.xref[contentsRef.num] = contentsStream;
-    const pageRef = this.newRef;
-    const pageDict = this.xref[pageRef.num] = new Dict(this.xrefWrapper);
-    pageDict.setIfName("Type", "Page");
-    pageDict.set("MediaBox", [0, 0, pageW, pageH]);
-    pageDict.set("Resources", resourcesDict);
-    pageDict.set("Contents", contentsRef);
-    if (this.useObjectStreams) {
-      const newLastRef = this.newRefCount;
-      const pageObjectRefs = [];
-      for (let i = lastRef; i < newLastRef; i++) {
-        const obj = this.xref[i];
-        if (obj instanceof BaseStream) {
-          continue;
-        }
-        pageObjectRefs.push(Ref.get(i, 0));
-      }
-      for (let i = 0; i < pageObjectRefs.length; i += 0xffff) {
-        const objStreamRef = this.newRef;
-        this.objStreamRefs.add(objStreamRef.num);
-        this.xref[objStreamRef.num] = pageObjectRefs.slice(i, i + 0xffff);
-      }
-    }
-    return pageRef;
-  }
   #makePageTree() {
     const {
       newPages: pages,
@@ -63604,7 +61848,7 @@ class PDFEditor {
     rootDict.set("Pages", pagesRef);
     pagesDict.setIfName("Type", "Pages");
     pagesDict.set("Count", pages.length);
-    const maxLeaves =  false ? 0 : MAX_LEAVES_PER_PAGES_NODE;
+    const maxLeaves = MAX_LEAVES_PER_PAGES_NODE <= 1 ? pages.length : MAX_LEAVES_PER_PAGES_NODE;
     const stack = [{
       dict: pagesDict,
       kids: pages,
@@ -63645,13 +61889,8 @@ class PDFEditor {
     }
   }
   #makeNameNumTree(map, areNames) {
-    const allEntries = map.sort(areNames ? ([keyA], [keyB]) => {
-      if (keyA < keyB) {
-        return -1;
-      }
-      return keyA > keyB ? 1 : 0;
-    } : ([keyA], [keyB]) => keyA - keyB);
-    const maxLeaves =  false ? 0 : MAX_IN_NAME_TREE_NODE;
+    const allEntries = map.sort(areNames ? ([keyA], [keyB]) => keyA.localeCompare(keyB) : ([keyA], [keyB]) => keyA - keyB);
+    const maxLeaves = MAX_IN_NAME_TREE_NODE <= 1 ? allEntries.length : MAX_IN_NAME_TREE_NODE;
     const [treeRef, treeDict] = this.newDict;
     const stack = [{
       dict: treeDict,
@@ -63695,7 +61934,7 @@ class PDFEditor {
     const {
       pageLabels
     } = this;
-    if (!pageLabels?.length) {
+    if (!pageLabels || pageLabels.length === 0) {
       return;
     }
     const {
@@ -63724,7 +61963,7 @@ class PDFEditor {
         if (embeddedFiles.has(name)) {
           const displayName = stringToPDFString(key, true);
           for (let i = 1;; i++) {
-            const deduped = stringToAsciiOrUTF16BE(`${displayName}_${i}`);
+            const deduped = `${displayName}_${i}`;
             if (!embeddedFiles.has(deduped)) {
               name = deduped;
               break;
@@ -63760,13 +61999,13 @@ class PDFEditor {
       [this.namesRef, this.namesDict] = this.newDict;
       this.rootDict.set("Names", this.namesRef);
     }
-    this.namesDict.set("Dests", this.#makeNameNumTree(Array.from(namedDestinations, ([name, dest]) => [stringToAsciiOrUTF16BE(name), dest]), true));
+    this.namesDict.set("Dests", this.#makeNameNumTree(Array.from(namedDestinations.entries()), true));
   }
   #makeStructTree() {
     const {
       structTreeKids
     } = this;
-    if (!structTreeKids?.length) {
+    if (!structTreeKids || structTreeKids.length === 0) {
       return;
     }
     const {
@@ -63788,11 +62027,7 @@ class PDFEditor {
       const parentTree = this.xref[parentTreeRef.num];
       parentTree.setIfName("Type", "ParentTree");
       structTree.set("ParentTree", parentTreeRef);
-      let nextKey = 0;
-      for (const key of this.parentTree.keys()) {
-        nextKey = Math.max(nextKey, key + 1);
-      }
-      structTree.set("ParentTreeNextKey", nextKey);
+      structTree.set("ParentTreeNextKey", this.parentTree.size);
     }
     if (this.idTree.size > 0) {
       const idTreeRef = this.#makeNameNumTree(Array.from(this.idTree.entries()), true);
@@ -63845,7 +62080,7 @@ class PDFEditor {
       acroForm.set("SigFlags", this.acroFormSigFlags);
     }
     acroForm.setIfArray("CO", this.acroFormCalculationOrder);
-    acroForm.setIfDefined("DR", this.acroFormDefaultResources);
+    acroForm.setIfDict("DR", this.acroFormDefaultResources);
     if (this.acroFormDefaultAppearance) {
       acroForm.set("DA", this.acroFormDefaultAppearance);
     }
@@ -63870,12 +62105,11 @@ class PDFEditor {
   #makeInfo() {
     const infoMap = new Map();
     if (this.isSingleFile) {
-      const firstRealPage = this.oldPages.find(p => !!p);
       const {
         xref: {
           trailer
         }
-      } = firstRealPage.documentData.document;
+      } = this.oldPages[0].documentData.document;
       const oldInfoDict = trailer.get("Info");
       for (const [key, value] of oldInfoDict || []) {
         if (typeof value === "string") {
@@ -63902,10 +62136,9 @@ class PDFEditor {
     if (!this.isSingleFile) {
       return [null, null, null];
     }
-    const firstRealPage = this.oldPages.find(p => !!p);
     const {
       documentData
-    } = firstRealPage;
+    } = this.oldPages[0];
     const {
       document: {
         xref: {
@@ -63927,7 +62160,7 @@ class PDFEditor {
     return result;
   }
   async #createChanges() {
-    const changes = new RefMap();
+    const changes = new RefSetCache();
     changes.put(Ref.get(0, 0xffff), {
       data: null
     });
@@ -63963,11 +62196,11 @@ class PDFEditor {
       offset += obj.length + 1;
     }
     streamBuffer[0] = objOffsets.join("\n");
-    const dict = new Dict();
-    dict.setIfName("Type", "ObjStm");
-    dict.set("N", objRefs.length);
-    dict.set("First", streamBuffer[0].length + 1);
-    const objStream = new StringStream(streamBuffer.join("\n"), dict);
+    const objStream = new StringStream(streamBuffer.join("\n"));
+    const objStreamDict = objStream.dict = new Dict();
+    objStreamDict.setIfName("Type", "ObjStm");
+    objStreamDict.set("N", objRefs.length);
+    objStreamDict.set("First", streamBuffer[0].length + 1);
     changes.put(objStreamRef, {
       data: objStream
     });
@@ -64148,10 +62381,13 @@ class PDFWorkerStreamRangeReader extends BasePDFStreamRangeReader {
       value,
       done
     } = await this._reader.read();
-    return done ? {
-      value: undefined,
-      done: true
-    } : {
+    if (done) {
+      return {
+        value: undefined,
+        done: true
+      };
+    }
+    return {
       value: value.buffer,
       done: false
     };
@@ -64173,19 +62409,17 @@ class PDFWorkerStreamRangeReader extends BasePDFStreamRangeReader {
 
 
 
-
-
 class WorkerTask {
-  #capability = Promise.withResolvers();
-  terminated = false;
   constructor(name) {
     this.name = name;
+    this.terminated = false;
+    this._capability = Promise.withResolvers();
   }
   get finished() {
-    return this.#capability.promise;
+    return this._capability.promise;
   }
   finish() {
-    this.#capability.resolve();
+    this._capability.resolve();
   }
   terminate() {
     this.terminated = true;
@@ -64203,6 +62437,14 @@ class WorkerMessageHandler {
     }
   }
   static setup(handler, port) {
+    let testMessageProcessed = false;
+    handler.on("test", data => {
+      if (testMessageProcessed) {
+        return;
+      }
+      testMessageProcessed = true;
+      handler.send("test", data instanceof Uint8Array);
+    });
     handler.on("configure", data => {
       setVerbosityLevel(data.verbosity);
     });
@@ -64213,11 +62455,12 @@ class WorkerMessageHandler {
     let terminated = false;
     let cancelXHRs = null;
     const WorkerTasks = new Set();
+    const verbosity = getVerbosityLevel();
     const {
       docId,
       apiVersion
     } = docParams;
-    const workerVersion = "6.4.299";
+    const workerVersion = "5.7.284";
     if (apiVersion !== workerVersion) {
       throw new Error(`The API version "${apiVersion}" does not match ` + `the Worker version "${workerVersion}".`);
     }
@@ -64243,7 +62486,11 @@ class WorkerMessageHandler {
       WorkerTasks.delete(task);
     }
     async function loadDocument(recoveryMode) {
-      await pdfManager.initDocument(recoveryMode);
+      await pdfManager.ensureDoc("checkHeader");
+      await pdfManager.ensureDoc("parseStartXRef");
+      await pdfManager.ensureDoc("parse", [recoveryMode]);
+      await pdfManager.ensureDoc("checkFirstPage", [recoveryMode]);
+      await pdfManager.ensureDoc("checkLastPage", [recoveryMode]);
       const isPureXfa = await pdfManager.ensureDoc("isPureXfa");
       if (isPureXfa) {
         const task = new WorkerTask("loadXfaResources");
@@ -64352,18 +62599,6 @@ class WorkerMessageHandler {
       });
       return promise;
     }
-    async function getPassword(ex) {
-      const task = new WorkerTask(`PasswordException: response ${ex.code}`);
-      startWorkerTask(task);
-      try {
-        const res = await handler.sendWithPromise("PasswordRequest", ex);
-        return res.password;
-      } finally {
-        Promise.resolve().then(() => {
-          finishWorkerTask(task);
-        });
-      }
-    }
     function setupDoc(data) {
       function onSuccess(doc) {
         ensureNotTerminated();
@@ -64376,10 +62611,16 @@ class WorkerMessageHandler {
           return;
         }
         if (ex instanceof PasswordException) {
-          getPassword(ex).then(password => {
+          const task = new WorkerTask(`PasswordException: response ${ex.code}`);
+          startWorkerTask(task);
+          handler.sendWithPromise("PasswordRequest", ex).then(function ({
+            password
+          }) {
+            finishWorkerTask(task);
             pdfManager.updatePassword(password);
             pdfManagerReady();
-          }).catch(() => {
+          }).catch(function () {
+            finishWorkerTask(task);
             handler.send("DocException", ex);
           });
         } else {
@@ -64397,7 +62638,7 @@ class WorkerMessageHandler {
           pdfManager.requestLoadedStream().then(function () {
             ensureNotTerminated();
             loadDocument(true).then(onSuccess, onFailure);
-          }, onFailure);
+          });
         });
       }
       ensureNotTerminated();
@@ -64411,80 +62652,57 @@ class WorkerMessageHandler {
           handler.send("DataLoaded", {
             length: stream.bytes.byteLength
           });
-        }, () => {});
+        });
       }).then(pdfManagerReady, onFailure);
     }
-    handler.on("GetPage", async function ({
-      pageIndex
-    }) {
-      const page = await pdfManager.getPage(pageIndex);
-      const [rotate, ref, userUnit, view] = await Promise.all([pdfManager.ensure(page, "rotate"), pdfManager.ensure(page, "ref"), pdfManager.ensure(page, "userUnit"), pdfManager.ensure(page, "view")]);
-      return {
-        rotate,
-        ref,
-        refStr: ref?.toString() ?? null,
-        userUnit,
-        view
-      };
+    handler.on("GetPage", function (data) {
+      return pdfManager.getPage(data.pageIndex).then(function (page) {
+        return Promise.all([pdfManager.ensure(page, "rotate"), pdfManager.ensure(page, "ref"), pdfManager.ensure(page, "userUnit"), pdfManager.ensure(page, "view")]).then(function ([rotate, ref, userUnit, view]) {
+          return {
+            rotate,
+            ref,
+            refStr: ref?.toString() ?? null,
+            userUnit,
+            view
+          };
+        });
+      });
     });
-    handler.on("GetPageIndex", function ({
-      num,
-      gen
-    }) {
-      return pdfManager.ensureCatalog("getPageIndex", [Ref.get(num, gen)]);
+    handler.on("GetPageIndex", function (data) {
+      const pageRef = Ref.get(data.num, data.gen);
+      return pdfManager.ensureCatalog("getPageIndex", [pageRef]);
     });
-    handler.on("GetDestinations", function () {
+    handler.on("GetDestinations", function (data) {
       return pdfManager.ensureCatalog("destinations");
     });
-    handler.on("GetDestination", function ({
-      id
-    }) {
-      return pdfManager.ensureCatalog("getDestination", [id]);
+    handler.on("GetDestination", function (data) {
+      return pdfManager.ensureCatalog("getDestination", [data.id]);
     });
-    handler.on("GetPageLabels", function () {
+    handler.on("GetPageLabels", function (data) {
       return pdfManager.ensureCatalog("pageLabels");
     });
-    handler.on("GetPageLayout", function () {
+    handler.on("GetPageLayout", function (data) {
       return pdfManager.ensureCatalog("pageLayout");
     });
-    handler.on("GetPageMode", function () {
+    handler.on("GetPageMode", function (data) {
       return pdfManager.ensureCatalog("pageMode");
     });
-    handler.on("GetViewerPreferences", function () {
+    handler.on("GetViewerPreferences", function (data) {
       return pdfManager.ensureCatalog("viewerPreferences");
     });
-    handler.on("GetOpenAction", function () {
+    handler.on("GetOpenAction", function (data) {
       return pdfManager.ensureCatalog("openAction");
     });
-    handler.on("GetAttachments", function () {
+    handler.on("GetAttachments", function (data) {
       return pdfManager.ensureCatalog("attachments");
     });
-    handler.on("GetAttachmentContent", async function (id) {
-      let passwordEx;
-      while (true) {
-        const password = passwordEx ? await getPassword(passwordEx) : null;
-        try {
-          if (password) {
-            pdfManager.updatePassword(password);
-          }
-          return await pdfManager.ensureCatalog("attachmentContent", [id]);
-        } catch (ex) {
-          if (ex instanceof PasswordException) {
-            passwordEx = ex;
-            continue;
-          }
-          throw ex;
-        }
-      }
-    });
-    handler.on("GetDocJSActions", function () {
+    handler.on("GetDocJSActions", function (data) {
       return pdfManager.ensureCatalog("jsActions");
     });
-    handler.on("GetPageJSActions", async function ({
+    handler.on("GetPageJSActions", function ({
       pageIndex
     }) {
-      const page = await pdfManager.getPage(pageIndex);
-      return pdfManager.ensure(page, "jsActions");
+      return pdfManager.getPage(pageIndex).then(page => pdfManager.ensure(page, "jsActions"));
     });
     handler.on("GetAnnotationsByType", async function ({
       types,
@@ -64498,7 +62716,7 @@ class WorkerMessageHandler {
       const annotationPromises = [];
       let task = null;
       try {
-        for (let i = 0; i < numPages; i++) {
+        for (let i = 0, ii = numPages; i < ii; i++) {
           if (pageIndexesToSkip?.has(i)) {
             continue;
           }
@@ -64506,63 +62724,63 @@ class WorkerMessageHandler {
             task = new WorkerTask("GetAnnotationsByType");
             startWorkerTask(task);
           }
-          pagePromises.push(pdfManager.getPage(i).then(page => page.collectAnnotationsByType(handler, task, types, annotationPromises, annotationGlobals)));
+          pagePromises.push(pdfManager.getPage(i).then(async page => {
+            if (!page) {
+              return [];
+            }
+            return page.collectAnnotationsByType(handler, task, types, annotationPromises, annotationGlobals) || [];
+          }));
         }
         await Promise.all(pagePromises);
         const annotations = await Promise.all(annotationPromises);
-        return annotations.filter(Boolean);
+        return annotations.filter(a => !!a);
       } finally {
         if (task) {
           finishWorkerTask(task);
         }
       }
     });
-    handler.on("GetOutline", function () {
+    handler.on("GetOutline", function (data) {
       return pdfManager.ensureCatalog("documentOutline");
     });
-    handler.on("GetOptionalContentConfig", function () {
+    handler.on("GetOptionalContentConfig", function (data) {
       return pdfManager.ensureCatalog("optionalContentConfig");
     });
-    handler.on("GetPermissions", function () {
+    handler.on("GetPermissions", function (data) {
       return pdfManager.ensureCatalog("permissions");
     });
-    handler.on("GetMetadata", function () {
+    handler.on("GetMetadata", function (data) {
       return Promise.all([pdfManager.ensureDoc("documentInfo"), pdfManager.ensureCatalog("metadata"), pdfManager.ensureCatalog("hasStructTree")]);
     });
-    handler.on("GetMarkInfo", function () {
+    handler.on("GetMarkInfo", function (data) {
       return pdfManager.ensureCatalog("markInfo");
     });
-    handler.on("GetData", async function () {
-      const stream = await pdfManager.requestLoadedStream();
-      return stream.bytes;
+    handler.on("GetData", function (data) {
+      return pdfManager.requestLoadedStream().then(stream => stream.bytes);
     });
-    handler.on("GetAnnotations", async function ({
+    handler.on("GetAnnotations", function ({
       pageIndex,
       intent
     }) {
-      const page = await pdfManager.getPage(pageIndex);
-      const task = new WorkerTask(`GetAnnotations: page ${pageIndex}`);
-      startWorkerTask(task);
-      try {
-        return await page.getAnnotationsData(handler, task, intent);
-      } finally {
-        finishWorkerTask(task);
-      }
+      return pdfManager.getPage(pageIndex).then(function (page) {
+        const task = new WorkerTask(`GetAnnotations: page ${pageIndex}`);
+        startWorkerTask(task);
+        return page.getAnnotationsData(handler, task, intent).then(data => {
+          finishWorkerTask(task);
+          return data;
+        }, reason => {
+          finishWorkerTask(task);
+          throw reason;
+        });
+      });
     });
-    handler.on("GetFieldObjects", async function () {
-      const fieldObjects = await pdfManager.ensureDoc("fieldObjects");
-      return fieldObjects?.allFields || null;
+    handler.on("GetFieldObjects", function (data) {
+      return pdfManager.ensureDoc("fieldObjects").then(fieldObjects => fieldObjects?.allFields || null);
     });
-    handler.on("GetSignatures", function () {
-      return pdfManager.ensureDoc("signatures");
-    });
-    handler.on("GetSignatureData", function (id) {
-      return pdfManager.ensureDoc("getSignatureData", [id]);
-    });
-    handler.on("HasJSActions", function () {
+    handler.on("HasJSActions", function (data) {
       return pdfManager.ensureDoc("hasJSActions");
     });
-    handler.on("GetCalculationOrderIds", function () {
+    handler.on("GetCalculationOrderIds", function (data) {
       return pdfManager.ensureDoc("calculationOrderIds");
     });
     handler.on("ExtractPages", async function ({
@@ -64578,9 +62796,6 @@ class WorkerMessageHandler {
       }
       let newDocumentId = 0;
       for (const pageInfo of pageInfos) {
-        if (pageInfo.image) {
-          continue;
-        }
         if (pageInfo.document === null) {
           pageInfo.document = pdfManager.pdfDocument;
         } else if (ArrayBuffer.isView(pageInfo.document)) {
@@ -64596,7 +62811,9 @@ class WorkerMessageHandler {
           while (true) {
             try {
               await manager.requestLoadedStream();
-              await manager.initDocument(recoveryMode);
+              await manager.ensureDoc("checkHeader");
+              await manager.ensureDoc("parseStartXRef");
+              await manager.ensureDoc("parse", [recoveryMode]);
               break;
             } catch (e) {
               if (e instanceof XRefParseException) {
@@ -64608,12 +62825,18 @@ class WorkerMessageHandler {
                   warn("extractPages: XRefParseException.");
                 }
               } else if (e instanceof PasswordException) {
+                const task = new WorkerTask(`PasswordException: response ${e.code}`);
+                startWorkerTask(task);
                 try {
-                  const password = await getPassword(e);
+                  const {
+                    password
+                  } = await handler.sendWithPromise("PasswordRequest", e);
                   manager.updatePassword(password);
                 } catch {
                   isValid = false;
                   warn("extractPages: invalid password.");
+                } finally {
+                  finishWorkerTask(task);
                 }
               } else {
                 isValid = false;
@@ -64643,7 +62866,8 @@ class WorkerMessageHandler {
         const pdfEditor = new PDFEditor();
         task = new WorkerTask(`ExtractPages: ${pageInfos.length} page(s)`);
         startWorkerTask(task);
-        return await pdfEditor.extractPages(pageInfos, annotationStorage, pdfManager.pdfDocument, handler, task);
+        const buffer = await pdfEditor.extractPages(pageInfos, annotationStorage, handler, task);
+        return buffer;
       } catch (reason) {
         warn(`extractPages: "${reason}".`);
         return null;
@@ -64657,11 +62881,10 @@ class WorkerMessageHandler {
       isPureXfa,
       numPages,
       annotationStorage,
-      supportsPrintToPDF,
       filename
     }) {
       const globalPromises = [pdfManager.requestLoadedStream(), pdfManager.ensureCatalog("acroForm"), pdfManager.ensureCatalog("acroFormRef"), pdfManager.ensureDoc("startXRef"), pdfManager.ensureDoc("xref"), pdfManager.ensureCatalog("structTreeRoot")];
-      const changes = new RefMap();
+      const changes = new RefSetCache();
       const promises = [];
       const newAnnotationsByPage = !isPureXfa ? getNewAnnotationsMap(annotationStorage) : null;
       const [stream, acroForm, acroFormRef, startXRef, xref, _structTreeRoot] = await Promise.all(globalPromises);
@@ -64688,25 +62911,29 @@ class WorkerMessageHandler {
           newAnnotationPromises.push(pdfManager.getPage(pageIndex).then(page => {
             const task = new WorkerTask(`Save (editor): page ${pageIndex}`);
             startWorkerTask(task);
-            return page.saveNewAnnotations(handler, task, annotations, imagePromises, changes).finally(() => {
+            return page.saveNewAnnotations(handler, task, annotations, imagePromises, changes).finally(function () {
               finishWorkerTask(task);
             });
           }));
         }
         if (structTreeRoot === null) {
-          promises.push(Promise.all(newAnnotationPromises).then(() => StructTreeRoot.createStructureTree({
-            newAnnotationsByPage,
-            xref,
-            catalogRef,
-            pdfManager,
-            changes
-          })));
+          promises.push(Promise.all(newAnnotationPromises).then(async () => {
+            await StructTreeRoot.createStructureTree({
+              newAnnotationsByPage,
+              xref,
+              catalogRef,
+              pdfManager,
+              changes
+            });
+          }));
         } else if (structTreeRoot) {
-          promises.push(Promise.all(newAnnotationPromises).then(() => structTreeRoot.updateStructureTree({
-            newAnnotationsByPage,
-            pdfManager,
-            changes
-          })));
+          promises.push(Promise.all(newAnnotationPromises).then(async () => {
+            await structTreeRoot.updateStructureTree({
+              newAnnotationsByPage,
+              pdfManager,
+              changes
+            });
+          }));
         }
       }
       if (isPureXfa) {
@@ -64716,7 +62943,7 @@ class WorkerMessageHandler {
           promises.push(pdfManager.getPage(pageIndex).then(function (page) {
             const task = new WorkerTask(`Save: page ${pageIndex}`);
             startWorkerTask(task);
-            return page.save(handler, task, annotationStorage, changes).finally(() => {
+            return page.save(handler, task, annotationStorage, changes).finally(function () {
               finishWorkerTask(task);
             });
           }));
@@ -64788,82 +63015,81 @@ class WorkerMessageHandler {
         xref.resetNewTemporaryRef();
       });
     });
-    handler.on("GetOperatorList", function ({
-      pageId,
-      pageIndex,
-      pageProxyId,
-      intent,
-      cacheKey,
-      annotationStorage,
-      modifiedIds
-    }, sink) {
+    handler.on("GetOperatorList", function (data, sink) {
+      const {
+        pageId,
+        pageIndex
+      } = data;
       pdfManager.getPage(pageId).then(function (page) {
         const task = new WorkerTask(`GetOperatorList: page ${pageIndex}`);
         startWorkerTask(task);
+        const start = verbosity >= VerbosityLevel.INFOS ? Date.now() : 0;
         page.getOperatorList({
           handler,
           sink,
           task,
-          intent,
-          cacheKey,
-          annotationStorage,
-          modifiedIds,
-          pageIndex,
-          pageProxyId
-        }).then(() => {
+          intent: data.intent,
+          cacheKey: data.cacheKey,
+          annotationStorage: data.annotationStorage,
+          modifiedIds: data.modifiedIds,
+          pageIndex
+        }).then(function (operatorListInfo) {
+          finishWorkerTask(task);
+          if (start) {
+            info(`page=${pageIndex + 1} - getOperatorList: time=` + `${Date.now() - start}ms, len=${operatorListInfo.length}`);
+          }
           sink.close();
-        }, reason => {
+        }, function (reason) {
+          finishWorkerTask(task);
           if (task.terminated) {
             return;
           }
           sink.error(reason);
-        }).finally(() => {
-          finishWorkerTask(task);
         });
       });
     });
-    handler.on("GetTextContent", function ({
-      pageId,
-      pageIndex,
-      includeMarkedContent,
-      disableNormalization
-    }, sink) {
+    handler.on("GetTextContent", function (data, sink) {
+      const {
+        pageId,
+        pageIndex,
+        includeMarkedContent,
+        disableNormalization
+      } = data;
       pdfManager.getPage(pageId).then(function (page) {
         const task = new WorkerTask("GetTextContent: page " + pageIndex);
         startWorkerTask(task);
+        const start = verbosity >= VerbosityLevel.INFOS ? Date.now() : 0;
         page.extractTextContent({
           handler,
           task,
           sink,
           includeMarkedContent,
           disableNormalization
-        }).then(() => {
+        }).then(function () {
+          finishWorkerTask(task);
+          if (start) {
+            info(`page=${pageIndex + 1} - getTextContent: time=` + `${Date.now() - start}ms`);
+          }
           sink.close();
-        }, reason => {
+        }, function (reason) {
+          finishWorkerTask(task);
           if (task.terminated) {
             return;
           }
           sink.error(reason);
-        }).finally(() => {
-          finishWorkerTask(task);
         });
       });
     });
-    handler.on("GetStructTree", async function ({
-      pageIndex
-    }) {
-      const page = await pdfManager.getPage(pageIndex);
-      return pdfManager.ensure(page, "getStructTree");
+    handler.on("GetStructTree", function (data) {
+      return pdfManager.getPage(data.pageIndex).then(page => pdfManager.ensure(page, "getStructTree"));
     });
-    handler.on("FontFallback", function ({
-      id
-    }) {
-      return pdfManager.fontFallback(id, handler);
+    handler.on("FontFallback", function (data) {
+      return pdfManager.fontFallback(data.id, handler);
     });
-    handler.on("Cleanup", function () {
+    handler.on("Cleanup", function (data) {
       return pdfManager.cleanup(true);
     });
-    handler.on("Terminate", async function () {
+    handler.on("Terminate", async function (data) {
       terminated = true;
       const waitOn = [];
       if (pdfManager) {
@@ -64883,7 +63109,7 @@ class WorkerMessageHandler {
       handler.destroy();
       handler = null;
     });
-    handler.on("Ready", function () {
+    handler.on("Ready", function (data) {
       setupDoc(docParams);
       docParams = null;
     });
@@ -64892,8 +63118,7 @@ class WorkerMessageHandler {
   static initializeFromPort(port) {
     const handler = new MessageHandler("worker", "main", port);
     this.setup(handler, port);
-    const testObj = new Uint8Array();
-    handler.send("ready", testObj, [testObj.buffer]);
+    handler.send("ready", null);
   }
 }
 

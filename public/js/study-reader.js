@@ -1,5 +1,4 @@
 import {api} from './api.js';
-import {auth} from './auth.js';
 const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const vendor='/vendor/pdfjs/';
 let pdfLibrary;
@@ -22,7 +21,7 @@ export async function pollTutor(job,signal){
  const until=Date.now()+60000;
  while(Date.now()<until){
   await pause(1500,signal);
-  const result=await api('/tutor/jobs/'+encodeURIComponent(job.jobId),{signal});
+  const result=await api('/materials/questions/'+encodeURIComponent(job.jobId)+'?quotaDate='+encodeURIComponent(job.quotaDate||''),{signal});
   if(result.status==='COMPLETED'){
    const r=result.result;
    if(!r||typeof r.message!=='string'||!['SUPPORTED','INSUFFICIENT','OUT_OF_SCOPE','ERROR','UNAVAILABLE'].includes(r.status))throw new Error('AI回答の形式を確認できませんでした。');
@@ -58,7 +57,11 @@ export function createStudyView({catalog,initialUnit,onUnitChange}){
  const lifecycle=new AbortController();let loadController,aiController,pdfTask,pdf,renderTask;
  let selected=initialUnit,part=0,page=1,text='',filename='',title='',documents=[],generation=0,renderGeneration=0,busy=false,ready=false,disposed=false;
  const canvas=$('#reader-canvas'),area=$('#reader-canvas-area'),status=$('#reader-status');
- const enabled=window.RUNTIME_CONFIG.tutor_enabled===true;
+ let enabled=false;
+ api('/materials/config',{signal:lifecycle.signal}).then(config=>{
+  if(disposed)return;enabled=config.tutorEnabled===true;
+  $('#reader-ai-status').textContent=enabled?'質問に表示中の章・ページを添えて送信します。':'AIは接続準備中です。教科書は閲覧できます。';sync();
+ }).catch(()=>{if(!disposed)$('#reader-ai-status').textContent='AIの接続設定を取得できませんでした。';});
  $('#reader-ai-status').textContent=enabled?'質問には、送信時に表示しているページが添付されます。':'AI回答は未接続です。教材の閲覧と質問の入力ができます。';
  function sync(){
   $('#reader-page').value=page;$('#reader-page').max=pdf?.numPages||1;$('#reader-page').disabled=!pdf;
@@ -102,9 +105,10 @@ export function createStudyView({catalog,initialUnit,onUnitChange}){
   const link=$('#reader-external');link.hidden=false;link.href=doc.url;
   status.textContent='教科書を読み込んでいます…';
   try{
-   const [lib,token]=await Promise.all([library(),auth.getAccessToken()]);if(version!==generation||disposed)return;
-   const response=await fetch(window.RUNTIME_CONFIG.api_base+'/materials/'+encodeURIComponent(selected)+'/pdf?part='+index,{headers:{Authorization:'Bearer '+token},signal:loadController.signal,credentials:'omit'});
-   if(!response.ok){let body;try{body=await response.json();}catch{}throw new Error(body?.message||'教材を取得できませんでした。');}
+   const lib=await library();if(version!==generation||disposed)return;
+   // Signed URL only. Never send a Cognito token to S3.
+   const response=await fetch(doc.url,{signal:loadController.signal,credentials:'omit',referrerPolicy:'no-referrer'});
+   if(!response.ok)throw new Error('PDFを取得できませんでした（HTTP '+response.status+'）。閲覧URLの更新・S3のCORS設定を確認してください。');
    const data=new Uint8Array(await response.arrayBuffer());if(version!==generation||disposed)return;
    const task=lib.getDocument({data,cMapUrl:vendor+'cmaps/',cMapPacked:true,standardFontDataUrl:vendor+'standard_fonts/',wasmUrl:vendor+'wasm/',isEvalSupported:false});pdfTask=task;
    const result=await task.promise;if(version!==generation||disposed){void task.destroy();return;}pdf=result;await draw();
@@ -142,7 +146,7 @@ export function createStudyView({catalog,initialUnit,onUnitChange}){
   busy=true;sync();aiController=new AbortController();$('#reader-stop').hidden=false;$('#reader-ai-status').textContent='回答を待っています…';
   message('user',question,context);$('#reader-question').value='';
   try{
-   const job=await api('/tutor/jobs',{method:'POST',body,signal:aiController.signal});
+   const job=await api('/materials/'+encodeURIComponent(selected)+'/questions',{method:'POST',body,signal:aiController.signal});
    const result=await pollTutor(job,aiController.signal);if(disposed)return;
    message('assistant',result.message,context,result.citations||[]);$('#reader-ai-status').textContent='回答を受信しました。';
   }catch(e){if(!disposed)$('#reader-ai-status').textContent=e.name==='AbortError'?'待機を停止しました。サーバー側の処理は継続する場合があります。':e.message;}
