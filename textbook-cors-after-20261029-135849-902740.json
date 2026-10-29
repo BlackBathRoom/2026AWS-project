@@ -1,0 +1,24 @@
+{
+  "CORSRules": [
+    {
+      "ID": "BittomoTextbookRead",
+      "AllowedOrigins": [
+        "https://bittomo.click"
+      ],
+      "AllowedMethods": [
+        "GET",
+        "HEAD"
+      ],
+      "AllowedHeaders": [
+        "Range"
+      ],
+      "ExposeHeaders": [
+        "Accept-Ranges",
+        "Content-Range",
+        "Content-Length",
+        "ETag"
+      ],
+      "MaxAgeSeconds": 300
+    }
+  ]
+}
