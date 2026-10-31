@@ -1,3 +1,4 @@
+import {icon,brand,studyIllustration} from './ui-brand.js';
 import {createStudyView} from './study-reader.js';
 import {adminViews} from './admin-views.js';
 import {initAccessibility} from './accessibility.js';
@@ -15,7 +16,7 @@ let me,catalog,plan=[],unitId='ii-1',dirty=false,epoch=0,abortAI,toastTimer,retr
 const unit=()=>catalog.units.find(x=>x.unit_id===unitId)||catalog.units[0];
 const allocation=()=>plan.find(x=>x.unit_id===unitId);
 const badge=x=>`<span class="badge">${esc(stateNames[x]||x)}</span>`;
-const heading=(h,d='')=>`<div class="page-heading"><p class="eyebrow">INFORMATION II · TEACHER LEARNING</p><h1 id="page-title" tabindex="-1">${esc(h)}</h1><p class="muted">${esc(d)}</p></div><div id="page-error" class="alert error" role="alert" hidden></div>`;
+const heading=(h,d='')=>`<div class="page-heading"><p class="eyebrow">情報Ⅱ 教員ラーニング</p><h1 id="page-title" tabindex="-1">${esc(h)}</h1><p class="muted">${esc(d)}</p></div><div id="page-error" class="alert error" role="alert" hidden></div>`;
 const card=(title,body)=>`<section class="card"><h2>${esc(title)}</h2>${body}</section>`;
 const empty=t=>`<p class="muted">${esc(t)}</p>`;
 const extLink=r=>`<a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">${esc(r.title)} ↗</a>`;
@@ -29,12 +30,18 @@ const nav={teacher:[['home','ホーム'],['profile','研修目標'],['materials'
 nav.trainer=[['home','ホーム'],['training','研修の状況'],['materials','教材を確認']];
 async function login(){
  viewCleanup?.();viewCleanup=null;abortAI?.abort();me=null;
- $('#app').innerHTML=`<main id="main" class="login"><div class="login-intro"><div class="brand-icon large">Ⅱ</div><p class="eyebrow">INFORMATION II</p><h1>学ぶ、その先の<br><em>教える力</em>へ。</h1><p>情報Ⅱの全5章と、情報Ⅰの前提知識。<br>教材・実践・振り返りをひとつの場所に。</p></div><section class="card login-card">${heading(window.RUNTIME_CONFIG.mode==='mock'?'接続確認をはじめる':'サインイン',window.RUNTIME_CONFIG.mode==='mock'?'ローカルの確認用ユーザーで入ります。':'Cognitoのログイン画面へ進みます。')}<form id="login-form">${window.RUNTIME_CONFIG.mode==='mock'?`<label for="user">確認する役割</label><select id="user" name="user_id">${demoUsers.map(u=>`<option value="${u.id}">${esc(u.label)}</option>`).join('')}</select>`:''}<button class="primary">${window.RUNTIME_CONFIG.mode==='mock'?'デモに入る':'サインイン'}</button></form><button type="button" class="login-settings secondary" data-open-settings aria-haspopup="dialog" aria-controls="display-settings">⚙ 表示設定</button></section></main>`;
+ const mock=window.RUNTIME_CONFIG.mode==='mock';
+ $('#app').innerHTML=`<main id="main" class="login"><div class="login-intro"><div class="brand">${brand()}</div><h1>先生の学びを、<br>もっと身近に。</h1><p>情報Ⅱの教材と学習を、ひとつに。<br>自分のペースで、教える力を育てましょう。</p>${studyIllustration()}<p class="login-caption">学ぶ一歩が、これからの授業をつくっていく。</p></div><section class="card login-card">${heading('ログイン',mock?'確認する役割を選んで、デモ画面へ進みます。':'お使いのアカウントでログインして、学習をはじめましょう。')}<form id="login-form">${mock?`<label for="user">確認する役割</label><select id="user" name="user_id">${demoUsers.map(u=>`<option value="${u.id}">${esc(u.label)}</option>`).join('')}</select>`:''}<button class="primary">${mock?'デモを開く':'ログインへ進む'}${icon('arrow')}</button></form><p class="login-security">${icon('lock')}<span>${mock?'この画面は動作確認用のデモです。':'次の画面でアカウント情報を入力します。'}</span></p><div class="login-divider"></div><button type="button" class="login-settings secondary" data-open-settings aria-haspopup="dialog" aria-controls="display-settings">${icon('settings')}文字サイズ・表示設定</button></section></main>`;
  bindForm('#login-form',async p=>{if(!await auth.signIn(p.user_id))return;dirty=false;me=await B.me();history.replaceState(null,'','#home');await render();});
 }
-function shell(route){$('#app').innerHTML=`<div class="layout ${me.role==='teacher'&&route==='materials'?'learner-study':''}"><aside class="sidebar"><a class="brand" href="#home"><span class="brand-icon">Ⅱ</span><span>情報Ⅱ<span class="brand-sub">教員ラーニング</span></span></a><nav aria-label="メインメニュー">${nav[me.role].map(([id,title])=>`<a href="#${id}" ${id===route?'aria-current="page"':''}>${title}</a>`).join('')}</nav><div class="sidebar-settings"><button type="button" data-open-settings aria-haspopup="dialog" aria-controls="display-settings"><span aria-hidden="true">⚙</span> 設定</button></div><div class="sidebar-note"><b>学びを、教える力へ。</b><p>理解・実践・振り返りをつなぐ。</p></div><div class="user"><div><b>${names[me.role]}</b><small>${esc(me.organization_id)}</small></div></div><button class="secondary small" id="logout">退出・役割を切り替える</button></aside><div class="workspace"><header class="topbar"><label for="unit-select">対象章</label><select id="unit-select">${['II','I'].map(level=>`<optgroup label="情報${level==='II'?'Ⅱ':'Ⅰ（前提知識）'}">${catalog.units.filter(u=>u.course_level===level).map(u=>`<option value="${u.unit_id}" ${u.unit_id===unitId?'selected':''}>${esc(u.title)}</option>`).join('')}</optgroup>`).join('')}</select>${badge(window.RUNTIME_CONFIG.mode.toUpperCase())}</header><main id="main">読み込み中…</main><footer>情報Ⅱ 教員ラーニング · 画面担当A / 仕様書のAPI契約に接続</footer></div></div>`;
+function shell(route){
+ const label=nav[me.role]?.find(([id])=>id===route)?.[1]||'ホーム';
+ const study=me.role==='teacher'&&['materials','ai'].includes(route);
+ $('#app').innerHTML=`<div class="layout ${study?'learner-study':''}"><aside class="sidebar"><a class="brand" href="#home" aria-label="bittomo ホーム">${brand()}</a><nav aria-label="メインメニュー">${(nav[me.role]||[]).map(([id,title])=>`<a href="#${id}" ${id===route?'aria-current="page"':''}>${icon(id)}<span>${title}</span></a>`).join('')}</nav><div class="sidebar-settings"><button type="button" data-open-settings aria-haspopup="dialog" aria-controls="display-settings">${icon('settings')}表示設定</button></div><div class="sidebar-note"><b>学びを、教える力へ。</b><p>理解・実践・振り返りをつなぐ。</p></div><div class="user"><span class="avatar">${icon('profile')}</span><div><b>${esc(names[me.role]||me.role)}</b><small>${esc(me.organization_id)}</small></div></div><button class="secondary small" id="logout">${icon('logout')}ログアウト・役割切替</button></aside><div class="workspace"><header class="topbar"><p class="topbar-title">${esc(label)}</p><div class="topbar-context"><label for="unit-select">対象章</label><select id="unit-select">${['II','I'].map(level=>`<optgroup label="情報${level==='II'?'Ⅱ':'Ⅰ（前提知識）'}">${catalog.units.filter(u=>u.course_level===level).map(u=>`<option value="${u.unit_id}" ${u.unit_id===unitId?'selected':''}>${esc(u.title)}</option>`).join('')}</optgroup>`).join('')}</select><span class="account-role">${esc(names[me.role]||me.role)}</span></div></header><main id="main"><p class="loading" role="status">画面を読み込んでいます…</p></main><footer>bittomo · 情報Ⅱ 教員ラーニング</footer></div></div>`;
+ const select=$('#unit-select');
+ if(unitId==='ii-0'){select.prepend(new Option('表紙・目次','ii-0'));select.value=unitId;}
  $('#logout').onclick=async()=>{if(!leave())return;try{await auth.signOut();dirty=false;login();}catch(e){error(e);}};
- $('#unit-select').onchange=e=>{if(!leave()){e.target.value=unitId;return;}unitId=e.target.value;dirty=false;render();};
+ select.onchange=e=>{if(!leave()){e.target.value=unitId;return;}unitId=e.target.value;dirty=false;render();};
 }
 async function render(){viewCleanup?.();viewCleanup=null;if(!me)return login();const run=++epoch;abortAI?.abort();dirty=false;const route=location.hash.slice(1)||'home';try{me=await B.me();if(run!==epoch)return;shell(route);if(!nav[me.role]?.some(([key])=>key===route)){ $('#main').innerHTML=heading('この画面は利用できません');return; }const view=await views[route]();if(run!==epoch)return;$('#main').innerHTML=view.html;viewCleanup=view.bind?.();$('#page-title')?.focus();}catch(e){if(run!==epoch)return;if(e.status===401)return login();if(!$('#main'))shell(route);$('#main').innerHTML=heading('画面を取得できませんでした')+'<button id="retry">再読み込み</button>';error(e);$('#retry').onclick=render;}}
 const views={};
@@ -85,17 +92,19 @@ views.materials=async()=>{
  }};
 };
 // Integration stage 1: current /me and /trainings contracts, without inventing allocations.
-const legacyHome=views.home;
+const routeDescriptions={profile:'学習の目標と進め方を設定',quiz:'学んだ内容の理解を確認',ai:'教材を見ながら疑問を相談',task:'授業づくりの課題に取り組む',progress:'これまでの学習を振り返る',training:'担当する研修の状況を確認',review:'提出された課題を確認',manage:'教材・問題と公開状態を管理',accounts:'利用者と所属を管理',assignments:'評価を担当する先生を設定',settings:'AIの利用方針を管理',approvals:'申請内容を確認',audit:'操作と変更の記録を確認'};
 views.home=async()=>{
  const trainings=await api('/trainings');
- const body=card('参加中の研修',trainings.items.length?trainings.items.map(t=>`<p><b>${esc(t.name)}</b> / ${esc(t.trainingId)}</p>`).join(''):empty('参加中の研修はありません。'));
+ const trainingBody=card('参加中の研修',trainings.items.length?trainings.items.map(t=>`<div class="training-row"><strong>${esc(t.name)}</strong><small>${esc(t.trainingId)}</small></div>`).join(''):empty('参加中の研修はありません。'));
+ const shortcuts=(nav[me.role]||[]).filter(([id])=>!['home','materials'].includes(id)).map(([id,title])=>`<a class="shortcut" href="#${id}" title="${esc(routeDescriptions[id]||title)}">${icon(id)}<span>${esc(title)}</span>${icon('arrow')}</a>`).join('');
  if(me.role==='teacher'){
-  const view=await originalHome();return {...view,html:view.html+body};
+  const chapters=catalog.units.filter(u=>u.course_level==='II');
+  return {html:heading('今日も、自分のペースで。','教材を読み、疑問を確かめながら、少しずつ学びを深めましょう。')+`<div class="home-lead"><section class="hero"><div><span class="pill">${icon('book')} 選択中の教材</span><h2>${esc(unit().title)}</h2><p>学びの続きは、ここから。</p><a class="button primary" href="#materials">教材を開く${icon('arrow')}</a></div><div class="hero-art" aria-hidden="true">${icon('book')}</div></section><section class="card home-training"><h2>${icon('training')}参加中の研修</h2>${trainings.items.length?trainings.items.map(t=>`<div class="training-row"><strong>${esc(t.name)}</strong><small>${esc(t.trainingId)}</small></div>`).join(''):empty('参加中の研修はありません。')}<p class="field-help">教材の閲覧や学習は、所属する研修の設定に従います。</p></section></div><div class="home-section-title"><h2>情報Ⅱの教材</h2><small>文部科学省 教員研修用教材</small></div><div class="chapter-cards">${chapters.map((u,i)=>`<a class="card chapter-card" href="#materials" data-home-unit="${esc(u.unit_id)}" ${u.unit_id===unitId?'aria-current="true"':''}><div class="chapter-meta">${icon(['materials','ai','progress','manage','book'][i])}<span>第${i+1}章</span></div><h3>${esc(u.title.replace(/^第[0-9０-９]+章\s*/,''))}</h3><span class="chapter-open">教材を読む${icon('arrow')}</span></a>`).join('')}</div><div class="home-section-title"><h2>学習メニュー</h2></div><div class="shortcut-grid">${shortcuts}</div>`,bind(){document.querySelectorAll('[data-home-unit]').forEach(a=>a.addEventListener('click',()=>{unitId=a.dataset.homeUnit;}));}};
  }
- return {html:heading(names[me.role]+'のホーム','ログイン中の所属・役割はサーバーで確認しています。')+body+card('画面連携の状況','<p>ログインと研修一覧を接続しました。各業務画面は現在のAPIへの接続を順次進めています。</p>')};
+ return {html:heading((names[me.role]||'利用者')+'のホーム','教材・研修の確認や、担当する業務へ進みます。')+trainingBody+`<div class="home-section-title"><h2>担当メニュー</h2></div><div class="shortcut-grid">${shortcuts}${(nav[me.role]||[]).some(([id])=>id==='materials')?`<a class="shortcut" href="#materials">${icon('materials')}<span>教材を確認</span>${icon('arrow')}</a>`:''}</div>`+card('画面連携の状況','<p class="muted">ログインと研修一覧を接続しています。各業務画面はAPIの接続状況に応じて利用できます。</p>')};
 };
 const pendingRoutes={materials:'教材取得APIとS3の教科書表示を接続する予定です。',quiz:'章と研修・課題の対応、および出題APIの接続を調整中です。',ai:'学習コンテキストとAI回答形式の接続を調整中です。',task:'提出データ形式の接続を調整中です。',progress:'進捗・到達判定のデータ形式を接続中です。',training:'研修集計のデータ形式を接続中です。',review:'レビューのデータ形式を接続中です。',accounts:'現バックエンドのアカウント管理APIは未接続です。',assignments:'評価者割当APIの接続を調整中です。',settings:'運用設定APIのデータ形式を接続中です。',approvals:'変更申請の承認APIは未接続です。',audit:'監査履歴のデータ形式を接続中です。'};
-for(const [route,message] of Object.entries(pendingRoutes)) views[route]=async()=>({html:heading('API連携の準備中')+card('現在の状況',`<p>${esc(message)}</p><p>この画面からの更新処理はまだ行えません。</p><a class="button secondary" href="#home">ホームへ戻る</a>`)});
+for(const [route,message] of Object.entries(pendingRoutes)) views[route]=async()=>({html:heading(nav[me.role]?.find(([id])=>id===route)?.[1]||'準備中',routeDescriptions[route]||'')+`<section class="card pending-state"><div class="pending-state-icon">${icon(route)}</div><h2>この機能は準備中です</h2><p>${esc(message)}</p><p>この画面からの更新処理はまだ行えません。</p><a class="button secondary" href="#home">ホームへ戻る${icon('arrow')}</a></section>`});
 views.materials=async()=>{
  const links=catalog.units.map(u=>`<button class="material-link" data-material="${esc(u.unit_id)}" aria-pressed="${u.unit_id===unitId}">${esc(u.title)}</button>`).join('');
  return {html:heading('教材を学ぶ',unit().title)+`<div class="material-layout"><section class="card material-list learner-material-list"><h2>教材の構成</h2><button class="material-link" data-material="ii-0">表紙・目次</button>${links}</section><section class="card reading"><div id="pdf-status" role="status">章を選択するとPDFを取得します。</div><div id="pdf-documents"></div><button id="pdf-refresh" class="secondary">閲覧URLを更新する</button></section></div>`,bind(){
@@ -109,15 +118,19 @@ views.materials=async()=>{
  document.querySelectorAll('[data-material]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-material]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));load(b.dataset.material);});refresh.onclick=()=>load(selection);load(selection);
  }};
 };
+function selectStudyUnit(id){
+ unitId=id;const select=$('#unit-select');
+ if(select){if(id==='ii-0'&&!select.querySelector('option[value="ii-0"]'))select.prepend(new Option('表紙・目次','ii-0'));select.value=id;}
+}
 const legacyMaterialView=views.materials;
 views.materials=()=>me.role==='teacher'
- ? createStudyView({catalog,initialUnit:unitId,onUnitChange:id=>{unitId=id;const select=$('#unit-select');if(select){if(id==='ii-0'&&!select.querySelector('option[value="ii-0"]'))select.prepend(new Option('表紙・目次','ii-0'));select.value=id;}}})
+ ? createStudyView({catalog,initialUnit:unitId,onUnitChange:selectStudyUnit})
  : legacyMaterialView();
 // Textbook questions use the same authenticated reader and the textbook-only API.
-views.ai=()=>createStudyView({catalog,initialUnit:unitId,onUnitChange:id=>{unitId=id;}});
+views.ai=()=>createStudyView({catalog,initialUnit:unitId,onUnitChange:selectStudyUnit});
 initAccessibility();
 document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#"]');if(!a||a.hash==='#main')return;if(!leave()){e.preventDefault();return;}dirty=false;if(a.hash===location.hash){e.preventDefault();render();}});
 let lastHash=location.hash;window.addEventListener('hashchange',()=>{if(dirty&&!leave()){history.replaceState(null,'',lastHash||'#home');return;}lastHash=location.hash;render();});
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
-async function start(){try{catalog=await(await fetch('/data/catalog.json')).json();if(window.RUNTIME_CONFIG.mode!=='mock')$('.demo-banner').textContent='認証・API連携モード';await auth.completeSignIn();if(!await auth.getAccessToken()){await login();return;}me=await B.me();await render();}catch(e){if(!catalog){$('#app').textContent='教材構成ファイルを読み込めませんでした。';return;}await login();error(e);}}
+async function start(){try{catalog=await(await fetch('/data/catalog.json')).json();$('.demo-banner').hidden=window.RUNTIME_CONFIG.mode!=='mock';await auth.completeSignIn();if(!await auth.getAccessToken()){await login();return;}me=await B.me();await render();}catch(e){if(!catalog){$('#app').textContent='教材構成ファイルを読み込めませんでした。';return;}await login();error(e);}}
 start();

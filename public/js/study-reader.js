@@ -1,3 +1,4 @@
+import {icon} from './ui-brand.js';
 import {api} from './api.js';
 const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const vendor='/vendor/pdfjs/';
@@ -36,7 +37,7 @@ export async function pollTutor(job,signal){
 export function createStudyView({catalog,initialUnit,onUnitChange}){
  const chapters=[{unit_id:'ii-0',title:'表紙・目次'},...catalog.units.filter(u=>u.course_level==='II')];
  return {html:`<section class="reader" aria-labelledby="page-title">
- <div class="reader-heading"><div><p class="reader-eyebrow">LEARNING ROOM</p><h1 id="page-title" tabindex="-1">教材を学ぶ</h1></div><button id="reader-toggle" aria-expanded="true" aria-controls="reader-tutor">AI相談を閉じる</button></div>
+ <div class="reader-heading"><div><p class="reader-eyebrow">情報Ⅱ 教員ラーニング</p><h1 id="page-title" tabindex="-1">教材を学ぶ</h1></div><button id="reader-toggle" aria-expanded="true" aria-controls="reader-tutor">AI相談を閉じる</button></div>
  <nav class="reader-chapters" aria-label="教材の章">${chapters.map((u,i)=>`<button data-chapter="${escapeHTML(u.unit_id)}" aria-pressed="false" title="${escapeHTML(u.title)}">${i===0?'表紙・目次':'第'+i+'章'}</button>`).join('')}</nav>
  <div class="reader-grid"><article class="reader-book" aria-label="教科書">
  <div class="reader-book-header"><h2 id="reader-title"></h2><div class="reader-toolbar" role="group" aria-label="教材の表示操作"><div class="reader-pages"><button id="reader-prev" aria-label="前のページ" disabled>‹</button><label class="reader-sr" for="reader-page">ページ</label><input id="reader-page" type="number" min="1" value="1" disabled><span id="reader-total">/ —</span><button id="reader-next" aria-label="次のページ" disabled>›</button></div>
@@ -46,8 +47,8 @@ export function createStudyView({catalog,initialUnit,onUnitChange}){
  <div id="reader-canvas-area" tabindex="0" aria-label="教材表示。スペースで下にスクロール"><canvas id="reader-canvas" aria-label="教科書のページ"></canvas></div>
  <div class="reader-bottom"><button id="reader-reload">再読み込み</button><a id="reader-external" target="_blank" rel="noopener noreferrer" hidden>PDFを別タブで開く ↗</a></div>
  <details class="reader-transcript"><summary>このページのテキストを読む</summary><p id="reader-text">ページを読み込むと表示します。</p></details>
- </article><aside id="reader-tutor" aria-labelledby="reader-ai-title"><h2 id="reader-ai-title">このページについて質問</h2><p id="reader-context" class="reader-context">教材を選択してください</p>
- <p class="reader-help">教材を根拠に回答します。図の画像そのものは送信せず、章・ページ番号と抽出できた本文を質問に添えます。</p>
+ </article><aside id="reader-tutor" aria-labelledby="reader-ai-title"><h2 id="reader-ai-title">${icon('ai')}このページについて質問</h2><p id="reader-context" class="reader-context">教材を選択してください</p>
+ <p class="reader-help">閲覧中の章・ページと本文を添えて、教材を根拠に回答します。図の内容は質問に書き添えてください。</p>
  <div id="reader-chat" role="log" aria-live="polite" aria-label="AIとの相談履歴"><div class="reader-welcome"><b>疑問を、その場で。</b><p>分からない言葉や、授業での説明の仕方を質問できます。</p></div></div>
  <p id="reader-ai-status" role="status" class="reader-help"></p><div class="reader-suggestions"><button data-prompt="このページの要点をまとめてください。">要点をまとめる</button><button data-prompt="このページの重要な用語を、身近な例で説明してください。">言葉を解説</button></div>
  <form id="reader-question-form"><label for="reader-question">このページの疑問</label><textarea id="reader-question" maxlength="800" placeholder="どの部分が気になりましたか？" required></textarea><div class="reader-send-row"><small>回答には教材の出典を表示</small><button id="reader-send" class="primary" disabled>質問を送る ↑</button></div></form>
