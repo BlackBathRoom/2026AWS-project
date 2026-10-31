@@ -25,8 +25,8 @@ export async function requireBackendAuth(req: Request, res: Response, next: Next
   try {
     cognitoProvider ||= new CognitoJwtAuthenticationProvider(cognitoConfigFromEnv());
     identityRepository ||= new DynamoEntityRepository();
-    const tokenContext = await cognitoProvider.verifyBearerToken(token);
-    const currentContext = await identityRepository.getCurrentAuthContext(process.env.BACKEND_TABLE_NAME, tokenContext.userId, tokenContext.organizationId);
+    const tokenContext = await cognitoProvider.verifyIdentity(token);
+    const currentContext = await identityRepository.getAuthContextForUser(process.env.BACKEND_TABLE_NAME, tokenContext.userId);
     if (!currentContext) { res.status(401).json({ code: 'UNAUTHORIZED', message: '有効な所属がありません', requestId: req.requestId, timestamp: new Date().toISOString() }); return; }
     req.auth = currentContext;
     next();

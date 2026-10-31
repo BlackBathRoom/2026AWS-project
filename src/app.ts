@@ -2,9 +2,24 @@ import express from 'express';
 import { randomUUID } from 'node:crypto';
 import * as path from 'node:path';
 import { mockRouter } from './routes/mock-routes';
+import { materialRouter } from './routes/material-routes';
 import { backendRouter } from './routes/backend-routes';
 
 export const app = express();
+// CORS for the deployed frontend. OPTIONS must be unauthenticated at API Gateway too.
+app.use((req, res, next) => {
+  const allowedOrigin = process.env.FRONTEND_ORIGIN || 'https://bittomo.click';
+  if (req.header('origin') === allowedOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+    res.vary('Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Authorization,Content-Type,Idempotency-Key,X-Request-Id');
+    res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
+  }
+  if (req.method === 'OPTIONS') { res.sendStatus(204); return; }
+  next();
+});
+
 app.use(express.json({ limit: '1mb' }));
 app.use((req, res, next) => { req.requestId = req.header('x-request-id') || `req-${randomUUID()}`; res.setHeader('x-request-id', req.requestId); next(); });
 
@@ -14,6 +29,7 @@ app.use((req, res, next) => { req.requestId = req.header('x-request-id') || `req
 app.get('/runtime-config.js', (_req, res) => {
   const config = {
     mode: process.env.FRONTEND_MODE || 'mock',
+    tutor_enabled: Boolean(process.env.TUTOR_QUEUE_URL && process.env.BACKEND_TABLE_NAME),
     api_base: process.env.FRONTEND_API_BASE || '/api/v1',
     upload_origins: (process.env.FRONTEND_UPLOAD_ORIGINS || '').split(',').filter(Boolean),
   };
@@ -27,6 +43,7 @@ app.get('/runtime-config.js', (_req, res) => {
 app.use(express.static(path.resolve(__dirname, '..', 'public')));
 app.use(express.static(path.resolve(__dirname, '..', '..', 'public')));
 
+app.use('/api/v1', materialRouter);
 app.use('/api/v1', mockRouter);
 app.use('/api/v1', backendRouter);
 app.use(mockRouter);

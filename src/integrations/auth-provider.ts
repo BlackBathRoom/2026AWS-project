@@ -30,6 +30,22 @@ export class CognitoJwtAuthenticationProvider implements AuthenticationProvider 
 
   constructor(private readonly config: CognitoAuthenticationConfig) {}
 
+  // Verify identity only. Membership and roles are resolved from DynamoDB.
+  async verifyIdentity(token: string): Promise<{ userId: string }> {
+    const { createRemoteJWKSet, jwtVerify } = await import('jose');
+    if (!this.jwks) this.jwks = createRemoteJWKSet(new URL(`${this.config.issuer}/.well-known/jwks.json`));
+    const { payload } = await jwtVerify(token, this.jwks as ReturnType<typeof createRemoteJWKSet>, {
+      issuer: this.config.issuer, algorithms: ['RS256']
+    });
+    if (typeof payload.sub !== 'string' || !payload.sub || payload.token_use !== 'access' ||
+        payload.client_id !== this.config.audience || typeof payload.iat !== 'number' ||
+        typeof payload.exp !== 'number' || !Number.isFinite(payload.iat) || !Number.isFinite(payload.exp) ||
+        payload.exp <= Date.now() / 1000 || payload.iat > Date.now() / 1000 + 60) {
+      throw new Error('Required Cognito access token claims are invalid');
+    }
+    return { userId: payload.sub };
+  }
+
   async verifyBearerToken(token: string): Promise<AuthContext> {
     const { createRemoteJWKSet, jwtVerify } = await import('jose');
     if (!this.jwks) this.jwks = createRemoteJWKSet(new URL(`${this.config.issuer}/.well-known/jwks.json`));

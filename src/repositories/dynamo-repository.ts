@@ -7,11 +7,18 @@ import { Role, roles } from '../contracts/common';
 export interface DynamoRepositoryConfig { tableName: string; }
 
 export class DynamoEntityRepository {
-  constructor(private readonly client = DynamoDBDocumentClient.from(new DynamoDBClient({}))) {}
+  constructor(private readonly client = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } })) {}
 
   async get<T>(config: DynamoRepositoryConfig, key: Record<string, unknown>): Promise<T | undefined> {
     const result = await this.client.send(new GetCommand({ TableName: config.tableName, Key: key, ConsistentRead: true }));
     return result.Item as T | undefined;
+  }
+
+  // Default organization is server-managed; never read it from request parameters.
+  async getAuthContextForUser(tableName: string, userId: string): Promise<AuthContext | undefined> {
+    const user = await this.get<Record<string, unknown>>({ tableName }, { pk: `USER#${userId}`, sk: 'PROFILE' });
+    if (!user || user.status !== 'active' || typeof user.organizationId !== 'string' || !user.organizationId) return undefined;
+    return this.getCurrentAuthContext(tableName, userId, user.organizationId);
   }
 
   async getCurrentAuthContext(tableName: string, userId: string, tokenOrganizationId: string): Promise<AuthContext | undefined> {
