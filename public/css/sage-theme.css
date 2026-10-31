@@ -327,15 +327,4 @@ footer,.learner-study footer { font-size:.72rem; padding:22px 32px; color:var(--
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
 @media(forced-colors:active) { select,.reader-book-header .reader-tools select#reader-zoom { appearance:auto; background-image:none; padding-right:12px; } .ui-icon { forced-color-adjust:auto; } }
 
-/* 教科書の表示枠を縦に広げる */
-#reader-canvas-area {
-  height: 85dvh;
-  min-height: 560px;
-  max-height: none;
-}
-@media (max-width: 760px) {
-  #reader-canvas-area {
-    height: 75dvh;
-    min-height: 360px;
-  }
-}
+
