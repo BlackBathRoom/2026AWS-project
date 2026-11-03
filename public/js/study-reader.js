@@ -1,3 +1,4 @@
+import {bindReaderLayout} from './reader-layout.js';
 import {icon} from './ui-brand.js';
 import {api} from './api.js';
 const escapeHTML=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -35,18 +36,18 @@ export async function pollTutor(job,signal){
 }
 export function createStudyView({catalog,initialUnit,onUnitChange}){
  const chapters=[{unit_id:'ii-0',title:'表紙・目次'},...catalog.units.filter(u=>u.course_level==='II')];
- return {html:`<section class="reader" aria-labelledby="page-title">
+ return {html:`<section id="reader-workspace" class="reader" aria-labelledby="page-title">
  <div class="reader-heading"><div><p class="reader-eyebrow">情報Ⅱ 教員ラーニング</p><h1 id="page-title" tabindex="-1">教材を学ぶ</h1></div><button id="reader-toggle" aria-expanded="true" aria-controls="reader-tutor">AI相談を閉じる</button></div>
  <nav class="reader-chapters" aria-label="教材の章">${chapters.map((u,i)=>`<button data-chapter="${escapeHTML(u.unit_id)}" aria-pressed="false" title="${escapeHTML(u.title)}">${i===0?'表紙・目次':'第'+i+'章'}</button>`).join('')}</nav>
- <div class="reader-grid"><article class="reader-book" aria-label="教科書">
+ <div class="reader-grid"><article id="reader-book-panel" class="reader-book" aria-label="教科書">
  <div class="reader-book-header"><h2 id="reader-title"></h2><div class="reader-toolbar" role="group" aria-label="教材の表示操作"><div class="reader-pages"><button id="reader-prev" aria-label="前のページ" disabled>‹</button><label class="reader-sr" for="reader-page">ページ</label><input id="reader-page" type="number" min="1" value="1" disabled><span id="reader-total">/ —</span><button id="reader-next" aria-label="次のページ" disabled>›</button></div>
- <div class="reader-tools"><label class="reader-sr" for="reader-zoom">教材の拡大率</label><select id="reader-zoom"><option value="fit">幅に合わせる</option><option value="1">100%</option><option value="1.25">125%</option><option value="1.5">150%</option><option value="2">200%</option></select><button id="reader-fullscreen"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><span>全画面</span></button></div></div></div>
+ <div class="reader-tools"><label class="reader-sr" for="reader-zoom">教材の拡大率</label><select id="reader-zoom"><option value="fit">幅に合わせる</option><option value="1">100%</option><option value="1.25">125%</option><option value="1.5">150%</option><option value="2">200%</option></select><button id="reader-fullscreen" aria-pressed="false" aria-controls="reader-workspace" aria-label="教科書とAI質問を全画面表示"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><span>全画面</span></button></div></div></div>
  <div id="reader-parts" class="reader-parts" aria-label="分冊の選択"></div>
  <p id="reader-status" class="reader-status" role="status" aria-live="polite">教材を読み込んでいます…</p>
  <div id="reader-canvas-area" tabindex="0" aria-label="教材表示。スペースで下にスクロール"><canvas id="reader-canvas" aria-label="教科書のページ"></canvas></div>
  <div class="reader-bottom"><button id="reader-reload">再読み込み</button><a id="reader-external" target="_blank" rel="noopener noreferrer" hidden>PDFを別タブで開く ↗</a></div>
  <details class="reader-transcript"><summary>このページのテキストを読む</summary><p id="reader-text">ページを読み込むと表示します。</p></details>
- </article><aside id="reader-tutor" aria-labelledby="reader-ai-title"><h2 id="reader-ai-title">${icon('ai')}このページについて質問</h2><p id="reader-context" class="reader-context">教材を選択してください</p>
+ </article><div id="reader-splitter" class="reader-splitter" role="separator" aria-orientation="vertical" aria-controls="reader-book-panel reader-tutor" aria-label="教科書とAI質問の幅を調整" aria-describedby="reader-splitter-help" tabindex="0" title="左右にドラッグして幅を調整。ダブルクリックで標準幅に戻す"><span aria-hidden="true"></span><span id="reader-splitter-help" class="reader-sr">左右の矢印キーで幅を調整できます。Shiftキーを押すと大きく調整し、Enterキーで標準幅に戻せます。</span></div><aside id="reader-tutor" aria-labelledby="reader-ai-title"><h2 id="reader-ai-title">${icon('ai')}このページについて質問</h2><p id="reader-context" class="reader-context">教材を選択してください</p>
  <p class="reader-help">閲覧中の章・ページと本文を添えて、教材を根拠に回答します。図の内容は質問に書き添えてください。</p>
  <div id="reader-chat" role="log" aria-live="polite" aria-label="AIとの相談履歴"><div class="reader-welcome"><b>疑問を、その場で。</b><p>分からない言葉や、授業での説明の仕方を質問できます。</p></div></div>
  <p id="reader-ai-status" role="status" class="reader-help"></p><div class="reader-suggestions"><button data-prompt="このページの要点をまとめてください。">要点をまとめる</button><button data-prompt="このページの重要な用語を、身近な例で説明してください。">言葉を解説</button></div>
@@ -57,6 +58,7 @@ export function createStudyView({catalog,initialUnit,onUnitChange}){
  const lifecycle=new AbortController();let loadController,aiController,pdfTask,pdf,renderTask;
  let selected=initialUnit,part=0,page=1,text='',filename='',title='',documents=[],generation=0,renderGeneration=0,busy=false,ready=false,disposed=false;
  const canvas=$('#reader-canvas'),area=$('#reader-canvas-area'),status=$('#reader-status');
+ const disposeLayout=bindReaderLayout(root,{onNotice:message=>{status.textContent=message;}});
  let enabled=false;
  api('/materials/config',{signal:lifecycle.signal}).then(config=>{
   if(disposed)return;enabled=config.tutorEnabled===true;
@@ -81,7 +83,8 @@ export function createStudyView({catalog,initialUnit,onUnitChange}){
   const version=++renderGeneration,currentPdf=pdf;ready=false;text='';sync();renderTask?.cancel();
   try{
    const sheet=await currentPdf.getPage(page);if(version!==renderGeneration||disposed)return;
-   const base=sheet.getViewport({scale:1}),fit=Math.max(160,area.clientWidth-32)/base.width;
+   const base=sheet.getViewport({scale:1}),padding=getComputedStyle(area);
+   const fit=Math.max(160,area.clientWidth-parseFloat(padding.paddingLeft)-parseFloat(padding.paddingRight))/base.width;
    const scale=$('#reader-zoom').value==='fit'?fit:Number($('#reader-zoom').value);
    const viewport=sheet.getViewport({scale}),ratio=Math.min(window.devicePixelRatio||1,2);
    // A fresh canvas avoids overlapping render operations during rapid navigation.
@@ -135,8 +138,6 @@ export function createStudyView({catalog,initialUnit,onUnitChange}){
  $('#reader-next').onclick=()=>{if(pdf&&page<pdf.numPages){page++;area.scrollTop=0;draw();}};
  $('#reader-page').onchange=e=>{if(pdf){page=Math.max(1,Math.min(pdf.numPages,Math.floor(Number(e.target.value)||1)));area.scrollTop=0;draw();}};
  $('#reader-zoom').onchange=draw;
- $('#reader-toggle').onclick=()=>{const hidden=!$('#reader-tutor').hidden;$('#reader-tutor').hidden=hidden;root.classList.toggle('reader-ai-hidden',hidden);$('#reader-toggle').setAttribute('aria-expanded',String(!hidden));$('#reader-toggle').textContent=hidden?'AI相談を開く':'AI相談を閉じる';};
- $('#reader-fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await $('.reader-book').requestFullscreen();}catch{status.textContent='全画面にできませんでした。AI相談を閉じると表示領域を広げられます。';}};
  area.onkeydown=e=>{if(e.target===area&&e.code==='Space'){e.preventDefault();area.scrollBy({top:area.clientHeight*.8*(e.shiftKey?-1:1),behavior:'auto'});}};
  root.querySelectorAll('[data-prompt]').forEach(b=>b.onclick=()=>{$('#reader-question').value=b.dataset.prompt;$('#reader-question').focus();});
  $('#reader-question-form').onsubmit=async event=>{
@@ -155,6 +156,6 @@ export function createStudyView({catalog,initialUnit,onUnitChange}){
  $('#reader-stop').onclick=()=>aiController?.abort();
  let resizeTimer,lastWidth=area.clientWidth;const observer=new ResizeObserver(()=>{if(area.clientWidth===lastWidth)return;lastWidth=area.clientWidth;clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if($('#reader-zoom').value==='fit')draw();},150);});observer.observe(area);
  load(selected);
- return ()=>{disposed=true;generation++;renderGeneration++;clearTimeout(resizeTimer);observer.disconnect();lifecycle.abort();loadController?.abort();aiController?.abort();renderTask?.cancel();void pdfTask?.destroy();};
+ return ()=>{disposeLayout();disposed=true;generation++;renderGeneration++;clearTimeout(resizeTimer);observer.disconnect();lifecycle.abort();loadController?.abort();aiController?.abort();renderTask?.cancel();void pdfTask?.destroy();};
  }};
 }
