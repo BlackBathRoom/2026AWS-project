@@ -1,3 +1,4 @@
+import { readerContextSchema } from '../contracts/reader-context';
 import { Router, Request, Response } from 'express';
 import { randomUUID } from 'node:crypto';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
@@ -56,6 +57,11 @@ materialRouter.post('/materials/:id/questions', async (req, res) => {
       !['explanation', 'hint', 'example'].includes(action)) {
     fail(req, res, 422, 'VALIDATION_ERROR', '質問は2000文字以内で入力してください。'); return;
   }
+  const reader = readerContextSchema.optional().safeParse(req.body?.readerContext);
+  const files = selectedMaterial(String(req.params.id))!;
+  if (!reader.success || (reader.data && !files.includes(reader.data.filename))) {
+    fail(req, res, 422, 'VALIDATION_ERROR', '閲覧中の教材とページ情報を確認してください。'); return;
+  }
   const jobId = `job-${randomUUID()}`;
   const date = dayJst();
   const quota = new TextbookAiQuota(process.env.BACKEND_TABLE_NAME);
@@ -66,7 +72,7 @@ materialRouter.post('/materials/:id/questions', async (req, res) => {
     const provider = resolveTutorProvider();
     if (!provider) throw new Error('Provider unavailable');
     // Await persistence and SQS dispatch before reporting success to the browser.
-    await provider.enqueue({ jobId, userId: auth.userId, question: question.trim(), requestedAction: action,
+    await provider.enqueue({ jobId, userId: auth.userId, question: question.trim(), requestedAction: action, readerContext: reader.data,
       context: { userId: auth.userId, organizationId: auth.organizationId, trainingId,
         assignmentId: asAssignmentId(`textbook-${String(req.params.id)}`), mode: 'learning', assistancePolicy: 'guided',
         ruleVersionId: asRuleVersionId('textbook-rule-v1'), purpose: 'learning', conceptIds: [],

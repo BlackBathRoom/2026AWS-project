@@ -12,14 +12,13 @@ function pause(ms,signal){return new Promise((resolve,reject)=>{
  const timer=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve();},ms);
  signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();
 });}
-// The chapter/page are question context, never authorization or an approved citation.
-export function contextualQuestion({title,filename,page,text,question}){
- const prefix=`閲覧中の教材：${title}\nファイル：${filename}\nPDFページ：${page}\n質問：${question.trim()}\n以下は表示ページから抽出した参考テキストです。承認済み教材の検索結果で確認してください。\n`;
- return prefix+text.slice(0,Math.max(0,2000-prefix.length));
+// Browser reference text stays separate from the user's question and KB evidence.
+export function textbookQuestion({filename,page,text,question}){
+ return {requestedAction:'explanation',question:question.trim(),readerContext:{filename,page,text:text.slice(0,4000)}};
 }
 export async function pollTutor(job,signal){
  if(!job?.jobId)throw new Error('AI受付番号を取得できませんでした。');
- const until=Date.now()+60000;
+ const until=Date.now()+120000;
  while(Date.now()<until){
   await pause(1500,signal);
   const result=await api('/materials/questions/'+encodeURIComponent(job.jobId)+'?quotaDate='+encodeURIComponent(job.quotaDate||''),{signal});
@@ -143,7 +142,7 @@ export function createStudyView({catalog,initialUnit,onUnitChange}){
  $('#reader-question-form').onsubmit=async event=>{
   event.preventDefault();const question=$('#reader-question').value.trim();if(!enabled||!ready||busy||!question)return;
   const context=$('#reader-context').textContent;
-  const body={requestedAction:'explanation',question:contextualQuestion({title,filename,page,text,question})};
+  const body=textbookQuestion({filename,page,text,question});
   busy=true;sync();aiController=new AbortController();$('#reader-stop').hidden=false;$('#reader-ai-status').textContent='回答を待っています…';
   message('user',question,context);$('#reader-question').value='';
   try{

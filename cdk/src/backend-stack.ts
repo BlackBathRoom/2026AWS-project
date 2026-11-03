@@ -9,6 +9,7 @@ import * as path from 'node:path';
 export class BackendStack extends cdk.Stack {
   // SQS FIFO キューの決定論的な基底名。TutorAiStack が同じ名前でキューを作る。
   // ".fifo" を除いた基底名。実キュー名は `${TUTOR_QUEUE_BASE_NAME}.fifo`。
+  public static readonly MATERIALS_BUCKET_NAME = 'info2-materials-432410731458-us-east-1-an';
   public static readonly TUTOR_QUEUE_BASE_NAME = 'information2-tutor-jobs';
 
   public readonly table: dynamodb.Table;
@@ -54,13 +55,13 @@ export class BackendStack extends cdk.Stack {
     const bucket = new s3.Bucket(this, 'PrivateUploads', { blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL, encryption: s3.BucketEncryption.S3_MANAGED, enforceSSL: true, versioned: true, removalPolicy: cdk.RemovalPolicy.RETAIN });
     const logGroup = new logs.LogGroup(this, 'ApiLogGroup', { retention: logs.RetentionDays.ONE_YEAR, removalPolicy: cdk.RemovalPolicy.RETAIN });
     const repositoryRoot = path.resolve(__dirname, '../..');
-    const handler = new lambdaNodejs.NodejsFunction(this, 'BackendHandler', { runtime: lambda.Runtime.NODEJS_24_X, entry: path.join(repositoryRoot, 'src/lambda.ts'), projectRoot: repositoryRoot, depsLockFilePath: path.join(repositoryRoot, 'package-lock.json'), handler: 'handler', timeout: cdk.Duration.seconds(30), environment: { NODE_ENV: 'production', FRONTEND_ORIGIN: frontendOrigin, MATERIALS_BUCKET_NAME: 'info2-materials-432410731458-us-east-1-an', MATERIALS_REGION: 'us-east-1', MATERIALS_ENTITLEMENTS_JSON: JSON.stringify({ 'school-001': ['training-001'] }), TEXTBOOK_AI_ENABLED: textbookAiEnabled.valueAsString, BACKEND_TABLE_NAME: table.tableName, UPLOAD_BUCKET_NAME: bucket.bucketName, COGNITO_REGION: this.region, COGNITO_USER_POOL_ID: userPool.userPoolId, COGNITO_AUDIENCE: userPoolClient.userPoolClientId } });
+    const handler = new lambdaNodejs.NodejsFunction(this, 'BackendHandler', { runtime: lambda.Runtime.NODEJS_24_X, entry: path.join(repositoryRoot, 'src/lambda.ts'), projectRoot: repositoryRoot, depsLockFilePath: path.join(repositoryRoot, 'package-lock.json'), handler: 'handler', timeout: cdk.Duration.seconds(30), environment: { NODE_ENV: 'production', FRONTEND_ORIGIN: frontendOrigin, MATERIALS_BUCKET_NAME: BackendStack.MATERIALS_BUCKET_NAME, MATERIALS_REGION: 'us-east-1', MATERIALS_ENTITLEMENTS_JSON: JSON.stringify({ 'school-001': ['training-001'] }), TEXTBOOK_AI_ENABLED: textbookAiEnabled.valueAsString, BACKEND_TABLE_NAME: table.tableName, UPLOAD_BUCKET_NAME: bucket.bucketName, COGNITO_REGION: this.region, COGNITO_USER_POOL_ID: userPool.userPoolId, COGNITO_AUDIENCE: userPoolClient.userPoolClientId } });
     // Existing private textbook bucket; allow only the seven registered PDF keys.
     handler.addToRolePolicy(new iam.PolicyStatement({
       actions: ['s3:GetObject'],
       resources: ['00_cover.pdf','01_chapter1.pdf','02_chapter2.pdf',
         '03_chapter3_part1.pdf','03_chapter3_part2.pdf','04_chapter4.pdf','05_chapter5.pdf']
-        .map(filename => `arn:aws:s3:::info2-materials-432410731458-us-east-1-an/materials/info2/${filename}`),
+        .map(filename => `arn:aws:s3:::${BackendStack.MATERIALS_BUCKET_NAME}/materials/info2/${filename}`),
     }));
     table.grantReadWriteData(handler);
     bucket.grantReadWrite(handler);

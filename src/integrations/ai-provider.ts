@@ -1,3 +1,4 @@
+import type { ReaderContext } from '../contracts/reader-context';
 import { InternalStudyContext } from '../contracts/study-context';
 import { TutorResult } from '../contracts/backend';
 
@@ -6,6 +7,7 @@ export interface AiTutorProvider {
     jobId?: string;
     userId: string;
     question: string;
+    readerContext?: ReaderContext;
     context: InternalStudyContext;
     requestedAction: string;
   }): Promise<{ jobId: string }>;

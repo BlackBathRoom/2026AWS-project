@@ -67,6 +67,7 @@ export async function processRecord(record: SQSRecord, deps: WorkerDeps): Promis
   try {
     const generated = await deps.tutor.answer({
       question: message.question,
+      readerContext: message.readerContext,
       context: message.context,
       requestedAction: message.requestedAction,
     });

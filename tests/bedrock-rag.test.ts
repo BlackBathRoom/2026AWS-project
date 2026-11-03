@@ -16,7 +16,7 @@ const config: BedrockRagConfig = {
   knowledgeBaseId: 'kb-001',
   modelId: 'model-001',
   maxResults: 5,
-  thresholds: { minChunks: 1, minScore: 0.5, outOfScopeMaxScore: 0.2 },
+  materialsBucketName: 'test-materials',
 };
 
 function chunk(score: number, sourceId = 'src-1'): RetrievedChunk {
@@ -40,22 +40,23 @@ function learningContext(overrides: Partial<InternalStudyContext> = {}): Interna
   };
 }
 
-/** Bedrock クライアントのスタブ。retrieve 結果と生成文を差し替えられる。 */
-function fakeTutor(chunks: RetrievedChunk[], generated = '教材に基づくヒントです') {
-  const agentRuntime = { send: async () => ({ retrievalResults: chunks.map((chunk) => ({ score: chunk.score, content: { text: chunk.content }, metadata: { source_id: chunk.citation.sourceId, chunk_id: chunk.chunkId, chapter: chunk.citation.chapter, lesson: chunk.citation.lesson, page: chunk.citation.page } })) }) };
-  const runtime = { send: async () => ({ output: { message: { content: [{ text: generated }] } } }) };
+/** Two Converse calls: semantic evidence evaluation, then selected-text generation. */
+function fakeTutor(chunks: RetrievedChunk[], generated = '教材に基づくヒントです', status = 'SUPPORTED') {
+  const agentRuntime = { send: async () => ({ retrievalResults: chunks.map((chunk) => ({ score: chunk.score, content: { text: chunk.content }, location: { s3Location: { uri: 's3://test-materials/materials/info2/01_chapter1.pdf' } }, metadata: { 'x-amz-bedrock-kb-document-page-number': 10 } })) }) };
+  let call = 0;
+  const runtime = { send: async () => ({ output: { message: { content: [{ text: call++ === 0 ? JSON.stringify({ status, reason: '教材で確認', supportingIndexes: status === 'SUPPORTED' ? [0] : [] }) : generated }] } } }) };
   return new BedrockRagTutor(config, agentRuntime as never, runtime as never);
 }
 
 describe('根拠充足判定 (G-002/G-004)', () => {
   it('関連チャンクが無ければ OUT_OF_SCOPE', () => {
-    expect(assessGrounding([chunk(0.1)], config.thresholds).status).toBe('OUT_OF_SCOPE');
+    expect(assessGrounding([chunk(0.1)], { minChunks: 1, minScore: 0.5, outOfScopeMaxScore: 0.2 }).status).toBe('OUT_OF_SCOPE');
   });
   it('関連はあるがスコア不足なら INSUFFICIENT', () => {
-    expect(assessGrounding([chunk(0.3)], config.thresholds).status).toBe('INSUFFICIENT');
+    expect(assessGrounding([chunk(0.3)], { minChunks: 1, minScore: 0.5, outOfScopeMaxScore: 0.2 }).status).toBe('INSUFFICIENT');
   });
   it('充足条件を満たせば SUPPORTED', () => {
-    expect(assessGrounding([chunk(0.8)], config.thresholds).status).toBe('SUPPORTED');
+    expect(assessGrounding([chunk(0.8)], { minChunks: 1, minScore: 0.5, outOfScopeMaxScore: 0.2 }).status).toBe('SUPPORTED');
   });
 });
 
@@ -96,7 +97,7 @@ describe('BedrockRagTutor.answer', () => {
   });
 
   it('範囲外の質問は本文を生成せず案内する', async () => {
-    const tutor = fakeTutor([chunk(0.05)]);
+    const tutor = fakeTutor([chunk(0.05)], '', 'OUT_OF_SCOPE');
     const result = await tutor.answer({ question: '天気予報を教えて', context: learningContext(), requestedAction: 'answer' });
     expect(result.status).toBe('OUT_OF_SCOPE');
     expect(result.responseType).toBe('NO_ANSWER');
