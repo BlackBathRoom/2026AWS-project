@@ -4,7 +4,7 @@ import { mockUsers, studyContexts, trainings } from '../mocks/sample-data';
 import { chapterQuestions } from '../data/quiz-questions';
 
 export interface BackendRepository {
-  organizations: Organization[]; users: UserRecord[]; memberships: Membership[]; questions: ApprovedQuestion[]; questionDrafts: QuestionDraft[]; knowledgeEdges: KnowledgeEdge[]; attempts: Attempt[]; progress: KnowledgeProgress[]; histories: LearningHistory[]; attainments: Attainment[]; assignments: TrainingAssignment[]; submissions: Submission[]; submissionVersions: SubmissionVersion[]; files: FileMetadata[]; reviewAssignments: ReviewAssignment[]; assessments: CompetencyAssessment[]; reEvaluations: ReEvaluation[]; appeals: ReviewAppeal[]; profiles: TrainingProfile[]; profileHistory: TrainingProfile[]; policies: Policy[]; usage: UsageCounter[]; deletions: DeletionRecord[]; audits: AuditEvent[]; jobs: TutorJob[]; idempotency: Map<string, unknown>;
+  organizations: Organization[]; users: UserRecord[]; memberships: Membership[]; questions: ApprovedQuestion[]; questionDrafts: QuestionDraft[]; knowledgeEdges: KnowledgeEdge[]; attempts: Attempt[]; progress: KnowledgeProgress[]; histories: LearningHistory[]; attainments: Attainment[]; assignments: TrainingAssignment[]; submissions: Submission[]; submissionVersions: SubmissionVersion[]; files: FileMetadata[]; reviewAssignments: ReviewAssignment[]; assessments: CompetencyAssessment[]; reEvaluations: ReEvaluation[]; appeals: ReviewAppeal[]; profiles: TrainingProfile[]; profileHistory: TrainingProfile[]; policies: Policy[]; usage: UsageCounter[]; deletions: DeletionRecord[]; audits: AuditEvent[]; jobs: TutorJob[]; idempotency: Map<string, unknown>; lastServedQuestion: Map<string, string>;
 }
 
 export class InMemoryBackendRepository implements BackendRepository {
@@ -34,6 +34,8 @@ export class InMemoryBackendRepository implements BackendRepository {
   audits: AuditEvent[] = [];
   jobs: TutorJob[] = [];
   idempotency = new Map<string, unknown>();
+  // 直近に出題した問題ID（キー: `${userId}:${chapterKey}`）。連続で同じ問題を出さないために使う。
+  lastServedQuestion = new Map<string, string>();
 
   getTraining(trainingId: string) { return trainings.find((item) => item.trainingId === trainingId); }
   getStudyContext(userId: string, trainingId: string, assignmentId: string) { return studyContexts.find((item) => item.userId === userId && item.trainingId === trainingId && item.assignmentId === assignmentId); }

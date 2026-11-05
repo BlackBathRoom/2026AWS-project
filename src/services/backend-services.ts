@@ -86,8 +86,29 @@ export function nextQuestion(repo: InMemoryBackendRepository, auth: AuthContext,
   if (retryOf && !retryAttempt) throw new DomainError(404, 'NOT_FOUND', '再回答元が見つかりません');
   const pool = repo.questions.filter((item) => item.trainingId === trainingId && item.organizationId === auth.organizationId && item.approvalStatus === 'APPROVED' && (!retryAttempt || item.questionId === retryAttempt.questionId) && (chapter === undefined ? item.chapter === undefined : item.chapter === chapter));
   if (pool.length === 0) throw new DomainError(404, 'NOT_FOUND', '出題可能な承認済み問題がありません');
-  // 難易度は完全ランダム: 対象プールから均等に1問選ぶ。再回答時は対象が1問に絞られる。
-  const question = retryAttempt ? pool[0] : pool[Math.floor(Math.random() * pool.length)];
+  // 難易度は完全ランダム（重み付けなし）だが、連続で同じ問題が出続けないようにする。
+  // このユーザーが同じ章で直近に出題/回答した問題を避け、できれば未回答の問題を優先する。
+  let question;
+  if (retryAttempt) {
+    question = pool[0];
+  } else {
+    const serveKey = `${auth.userId}:${chapter ?? 'all'}`;
+    // この章での直近の回答履歴（新しい順）。
+    const answeredInChapter = repo.attempts
+      .filter((item) => item.userId === auth.userId && pool.some((q) => q.questionId === item.questionId))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const answeredIds = new Set(answeredInChapter.map((item) => item.questionId));
+    // 直前に「出題」した問題（回答前でも記録される）。連続出題での重複を防ぐ。
+    const lastServed = repo.lastServedQuestion.get(serveKey);
+    // 1) まだ一度も回答しておらず、かつ直前に出題もしていない問題を最優先。
+    let candidates = pool.filter((item) => !answeredIds.has(item.questionId) && item.questionId !== lastServed);
+    // 2) 未回答が無ければ、回答済みでも「直前に出した問題」だけ除外して選ぶ。
+    if (candidates.length === 0) {
+      candidates = pool.length > 1 ? pool.filter((item) => item.questionId !== lastServed) : pool;
+    }
+    question = candidates[Math.floor(Math.random() * candidates.length)];
+    repo.lastServedQuestion.set(serveKey, question.questionId);
+  }
   const root = `attempt-${randomUUID()}` as Attempt['attemptId'];
   const { correctAnswer: _correctAnswer, ...safeQuestion } = question;
   return { attemptId: root, rootAttemptId: retryAttempt?.rootAttemptId || root, ...safeQuestion, reason: retryAttempt ? '同じrootへの練習再回答' : '承認済み問題から出題', mode: 'learning' as const };
