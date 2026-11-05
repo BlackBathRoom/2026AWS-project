@@ -1,6 +1,6 @@
 import { AuthContext } from '../contracts/user';
-import { Axis, Attempt, CompetencyAssessment, KnowledgeProgress, Submission, SubmissionVersion } from '../contracts/backend';
-import { asAssignmentId } from '../contracts/common';
+import { ApprovedQuestion, Axis, Attempt, CompetencyAssessment, KnowledgeProgress, Submission, SubmissionVersion } from '../contracts/backend';
+import { asAssignmentId, asRuleVersionId } from '../contracts/common';
 import { randomUUID } from 'node:crypto';
 import { backendRepository, InMemoryBackendRepository } from '../repositories/backend-repository';
 import { mockUsers } from '../mocks/sample-data';
@@ -285,6 +285,93 @@ export function reapplyDeletionLedger(repo: InMemoryBackendRepository, auth: Aut
 export function getUsage(repo: InMemoryBackendRepository, auth: AuthContext) {
   const policy = repo.getPolicy(auth.organizationId);
   return { userId: auth.userId, dailyLimit: policy?.dailyAiLimit ?? 0, counters: repo.usage.filter((item) => item.userId === auth.userId) };
+}
+
+// --- 章別AI生成小テスト: 生成 → 下書き保存 → 承認 → 出題対象へ昇格 (QUIZ_AI_PLAN.md) ---
+
+import type { QuizGeneratorLike } from '../integrations/quiz-generator-factory';
+import type { QuestionDraft } from '../contracts/backend';
+
+// AIで章別の問題を生成し、下書き(未承認)として保存する。承認を経るまで出題対象にしない。
+// 生成器が未設定(AWS未接続)なら 503。生成が不十分/不正なら下書きは作らない。
+export async function generateChapterQuizDrafts(repo: InMemoryBackendRepository, auth: AuthContext, generator: QuizGeneratorLike | null, chapter: number, count = 3) {
+  // 作成は教材作成者/管理者の役割に限る（承認とは別担当。QUIZ_AI_PLAN.md）。
+  requireRole(auth, ['teacher', 'admin']);
+  if (!Number.isInteger(chapter) || chapter < 1 || chapter > 5) throw new DomainError(422, 'UNPROCESSABLE_ENTITY', '章は1〜5で指定してください');
+  if (!Number.isInteger(count) || count < 1 || count > 10) throw new DomainError(422, 'UNPROCESSABLE_ENTITY', '生成数は1〜10で指定してください');
+  if (!generator) throw new DomainError(503, 'SERVICE_UNAVAILABLE', 'AI問題生成の接続が未設定です');
+  const trainingId = auth.trainingIds[0];
+  if (!trainingId) throw new DomainError(404, 'NOT_FOUND', '有効な研修所属が見つかりません');
+  const result = await generator.generateForChapter(chapter, count);
+  if (result.status !== 'GENERATED' || result.questions.length === 0) {
+    return { status: result.status, chapter, reasonCode: result.reasonCode, drafts: [] as QuestionDraft[] };
+  }
+  const drafts: QuestionDraft[] = result.questions.map((question) => ({
+    draftId: `qdraft-${randomUUID()}`,
+    organizationId: auth.organizationId,
+    trainingId: trainingId as QuestionDraft['trainingId'],
+    chapter,
+    conceptId: conceptIdForChapter(chapter),
+    format: question.format,
+    prompt: question.prompt,
+    choices: question.choices,
+    correctAnswer: question.correctAnswer,
+    explanation: question.explanation,
+    conceptTag: question.conceptTag,
+    citations: question.citations,
+    model: result.model,
+    status: 'DRAFT',
+    createdAt: now(),
+  }));
+  repo.questionDrafts.push(...drafts);
+  audit(repo, auth, 'quiz.draft.generate', 'question_draft', `chapter-${chapter}`);
+  return { status: 'GENERATED', chapter, drafts };
+}
+
+// 組織内の下書き一覧（任意で章・状態で絞り込み）。承認者が確認に使う。
+export function listQuestionDrafts(repo: InMemoryBackendRepository, auth: AuthContext, filter: { chapter?: number; status?: QuestionDraft['status'] } = {}) {
+  requireRole(auth, ['teacher', 'admin']);
+  return repo.questionDrafts.filter((draft) => draft.organizationId === auth.organizationId && (filter.chapter === undefined || draft.chapter === filter.chapter) && (filter.status === undefined || draft.status === filter.status));
+}
+
+// 下書きを承認して ApprovedQuestion へ昇格する。承認後に初めて /quiz/next の出題対象になる。
+// 承認者は教材承認者（admin/teacher）。生成した本人と別運用にするのが望ましいが、ここでは役割で制御する。
+export function approveQuestionDraft(repo: InMemoryBackendRepository, auth: AuthContext, draftId: string) {
+  requireRole(auth, ['teacher', 'admin']);
+  const draft = repo.questionDrafts.find((item) => item.draftId === draftId && item.organizationId === auth.organizationId);
+  if (!draft) throw new DomainError(404, 'NOT_FOUND', '問題の下書きが見つかりません');
+  if (draft.status === 'APPROVED') { const existing = repo.questions.find((item) => item.questionId === draft.approvedQuestionId); if (existing) return { draft, question: existing }; }
+  if (draft.status === 'REJECTED') throw new DomainError(409, 'CONFLICT', '却下済みの下書きは承認できません');
+  const questionId = `question-ai-${randomUUID()}` as ApprovedQuestion['questionId'];
+  const question: ApprovedQuestion = {
+    questionId,
+    version: `question-version-ai-${randomUUID()}` as ApprovedQuestion['version'],
+    organizationId: draft.organizationId,
+    trainingId: draft.trainingId,
+    conceptId: draft.conceptId,
+    chapter: draft.chapter,
+    format: draft.format,
+    prompt: draft.prompt,
+    choices: draft.choices,
+    correctAnswer: draft.correctAnswer,
+    approvalStatus: 'APPROVED',
+    ruleVersionId: asRuleVersionId('rule-v1'),
+  };
+  repo.questions.push(question);
+  draft.status = 'APPROVED';
+  draft.approvedQuestionId = questionId;
+  audit(repo, auth, 'quiz.draft.approve', 'question_draft', draftId);
+  return { draft, question };
+}
+
+export function rejectQuestionDraft(repo: InMemoryBackendRepository, auth: AuthContext, draftId: string) {
+  requireRole(auth, ['teacher', 'admin']);
+  const draft = repo.questionDrafts.find((item) => item.draftId === draftId && item.organizationId === auth.organizationId);
+  if (!draft) throw new DomainError(404, 'NOT_FOUND', '問題の下書きが見つかりません');
+  if (draft.status === 'APPROVED') throw new DomainError(409, 'CONFLICT', '承認済みの下書きは却下できません');
+  draft.status = 'REJECTED';
+  audit(repo, auth, 'quiz.draft.reject', 'question_draft', draftId);
+  return draft;
 }
 
 export { backendRepository };

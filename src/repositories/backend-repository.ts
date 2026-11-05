@@ -1,10 +1,10 @@
 import { asAssignmentId, asOrganizationId, asRuleVersionId, asTrainingId, asUserId } from '../contracts/common';
-import { ApprovedQuestion, Attempt, AuditEvent, CompetencyAssessment, DeletionRecord, FileMetadata, KnowledgeEdge, KnowledgeProgress, Policy, ReviewAppeal, ReviewAssignment, Submission, SubmissionVersion, TrainingAssignment, TrainingProfile, TutorJob, UsageCounter, Organization, UserRecord, Membership, LearningHistory, Attainment, ReEvaluation } from '../contracts/backend';
+import { ApprovedQuestion, Attempt, AuditEvent, CompetencyAssessment, DeletionRecord, FileMetadata, KnowledgeEdge, KnowledgeProgress, Policy, QuestionDraft, ReviewAppeal, ReviewAssignment, Submission, SubmissionVersion, TrainingAssignment, TrainingProfile, TutorJob, UsageCounter, Organization, UserRecord, Membership, LearningHistory, Attainment, ReEvaluation } from '../contracts/backend';
 import { mockUsers, studyContexts, trainings } from '../mocks/sample-data';
 import { chapterQuestions } from '../data/quiz-questions';
 
 export interface BackendRepository {
-  organizations: Organization[]; users: UserRecord[]; memberships: Membership[]; questions: ApprovedQuestion[]; knowledgeEdges: KnowledgeEdge[]; attempts: Attempt[]; progress: KnowledgeProgress[]; histories: LearningHistory[]; attainments: Attainment[]; assignments: TrainingAssignment[]; submissions: Submission[]; submissionVersions: SubmissionVersion[]; files: FileMetadata[]; reviewAssignments: ReviewAssignment[]; assessments: CompetencyAssessment[]; reEvaluations: ReEvaluation[]; appeals: ReviewAppeal[]; profiles: TrainingProfile[]; profileHistory: TrainingProfile[]; policies: Policy[]; usage: UsageCounter[]; deletions: DeletionRecord[]; audits: AuditEvent[]; jobs: TutorJob[]; idempotency: Map<string, unknown>;
+  organizations: Organization[]; users: UserRecord[]; memberships: Membership[]; questions: ApprovedQuestion[]; questionDrafts: QuestionDraft[]; knowledgeEdges: KnowledgeEdge[]; attempts: Attempt[]; progress: KnowledgeProgress[]; histories: LearningHistory[]; attainments: Attainment[]; assignments: TrainingAssignment[]; submissions: Submission[]; submissionVersions: SubmissionVersion[]; files: FileMetadata[]; reviewAssignments: ReviewAssignment[]; assessments: CompetencyAssessment[]; reEvaluations: ReEvaluation[]; appeals: ReviewAppeal[]; profiles: TrainingProfile[]; profileHistory: TrainingProfile[]; policies: Policy[]; usage: UsageCounter[]; deletions: DeletionRecord[]; audits: AuditEvent[]; jobs: TutorJob[]; idempotency: Map<string, unknown>;
 }
 
 export class InMemoryBackendRepository implements BackendRepository {
@@ -12,6 +12,7 @@ export class InMemoryBackendRepository implements BackendRepository {
   users: UserRecord[] = Object.values(mockUsers).map((user) => ({ userId: user.userId, organizationId: user.organizationId, role: user.role, status: 'active' }));
   memberships: Membership[] = Object.values(mockUsers).map((user) => ({ userId: user.userId, organizationId: user.organizationId, trainingIds: user.trainingIds, startsAt: '2026-01-01T00:00:00Z', endsAt: user.userId === 'user-006' ? '2026-01-01T00:00:00Z' : null, status: user.userId === 'user-006' ? 'ended' : 'active' }));
   questions: ApprovedQuestion[] = [{ questionId: 'question-001' as ApprovedQuestion['questionId'], version: 'question-version-001' as ApprovedQuestion['version'], organizationId: asOrganizationId('school-001'), trainingId: asTrainingId('training-001'), conceptId: 'concept-001' as ApprovedQuestion['conceptId'], format: 'single_choice', prompt: '2進数の10を10進数で表した値は？', choices: ['2', '10', '12'], correctAnswer: ['b'], approvalStatus: 'APPROVED', ruleVersionId: asRuleVersionId('rule-v1') }, ...chapterQuestions];
+  questionDrafts: QuestionDraft[] = [];
   knowledgeEdges: KnowledgeEdge[] = [];
   attempts: Attempt[] = [];
   progress: KnowledgeProgress[] = [];
