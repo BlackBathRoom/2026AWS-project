@@ -4,6 +4,16 @@ import { asAssignmentId } from '../contracts/common';
 import { randomUUID } from 'node:crypto';
 import { backendRepository, InMemoryBackendRepository } from '../repositories/backend-repository';
 import { mockUsers } from '../mocks/sample-data';
+import { conceptIdForChapter } from '../data/quiz-questions';
+
+// 情報Ⅱ第1〜5章のラベル（catalog.json / materials.json と一致）。章別到達状況レーダーの5軸。
+const CHAPTER_LABELS: Record<number, string> = {
+  1: '情報社会の進展と情報技術',
+  2: 'コミュニケーションとコンテンツ',
+  3: '情報とデータサイエンス',
+  4: '情報システムとプログラミング',
+  5: '問題発見・解決の探究',
+};
 
 export class DomainError extends Error {
   constructor(public readonly status: number, public readonly code: string, message: string) { super(message); }
@@ -39,13 +49,40 @@ export function getSafeQuestion(repo: InMemoryBackendRepository, auth: AuthConte
   return safeQuestion;
 }
 
+// lessonId は2通りを受け付ける:
+//   - 'ii-N' 形式（例 'ii-3'）: 情報Ⅱ第N章。所属研修に属する chapter===N の承認済み問題から
+//     ランダムに1問出題する（章別小テスト）。
+//   - trainingId そのもの（例 'training-001'）: 既存契約。章に紐付かない従来問題のみを対象にする。
+// どちらの場合も出題対象は「ユーザーが現在有効に所属する研修の、承認済み問題」に限る。
+function parseChapter(lessonId: string): number | undefined {
+  const match = /^ii-(\d+)$/.exec(lessonId);
+  if (!match) return undefined;
+  const chapter = Number(match[1]);
+  return Number.isInteger(chapter) && chapter >= 1 && chapter <= 5 ? chapter : undefined;
+}
+
+function resolveQuizTraining(repo: InMemoryBackendRepository, auth: AuthContext, lessonId: string): { trainingId: string; chapter?: number } {
+  const chapter = parseChapter(lessonId);
+  if (chapter !== undefined) {
+    // 章指定: 所属している研修（通常1件）を出題対象の研修とする。
+    const trainingId = auth.trainingIds[0];
+    if (!trainingId) throw new DomainError(404, 'NOT_FOUND', '有効な研修所属が見つかりません');
+    requireCurrentTraining(repo, auth, trainingId);
+    return { trainingId, chapter };
+  }
+  requireCurrentTraining(repo, auth, lessonId);
+  return { trainingId: lessonId };
+}
+
 export function nextQuestion(repo: InMemoryBackendRepository, auth: AuthContext, lessonId: string, retryOf?: string) {
   requireDataAccess(repo, auth, 'learning');
-  requireCurrentTraining(repo, auth, lessonId);
+  const { trainingId, chapter } = resolveQuizTraining(repo, auth, lessonId);
   const retryAttempt = retryOf ? repo.attempts.find((item) => item.attemptId === retryOf && item.userId === auth.userId) : undefined;
   if (retryOf && !retryAttempt) throw new DomainError(404, 'NOT_FOUND', '再回答元が見つかりません');
-  const question = repo.questions.find((item) => item.trainingId === lessonId && item.organizationId === auth.organizationId && item.approvalStatus === 'APPROVED' && (!retryAttempt || item.questionId === retryAttempt.questionId));
-  if (!question) throw new DomainError(404, 'NOT_FOUND', '出題可能な承認済み問題がありません');
+  const pool = repo.questions.filter((item) => item.trainingId === trainingId && item.organizationId === auth.organizationId && item.approvalStatus === 'APPROVED' && (!retryAttempt || item.questionId === retryAttempt.questionId) && (chapter === undefined ? item.chapter === undefined : item.chapter === chapter));
+  if (pool.length === 0) throw new DomainError(404, 'NOT_FOUND', '出題可能な承認済み問題がありません');
+  // 難易度は完全ランダム: 対象プールから均等に1問選ぶ。再回答時は対象が1問に絞られる。
+  const question = retryAttempt ? pool[0] : pool[Math.floor(Math.random() * pool.length)];
   const root = `attempt-${randomUUID()}` as Attempt['attemptId'];
   const { correctAnswer: _correctAnswer, ...safeQuestion } = question;
   return { attemptId: root, rootAttemptId: retryAttempt?.rootAttemptId || root, ...safeQuestion, reason: retryAttempt ? '同じrootへの練習再回答' : '承認済み問題から出題', mode: 'learning' as const };
@@ -98,6 +135,27 @@ export function getProgress(repo: InMemoryBackendRepository, auth: AuthContext, 
   requireDataAccess(repo, auth, 'learning');
   const ids = conceptId ? [conceptId] : [...new Set(repo.questions.filter((item) => item.organizationId === auth.organizationId).map((item) => item.conceptId))];
   return ids.map((id) => calculateProgress(repo, auth, id));
+}
+
+// 章別（第1〜5章）の小テスト正答率を集計する。将来の到達状況レーダーチャート（5角形）の下地。
+// scored な initial attempt のみを対象にする（練習の再回答は水増しに使わない）。
+// 難易度は完全ランダムなので各問1点均等で正答率を出す。
+export function getChapterAttainment(repo: InMemoryBackendRepository, auth: AuthContext, trainingId: string) {
+  requireDataAccess(repo, auth, 'learning');
+  requireCurrentTraining(repo, auth, trainingId);
+  const chapters = [1, 2, 3, 4, 5];
+  const axes = chapters.map((chapter) => {
+    const conceptId = conceptIdForChapter(chapter);
+    const attempts = repo.attempts.filter((item) => item.userId === auth.userId && item.trainingId === trainingId && item.scored && item.conceptId === conceptId);
+    const answered = attempts.length;
+    const correct = attempts.filter((item) => item.correct === true).length;
+    // 判定材料が少ない間は正答率を確定させない（3件未満は null）。
+    const accuracy = answered < 3 ? null : Math.round((100 * correct) / answered);
+    return { chapter, conceptId, label: CHAPTER_LABELS[chapter], answered, correct, accuracy };
+  });
+  const measured = axes.filter((axis) => axis.accuracy !== null);
+  const overall = measured.length ? Math.round(measured.reduce((sum, axis) => sum + (axis.accuracy ?? 0), 0) / measured.length) : null;
+  return { trainingId, axes, overall };
 }
 
 export function getRecommendations(repo: InMemoryBackendRepository, auth: AuthContext, trainingId: string) {

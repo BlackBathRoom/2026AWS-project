@@ -8,7 +8,7 @@ import { resolveTutorProvider } from '../integrations/tutor-provider-factory';
 import { InternalStudyContext, StudyContext } from '../contracts/study-context';
 import { Policy } from '../contracts/backend';
 import { asAssignmentId, asOrganizationId, asRuleVersionId, asTrainingId, asUserId } from '../contracts/common';
-import { DomainError, applyDeletion, assignReview, calculateAttainment, completeTutorJob, createSubmission, finalizeAssessment, getProgress, getRecommendations, getSafeQuestion, getUsage, nextQuestion, reapplyDeletionLedger, requireCurrentTraining, requireOrganization, requireRole, requireSelf, requireTraining, reserveAi, saveAttempt, submitSubmission, updateSubmission } from '../services/backend-services';
+import { DomainError, applyDeletion, assignReview, calculateAttainment, completeTutorJob, createSubmission, finalizeAssessment, getChapterAttainment, getProgress, getRecommendations, getSafeQuestion, getUsage, nextQuestion, reapplyDeletionLedger, requireCurrentTraining, requireOrganization, requireRole, requireSelf, requireTraining, reserveAi, saveAttempt, submitSubmission, updateSubmission } from '../services/backend-services';
 
 function errorResponse(req: Request, res: Response, error: unknown): void {
   if (error instanceof DomainError) { res.status(error.status).json({ code: error.code, message: error.message, requestId: req.requestId, timestamp: new Date().toISOString() }); return; }
@@ -60,6 +60,11 @@ backendRouter.get('/progress', endpoint((req, res) => {
 
 backendRouter.get('/attainment', endpoint((req, res) => {
   const auth = req.auth!; const trainingId = id.parse(req.query.trainingId); requireCurrentTraining(repo, auth, trainingId); res.json(calculateAttainment(repo, auth, trainingId));
+}));
+
+// 章別（第1〜5章）の小テスト正答率。学習到達状況レーダーチャート（5角形）用。
+backendRouter.get('/chapter-attainment', endpoint((req, res) => {
+  const auth = req.auth!; const trainingId = id.parse(req.query.trainingId); res.json(getChapterAttainment(repo, auth, trainingId));
 }));
 
 backendRouter.get('/recommendations', endpoint((req, res) => { const auth = req.auth!; const trainingId = id.parse(req.query.trainingId); res.json(getRecommendations(repo, auth, trainingId)); }));
