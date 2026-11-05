@@ -23,9 +23,14 @@ export function requireSelf(auth: AuthContext, userId: string): void { if (auth.
 export function requireRole(auth: AuthContext, roles: string[]): void { if (!roles.includes(auth.role)) throw new DomainError(403, 'FORBIDDEN', '必要な権限がありません'); }
 export function requireTraining(auth: AuthContext, trainingId: string): void { if (!auth.trainingIds.includes(trainingId as AuthContext['trainingIds'][number])) throw new DomainError(404, 'NOT_FOUND', '研修が見つかりません'); }
 export function requireCurrentTraining(repo: InMemoryBackendRepository, auth: AuthContext, trainingId: string): void {
+  // 認証ミドルウェアが所属を検証済み (本番は DynamoDB の Membership、ローカルは mockUsers) なので、
+  // auth.trainingIds を所属の真実とみなす。これを満たさなければ 404。
   requireTraining(auth, trainingId);
-  const membership = repo.memberships.find((item) => item.userId === auth.userId && item.organizationId === auth.organizationId && item.trainingIds.includes(trainingId as AuthContext['trainingIds'][number]));
-  if (!membership || membership.status !== 'active' || new Date(membership.startsAt).getTime() > Date.now() || (membership.endsAt && new Date(membership.endsAt).getTime() <= Date.now())) throw new DomainError(404, 'NOT_FOUND', '有効な研修所属が見つかりません');
+  // InMemory リポジトリに当該ユーザーの membership がある場合 (モック/テスト環境) は、
+  // 従来どおり status・期間の失効チェックも行う (例: 所属解除済みユーザーの拒否)。
+  // 本番ユーザーは InMemory に membership を持たないため、auth.trainingIds の検証のみで通す。
+  const membership = repo.memberships.find((item) => item.userId === auth.userId && item.organizationId === auth.organizationId);
+  if (membership && (membership.status !== 'active' || !membership.trainingIds.includes(trainingId as AuthContext['trainingIds'][number]) || new Date(membership.startsAt).getTime() > Date.now() || (membership.endsAt && new Date(membership.endsAt).getTime() <= Date.now()))) throw new DomainError(404, 'NOT_FOUND', '有効な研修所属が見つかりません');
 }
 export function requireDataAccess(repo: InMemoryBackendRepository, auth: AuthContext, scope: 'learning' | 'submissions'): void {
   const deleted = repo.deletions.some((item) => item.subjectId === auth.userId && item.status === 'applied' && (item.scope === 'all' || item.scope === scope));
