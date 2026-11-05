@@ -1,3 +1,4 @@
+import { readerContextSchema, type ReaderContext } from '../contracts/reader-context';
 // SQS 経由で B(受付API) から C(AI worker) へ渡すジョブメッセージの契約。
 // B は認可・利用枠ゲート通過後にこのメッセージを enqueue し、worker がこれを消費する。
 
@@ -26,6 +27,7 @@ export const tutorJobMessageSchema = z.object({
   userId: z.string().min(1),
   organizationId: z.string().min(1),
   question: z.string().min(1).max(2000),
+  readerContext: readerContextSchema.optional(),
   requestedAction: z.enum(requestedActions),
   context: internalStudyContextSchema,
 });
@@ -35,6 +37,7 @@ export type TutorJobMessage = {
   userId: string;
   organizationId: string;
   question: string;
+  readerContext?: ReaderContext;
   requestedAction: (typeof requestedActions)[number];
   context: InternalStudyContext;
 };

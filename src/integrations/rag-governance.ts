@@ -25,7 +25,7 @@ export interface RetrievedChunk {
   score: number;
   content: string;
   /** 仕様書 G-005 の引用メタデータ: 章・学習・ページ・教材ID。 */
-  citation: { sourceId: string; chapter?: string; lesson?: string; page?: string };
+  citation: { sourceId: string; chapter?: string; lesson?: string; page?: string; fileName?: string; s3Uri?: string };
 }
 
 /** 根拠充足判定(G-002)の閾値。組織やモデルに応じて調整可能にする。 */
@@ -129,6 +129,14 @@ export function formatCitations(chunks: RetrievedChunk[]): string[] {
   const seen = new Set<string>();
   const citations: string[] = [];
   for (const chunk of chunks) {
+    if (chunk.citation.fileName && chunk.citation.s3Uri) {
+      const key = `${chunk.citation.s3Uri}\u0000${chunk.citation.page ?? ''}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        citations.push(`${chunk.citation.fileName} / ${chunk.citation.page ? 'PDF ' + chunk.citation.page + 'ページ' : 'ページ番号未取得'}`);
+      }
+      continue;
+    }
     const parts = [chunk.citation.sourceId, chunk.citation.chapter, chunk.citation.lesson, chunk.citation.page].filter(
       (value): value is string => Boolean(value),
     );

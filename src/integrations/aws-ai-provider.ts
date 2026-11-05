@@ -1,3 +1,4 @@
+import type { ReaderContext } from '../contracts/reader-context';
 import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { InternalStudyContext } from '../contracts/study-context';
 import { AiTutorProvider } from './ai-provider';
@@ -18,6 +19,7 @@ export class SqsAiTutorProvider implements AiTutorProvider {
     jobId?: string;
     userId: string;
     question: string;
+    readerContext?: ReaderContext;
     context: InternalStudyContext;
     requestedAction: string;
   }) {
@@ -33,6 +35,7 @@ export class SqsAiTutorProvider implements AiTutorProvider {
       userId: input.userId,
       organizationId: input.context.organizationId,
       question: input.question,
+      readerContext: input.readerContext,
       requestedAction: input.requestedAction as RequestedAction,
       context: input.context,
     };

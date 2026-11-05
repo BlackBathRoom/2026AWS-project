@@ -27,7 +27,7 @@ export class TutorAiStack extends cdk.Stack {
     // こうすることで BackendStack 側が TutorAiStack の構造体を参照せずに
     // (名前ベースARNで) 送信権限・環境変数を持て、スタック間の循環依存を避けられる。
     const tutorDlq = new sqs.Queue(this, 'TutorJobsDlq', { queueName: `${BackendStack.TUTOR_QUEUE_BASE_NAME}-dlq.fifo`, fifo: true, contentBasedDeduplication: false, retentionPeriod: cdk.Duration.days(14), enforceSSL: true, removalPolicy: cdk.RemovalPolicy.RETAIN });
-    const tutorQueue = new sqs.Queue(this, 'TutorJobsQueue', { queueName: `${BackendStack.TUTOR_QUEUE_BASE_NAME}.fifo`, fifo: true, contentBasedDeduplication: false, enforceSSL: true, visibilityTimeout: cdk.Duration.seconds(120), deadLetterQueue: { queue: tutorDlq, maxReceiveCount: 3 }, removalPolicy: cdk.RemovalPolicy.RETAIN });
+    const tutorQueue = new sqs.Queue(this, 'TutorJobsQueue', { queueName: `${BackendStack.TUTOR_QUEUE_BASE_NAME}.fifo`, fifo: true, contentBasedDeduplication: false, enforceSSL: true, visibilityTimeout: cdk.Duration.seconds(540), deadLetterQueue: { queue: tutorDlq, maxReceiveCount: 3 }, removalPolicy: cdk.RemovalPolicy.RETAIN });
     const aiAuditLogGroup = new logs.LogGroup(this, 'AiAuditLogGroup', { retention: logs.RetentionDays.ONE_YEAR, removalPolicy: cdk.RemovalPolicy.RETAIN });
     const aiAuditLogStream = 'tutor-worker';
 
@@ -50,13 +50,15 @@ export class TutorAiStack extends cdk.Stack {
       projectRoot: repositoryRoot,
       depsLockFilePath: path.join(repositoryRoot, 'package-lock.json'),
       handler: 'handler',
-      timeout: cdk.Duration.seconds(60),
+      bundling: { externalModules: [] },
+      timeout: cdk.Duration.seconds(90),
       memorySize: 512,
       reservedConcurrentExecutions: 5,
       environment: {
         BACKEND_TABLE_NAME: backendTable.tableName,
         BEDROCK_KNOWLEDGE_BASE_ID: knowledgeBaseId,
         BEDROCK_MODEL_ID: bedrockModelId,
+        MATERIALS_BUCKET_NAME: BackendStack.MATERIALS_BUCKET_NAME,
         AI_AUDIT_LOG_GROUP: aiAuditLogGroup.logGroupName,
         AI_AUDIT_LOG_STREAM: aiAuditLogStream,
       },

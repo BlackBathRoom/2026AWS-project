@@ -1,0 +1,60 @@
+/* Workspace layout shared by the normal and fullscreen textbook reader. */
+.reader .reader-grid{grid-template-columns:minmax(0,1fr);gap:14px}
+.reader[data-reader-split=true] .reader-grid{grid-template-columns:minmax(0,1fr) 20px var(--reader-tutor-width,340px);gap:0}
+.reader.reader-ai-hidden .reader-grid{grid-template-columns:minmax(0,1fr)}
+.reader[data-reader-split=true] #reader-tutor{position:sticky;top:20px}
+.reader:not([data-reader-split=true]) #reader-tutor{position:static}
+.reader .reader-splitter{position:sticky;top:20px;height:clamp(180px,calc(100dvh - 200px),640px);width:20px;min-width:20px;display:flex;align-items:center;justify-content:center;cursor:col-resize;touch-action:none;border-radius:6px;user-select:none;-webkit-user-select:none}
+.reader .reader-splitter>span[aria-hidden]{display:block;width:4px;height:46px;border-radius:3px;background:var(--line,#dedfd9);transition:background-color .12s}
+.reader .reader-splitter:hover,.reader .reader-splitter:focus-visible{background:var(--mint,#eaf0e6)}
+.reader .reader-splitter:hover>span[aria-hidden],.reader .reader-splitter:focus-visible>span[aria-hidden],.reader.reader-is-resizing .reader-splitter>span[aria-hidden]{background:var(--accent,#527160)}
+.reader.reader-is-resizing,.reader.reader-is-resizing *{cursor:col-resize!important;user-select:none!important;-webkit-user-select:none!important}
+
+/* The reader section includes chapter navigation, PDF controls and AI controls. */
+.reader.reader-expanded{display:flex;flex-direction:column;box-sizing:border-box;width:100%;height:100dvh;min-height:0;max-height:none;overflow:hidden;padding:16px 20px;background:var(--bg,#f6f5f1);color:var(--ink,#28342e)}
+.reader.reader-window-expanded{position:fixed;inset:0;z-index:10000;margin:0}
+.reader.reader-expanded .reader-heading{flex:0 0 auto;margin-bottom:10px}
+.reader.reader-expanded .reader-heading h1{font-size:1.25rem;line-height:1.5}
+.reader.reader-expanded .reader-eyebrow{display:none}
+.reader.reader-expanded .reader-chapters{flex:0 0 auto;margin-bottom:12px}
+.reader.reader-expanded .reader-grid{flex:1 1 auto;min-height:0;align-items:stretch;overflow:hidden}
+.reader.reader-expanded .reader-book{display:flex;flex-direction:column;height:100%;min-height:0;overflow-y:auto}
+.reader.reader-expanded .reader-book-header,.reader.reader-expanded .reader-parts,.reader.reader-expanded .reader-status,.reader.reader-expanded .reader-bottom,.reader.reader-expanded .reader-transcript{flex:0 0 auto}
+.reader.reader-expanded .reader-book-header{padding:10px 14px;gap:8px}
+.reader.reader-expanded .reader-book-header #reader-title{flex:1 1 160px}
+.reader.reader-expanded #reader-canvas-area{flex:1 1 auto;height:auto;min-height:100px;max-height:none;padding:16px}
+.reader.reader-expanded .reader-bottom{padding:8px 14px}
+.reader.reader-expanded .reader-transcript{padding:8px 14px;max-height:32dvh;overflow-y:auto}
+.reader.reader-expanded .reader-transcript p{max-height:24dvh;margin-bottom:0}
+.reader.reader-expanded .reader-splitter{position:static;height:100%;align-self:stretch}
+.reader.reader-expanded #reader-tutor{position:static;display:flex;flex-direction:column;height:100%;min-height:0;overflow-y:auto;padding:16px}
+.reader.reader-expanded #reader-tutor>*{flex-shrink:0}
+.reader.reader-expanded #reader-tutor h2{margin:0 0 10px}
+.reader.reader-expanded .reader-context{margin:0 0 10px}
+.reader.reader-expanded .reader-help{margin:0 0 10px}
+.reader.reader-expanded #reader-chat{flex:1 1 auto;min-height:100px;height:auto;max-height:none;margin:0 0 12px}
+.reader.reader-expanded #reader-question-form{margin:0}
+.reader.reader-expanded #reader-question-form label{margin-top:10px}
+.reader.reader-expanded #reader-question{min-height:86px;max-height:24dvh;resize:vertical}
+.reader.reader-expanded .reader-send-row{margin-top:8px}
+.reader.reader-expanded #reader-stop{margin-top:8px}
+
+/* Narrow screens retain usable stacked panes; landscape can split again. */
+.reader.reader-expanded:not([data-reader-split=true]) .reader-grid{display:block;overflow-y:auto}
+.reader.reader-expanded:not([data-reader-split=true]) .reader-book{height:70dvh;min-height:420px}
+.reader.reader-expanded:not([data-reader-split=true]) #reader-tutor{height:75dvh;min-height:480px;margin-top:14px}
+.reader.reader-expanded.reader-ai-hidden .reader-grid{display:grid;overflow:hidden}
+.reader.reader-expanded.reader-ai-hidden .reader-book{height:100%;min-height:0}
+@media(max-width:700px){
+ .reader.reader-expanded{padding:10px}
+ .reader.reader-expanded .reader-heading h1{font-size:1.1rem}
+ .reader.reader-expanded .reader-chapters{margin-bottom:10px}
+ .reader.reader-expanded .reader-book-header{padding:10px}
+ .reader.reader-expanded .reader-book-header #reader-title{flex-basis:100%}
+ .reader.reader-expanded #reader-tutor{padding:14px}
+}
+@media(prefers-reduced-motion:reduce){.reader .reader-splitter>span[aria-hidden]{transition:none}}
+@media(forced-colors:active){.reader .reader-splitter>span[aria-hidden]{background:CanvasText}}
+
+/* The account footer also uses .user; keep chat questions in a single column. */
+.reader #reader-chat .reader-message.user{display:block}
