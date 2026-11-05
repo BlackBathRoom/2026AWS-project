@@ -8,7 +8,8 @@ import { resolveTutorProvider } from '../integrations/tutor-provider-factory';
 import { InternalStudyContext, StudyContext } from '../contracts/study-context';
 import { Policy } from '../contracts/backend';
 import { asAssignmentId, asOrganizationId, asRuleVersionId, asTrainingId, asUserId } from '../contracts/common';
-import { DomainError, applyDeletion, assignReview, calculateAttainment, completeTutorJob, createSubmission, finalizeAssessment, getProgress, getRecommendations, getSafeQuestion, getUsage, nextQuestion, reapplyDeletionLedger, requireCurrentTraining, requireOrganization, requireRole, requireSelf, requireTraining, reserveAi, saveAttempt, submitSubmission, updateSubmission } from '../services/backend-services';
+import { DomainError, applyDeletion, approveQuestionDraft, assignReview, calculateAttainment, completeTutorJob, createSubmission, finalizeAssessment, generateChapterQuizDrafts, getChapterAttainment, getProgress, getRecommendations, getSafeQuestion, getUsage, listQuestionDrafts, nextQuestion, reapplyDeletionLedger, rejectQuestionDraft, requireCurrentTraining, requireOrganization, requireRole, requireSelf, requireTraining, reserveAi, saveAttempt, submitSubmission, updateSubmission } from '../services/backend-services';
+import { resolveQuizGenerator } from '../integrations/quiz-generator-factory';
 
 function errorResponse(req: Request, res: Response, error: unknown): void {
   if (error instanceof DomainError) { res.status(error.status).json({ code: error.code, message: error.message, requestId: req.requestId, timestamp: new Date().toISOString() }); return; }
@@ -60,6 +61,39 @@ backendRouter.get('/progress', endpoint((req, res) => {
 
 backendRouter.get('/attainment', endpoint((req, res) => {
   const auth = req.auth!; const trainingId = id.parse(req.query.trainingId); requireCurrentTraining(repo, auth, trainingId); res.json(calculateAttainment(repo, auth, trainingId));
+}));
+
+// 章別（第1〜5章）の小テスト正答率。学習到達状況レーダーチャート（5角形）用。
+backendRouter.get('/chapter-attainment', endpoint((req, res) => {
+  const auth = req.auth!; const trainingId = id.parse(req.query.trainingId); res.json(getChapterAttainment(repo, auth, trainingId));
+}));
+
+// --- 章別AI生成小テスト: 生成・下書き確認・承認・却下 (QUIZ_AI_PLAN.md) ---
+const quizGenerationInput = z.object({ chapter: z.number().int().min(1).max(5), count: z.number().int().min(1).max(10).optional() });
+
+// AIで章別の問題を生成し、下書き(未承認)として保存する。出題対象にはまだ入らない。
+backendRouter.post('/quiz/generate', endpoint(async (req, res) => {
+  const auth = req.auth!; const input = quizGenerationInput.parse(req.body);
+  const result = await generateChapterQuizDrafts(repo, auth, resolveQuizGenerator(), input.chapter, input.count ?? 3);
+  res.status(result.status === 'GENERATED' ? 201 : 200).json(result);
+}));
+
+// 問題下書きの一覧（章・状態で絞り込み可）。承認者が確認に使う。
+backendRouter.get('/quiz/drafts', endpoint((req, res) => {
+  const auth = req.auth!;
+  const chapter = req.query.chapter === undefined ? undefined : z.coerce.number().int().min(1).max(5).parse(req.query.chapter);
+  const status = req.query.status === undefined ? undefined : z.enum(['DRAFT', 'APPROVED', 'REJECTED']).parse(req.query.status);
+  res.json({ items: listQuestionDrafts(repo, auth, { chapter, status }) });
+}));
+
+// 下書きを承認して出題対象（ApprovedQuestion）へ昇格する。
+backendRouter.post('/quiz/drafts/:id/approve', endpoint((req, res) => {
+  const auth = req.auth!; res.status(201).json(approveQuestionDraft(repo, auth, id.parse(req.params.id)));
+}));
+
+// 下書きを却下する（出題対象にしない）。
+backendRouter.post('/quiz/drafts/:id/reject', endpoint((req, res) => {
+  const auth = req.auth!; res.json(rejectQuestionDraft(repo, auth, id.parse(req.params.id)));
 }));
 
 backendRouter.get('/recommendations', endpoint((req, res) => { const auth = req.auth!; const trainingId = id.parse(req.query.trainingId); res.json(getRecommendations(repo, auth, trainingId)); }));

@@ -1,9 +1,19 @@
 import { AuthContext } from '../contracts/user';
-import { Axis, Attempt, CompetencyAssessment, KnowledgeProgress, Submission, SubmissionVersion } from '../contracts/backend';
-import { asAssignmentId } from '../contracts/common';
+import { ApprovedQuestion, Axis, Attempt, CompetencyAssessment, KnowledgeProgress, Submission, SubmissionVersion } from '../contracts/backend';
+import { asAssignmentId, asRuleVersionId } from '../contracts/common';
 import { randomUUID } from 'node:crypto';
 import { backendRepository, InMemoryBackendRepository } from '../repositories/backend-repository';
 import { mockUsers } from '../mocks/sample-data';
+import { conceptIdForChapter } from '../data/quiz-questions';
+
+// 情報Ⅱ第1〜5章のラベル（catalog.json / materials.json と一致）。章別到達状況レーダーの5軸。
+const CHAPTER_LABELS: Record<number, string> = {
+  1: '情報社会の進展と情報技術',
+  2: 'コミュニケーションとコンテンツ',
+  3: '情報とデータサイエンス',
+  4: '情報システムとプログラミング',
+  5: '問題発見・解決の探究',
+};
 
 export class DomainError extends Error {
   constructor(public readonly status: number, public readonly code: string, message: string) { super(message); }
@@ -13,9 +23,14 @@ export function requireSelf(auth: AuthContext, userId: string): void { if (auth.
 export function requireRole(auth: AuthContext, roles: string[]): void { if (!roles.includes(auth.role)) throw new DomainError(403, 'FORBIDDEN', '必要な権限がありません'); }
 export function requireTraining(auth: AuthContext, trainingId: string): void { if (!auth.trainingIds.includes(trainingId as AuthContext['trainingIds'][number])) throw new DomainError(404, 'NOT_FOUND', '研修が見つかりません'); }
 export function requireCurrentTraining(repo: InMemoryBackendRepository, auth: AuthContext, trainingId: string): void {
+  // 認証ミドルウェアが所属を検証済み (本番は DynamoDB の Membership、ローカルは mockUsers) なので、
+  // auth.trainingIds を所属の真実とみなす。これを満たさなければ 404。
   requireTraining(auth, trainingId);
-  const membership = repo.memberships.find((item) => item.userId === auth.userId && item.organizationId === auth.organizationId && item.trainingIds.includes(trainingId as AuthContext['trainingIds'][number]));
-  if (!membership || membership.status !== 'active' || new Date(membership.startsAt).getTime() > Date.now() || (membership.endsAt && new Date(membership.endsAt).getTime() <= Date.now())) throw new DomainError(404, 'NOT_FOUND', '有効な研修所属が見つかりません');
+  // InMemory リポジトリに当該ユーザーの membership がある場合 (モック/テスト環境) は、
+  // 従来どおり status・期間の失効チェックも行う (例: 所属解除済みユーザーの拒否)。
+  // 本番ユーザーは InMemory に membership を持たないため、auth.trainingIds の検証のみで通す。
+  const membership = repo.memberships.find((item) => item.userId === auth.userId && item.organizationId === auth.organizationId);
+  if (membership && (membership.status !== 'active' || !membership.trainingIds.includes(trainingId as AuthContext['trainingIds'][number]) || new Date(membership.startsAt).getTime() > Date.now() || (membership.endsAt && new Date(membership.endsAt).getTime() <= Date.now()))) throw new DomainError(404, 'NOT_FOUND', '有効な研修所属が見つかりません');
 }
 export function requireDataAccess(repo: InMemoryBackendRepository, auth: AuthContext, scope: 'learning' | 'submissions'): void {
   const deleted = repo.deletions.some((item) => item.subjectId === auth.userId && item.status === 'applied' && (item.scope === 'all' || item.scope === scope));
@@ -39,13 +54,61 @@ export function getSafeQuestion(repo: InMemoryBackendRepository, auth: AuthConte
   return safeQuestion;
 }
 
+// lessonId は2通りを受け付ける:
+//   - 'ii-N' 形式（例 'ii-3'）: 情報Ⅱ第N章。所属研修に属する chapter===N の承認済み問題から
+//     ランダムに1問出題する（章別小テスト）。
+//   - trainingId そのもの（例 'training-001'）: 既存契約。章に紐付かない従来問題のみを対象にする。
+// どちらの場合も出題対象は「ユーザーが現在有効に所属する研修の、承認済み問題」に限る。
+function parseChapter(lessonId: string): number | undefined {
+  const match = /^ii-(\d+)$/.exec(lessonId);
+  if (!match) return undefined;
+  const chapter = Number(match[1]);
+  return Number.isInteger(chapter) && chapter >= 1 && chapter <= 5 ? chapter : undefined;
+}
+
+function resolveQuizTraining(repo: InMemoryBackendRepository, auth: AuthContext, lessonId: string): { trainingId: string; chapter?: number } {
+  const chapter = parseChapter(lessonId);
+  if (chapter !== undefined) {
+    // 章指定: 所属している研修（通常1件）を出題対象の研修とする。
+    const trainingId = auth.trainingIds[0];
+    if (!trainingId) throw new DomainError(404, 'NOT_FOUND', '有効な研修所属が見つかりません');
+    requireCurrentTraining(repo, auth, trainingId);
+    return { trainingId, chapter };
+  }
+  requireCurrentTraining(repo, auth, lessonId);
+  return { trainingId: lessonId };
+}
+
 export function nextQuestion(repo: InMemoryBackendRepository, auth: AuthContext, lessonId: string, retryOf?: string) {
   requireDataAccess(repo, auth, 'learning');
-  requireCurrentTraining(repo, auth, lessonId);
+  const { trainingId, chapter } = resolveQuizTraining(repo, auth, lessonId);
   const retryAttempt = retryOf ? repo.attempts.find((item) => item.attemptId === retryOf && item.userId === auth.userId) : undefined;
   if (retryOf && !retryAttempt) throw new DomainError(404, 'NOT_FOUND', '再回答元が見つかりません');
-  const question = repo.questions.find((item) => item.trainingId === lessonId && item.organizationId === auth.organizationId && item.approvalStatus === 'APPROVED' && (!retryAttempt || item.questionId === retryAttempt.questionId));
-  if (!question) throw new DomainError(404, 'NOT_FOUND', '出題可能な承認済み問題がありません');
+  const pool = repo.questions.filter((item) => item.trainingId === trainingId && item.organizationId === auth.organizationId && item.approvalStatus === 'APPROVED' && (!retryAttempt || item.questionId === retryAttempt.questionId) && (chapter === undefined ? item.chapter === undefined : item.chapter === chapter));
+  if (pool.length === 0) throw new DomainError(404, 'NOT_FOUND', '出題可能な承認済み問題がありません');
+  // 難易度は完全ランダム（重み付けなし）だが、連続で同じ問題が出続けないようにする。
+  // このユーザーが同じ章で直近に出題/回答した問題を避け、できれば未回答の問題を優先する。
+  let question;
+  if (retryAttempt) {
+    question = pool[0];
+  } else {
+    const serveKey = `${auth.userId}:${chapter ?? 'all'}`;
+    // この章での直近の回答履歴（新しい順）。
+    const answeredInChapter = repo.attempts
+      .filter((item) => item.userId === auth.userId && pool.some((q) => q.questionId === item.questionId))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const answeredIds = new Set(answeredInChapter.map((item) => item.questionId));
+    // 直前に「出題」した問題（回答前でも記録される）。連続出題での重複を防ぐ。
+    const lastServed = repo.lastServedQuestion.get(serveKey);
+    // 1) まだ一度も回答しておらず、かつ直前に出題もしていない問題を最優先。
+    let candidates = pool.filter((item) => !answeredIds.has(item.questionId) && item.questionId !== lastServed);
+    // 2) 未回答が無ければ、回答済みでも「直前に出した問題」だけ除外して選ぶ。
+    if (candidates.length === 0) {
+      candidates = pool.length > 1 ? pool.filter((item) => item.questionId !== lastServed) : pool;
+    }
+    question = candidates[Math.floor(Math.random() * candidates.length)];
+    repo.lastServedQuestion.set(serveKey, question.questionId);
+  }
   const root = `attempt-${randomUUID()}` as Attempt['attemptId'];
   const { correctAnswer: _correctAnswer, ...safeQuestion } = question;
   return { attemptId: root, rootAttemptId: retryAttempt?.rootAttemptId || root, ...safeQuestion, reason: retryAttempt ? '同じrootへの練習再回答' : '承認済み問題から出題', mode: 'learning' as const };
@@ -98,6 +161,27 @@ export function getProgress(repo: InMemoryBackendRepository, auth: AuthContext, 
   requireDataAccess(repo, auth, 'learning');
   const ids = conceptId ? [conceptId] : [...new Set(repo.questions.filter((item) => item.organizationId === auth.organizationId).map((item) => item.conceptId))];
   return ids.map((id) => calculateProgress(repo, auth, id));
+}
+
+// 章別（第1〜5章）の小テスト正答率を集計する。将来の到達状況レーダーチャート（5角形）の下地。
+// scored な initial attempt のみを対象にする（練習の再回答は水増しに使わない）。
+// 難易度は完全ランダムなので各問1点均等で正答率を出す。
+export function getChapterAttainment(repo: InMemoryBackendRepository, auth: AuthContext, trainingId: string) {
+  requireDataAccess(repo, auth, 'learning');
+  requireCurrentTraining(repo, auth, trainingId);
+  const chapters = [1, 2, 3, 4, 5];
+  const axes = chapters.map((chapter) => {
+    const conceptId = conceptIdForChapter(chapter);
+    const attempts = repo.attempts.filter((item) => item.userId === auth.userId && item.trainingId === trainingId && item.scored && item.conceptId === conceptId);
+    const answered = attempts.length;
+    const correct = attempts.filter((item) => item.correct === true).length;
+    // 判定材料が少ない間は正答率を確定させない（3件未満は null）。
+    const accuracy = answered < 3 ? null : Math.round((100 * correct) / answered);
+    return { chapter, conceptId, label: CHAPTER_LABELS[chapter], answered, correct, accuracy };
+  });
+  const measured = axes.filter((axis) => axis.accuracy !== null);
+  const overall = measured.length ? Math.round(measured.reduce((sum, axis) => sum + (axis.accuracy ?? 0), 0) / measured.length) : null;
+  return { trainingId, axes, overall };
 }
 
 export function getRecommendations(repo: InMemoryBackendRepository, auth: AuthContext, trainingId: string) {
@@ -227,6 +311,93 @@ export function reapplyDeletionLedger(repo: InMemoryBackendRepository, auth: Aut
 export function getUsage(repo: InMemoryBackendRepository, auth: AuthContext) {
   const policy = repo.getPolicy(auth.organizationId);
   return { userId: auth.userId, dailyLimit: policy?.dailyAiLimit ?? 0, counters: repo.usage.filter((item) => item.userId === auth.userId) };
+}
+
+// --- 章別AI生成小テスト: 生成 → 下書き保存 → 承認 → 出題対象へ昇格 (QUIZ_AI_PLAN.md) ---
+
+import type { QuizGeneratorLike } from '../integrations/quiz-generator-factory';
+import type { QuestionDraft } from '../contracts/backend';
+
+// AIで章別の問題を生成し、下書き(未承認)として保存する。承認を経るまで出題対象にしない。
+// 生成器が未設定(AWS未接続)なら 503。生成が不十分/不正なら下書きは作らない。
+export async function generateChapterQuizDrafts(repo: InMemoryBackendRepository, auth: AuthContext, generator: QuizGeneratorLike | null, chapter: number, count = 3) {
+  // 作成は教材作成者/管理者の役割に限る（承認とは別担当。QUIZ_AI_PLAN.md）。
+  requireRole(auth, ['teacher', 'admin']);
+  if (!Number.isInteger(chapter) || chapter < 1 || chapter > 5) throw new DomainError(422, 'UNPROCESSABLE_ENTITY', '章は1〜5で指定してください');
+  if (!Number.isInteger(count) || count < 1 || count > 10) throw new DomainError(422, 'UNPROCESSABLE_ENTITY', '生成数は1〜10で指定してください');
+  if (!generator) throw new DomainError(503, 'SERVICE_UNAVAILABLE', 'AI問題生成の接続が未設定です');
+  const trainingId = auth.trainingIds[0];
+  if (!trainingId) throw new DomainError(404, 'NOT_FOUND', '有効な研修所属が見つかりません');
+  const result = await generator.generateForChapter(chapter, count);
+  if (result.status !== 'GENERATED' || result.questions.length === 0) {
+    return { status: result.status, chapter, reasonCode: result.reasonCode, drafts: [] as QuestionDraft[] };
+  }
+  const drafts: QuestionDraft[] = result.questions.map((question) => ({
+    draftId: `qdraft-${randomUUID()}`,
+    organizationId: auth.organizationId,
+    trainingId: trainingId as QuestionDraft['trainingId'],
+    chapter,
+    conceptId: conceptIdForChapter(chapter),
+    format: question.format,
+    prompt: question.prompt,
+    choices: question.choices,
+    correctAnswer: question.correctAnswer,
+    explanation: question.explanation,
+    conceptTag: question.conceptTag,
+    citations: question.citations,
+    model: result.model,
+    status: 'DRAFT',
+    createdAt: now(),
+  }));
+  repo.questionDrafts.push(...drafts);
+  audit(repo, auth, 'quiz.draft.generate', 'question_draft', `chapter-${chapter}`);
+  return { status: 'GENERATED', chapter, drafts };
+}
+
+// 組織内の下書き一覧（任意で章・状態で絞り込み）。承認者が確認に使う。
+export function listQuestionDrafts(repo: InMemoryBackendRepository, auth: AuthContext, filter: { chapter?: number; status?: QuestionDraft['status'] } = {}) {
+  requireRole(auth, ['teacher', 'admin']);
+  return repo.questionDrafts.filter((draft) => draft.organizationId === auth.organizationId && (filter.chapter === undefined || draft.chapter === filter.chapter) && (filter.status === undefined || draft.status === filter.status));
+}
+
+// 下書きを承認して ApprovedQuestion へ昇格する。承認後に初めて /quiz/next の出題対象になる。
+// 承認者は教材承認者（admin/teacher）。生成した本人と別運用にするのが望ましいが、ここでは役割で制御する。
+export function approveQuestionDraft(repo: InMemoryBackendRepository, auth: AuthContext, draftId: string) {
+  requireRole(auth, ['teacher', 'admin']);
+  const draft = repo.questionDrafts.find((item) => item.draftId === draftId && item.organizationId === auth.organizationId);
+  if (!draft) throw new DomainError(404, 'NOT_FOUND', '問題の下書きが見つかりません');
+  if (draft.status === 'APPROVED') { const existing = repo.questions.find((item) => item.questionId === draft.approvedQuestionId); if (existing) return { draft, question: existing }; }
+  if (draft.status === 'REJECTED') throw new DomainError(409, 'CONFLICT', '却下済みの下書きは承認できません');
+  const questionId = `question-ai-${randomUUID()}` as ApprovedQuestion['questionId'];
+  const question: ApprovedQuestion = {
+    questionId,
+    version: `question-version-ai-${randomUUID()}` as ApprovedQuestion['version'],
+    organizationId: draft.organizationId,
+    trainingId: draft.trainingId,
+    conceptId: draft.conceptId,
+    chapter: draft.chapter,
+    format: draft.format,
+    prompt: draft.prompt,
+    choices: draft.choices,
+    correctAnswer: draft.correctAnswer,
+    approvalStatus: 'APPROVED',
+    ruleVersionId: asRuleVersionId('rule-v1'),
+  };
+  repo.questions.push(question);
+  draft.status = 'APPROVED';
+  draft.approvedQuestionId = questionId;
+  audit(repo, auth, 'quiz.draft.approve', 'question_draft', draftId);
+  return { draft, question };
+}
+
+export function rejectQuestionDraft(repo: InMemoryBackendRepository, auth: AuthContext, draftId: string) {
+  requireRole(auth, ['teacher', 'admin']);
+  const draft = repo.questionDrafts.find((item) => item.draftId === draftId && item.organizationId === auth.organizationId);
+  if (!draft) throw new DomainError(404, 'NOT_FOUND', '問題の下書きが見つかりません');
+  if (draft.status === 'APPROVED') throw new DomainError(409, 'CONFLICT', '承認済みの下書きは却下できません');
+  draft.status = 'REJECTED';
+  audit(repo, auth, 'quiz.draft.reject', 'question_draft', draftId);
+  return draft;
 }
 
 export { backendRepository };
